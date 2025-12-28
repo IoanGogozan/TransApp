@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["frontend/**", "prisma/**", "test/**", "**/*.log"],
+  "exec": "node src/index.js"
+}

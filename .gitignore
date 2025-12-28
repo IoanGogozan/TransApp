@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+frontend/node_modules
+
+# builds
+frontend/dist
+
+# env (nu commit secrete)
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+!.env.example
+
+# logs
+*.log
+
+# coverage
+coverage
+frontend/coverage
+
+# misc
+.DS_Store
+
+/generated/prisma

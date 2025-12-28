@@ -1,0 +1,72 @@
+const prisma = require("../config/prismaClient");
+
+const baseSelect = {
+  id: true,
+  companyId: true,
+  vehicleId: true,
+  reportedByUserId: true,
+  assignedToUserId: true,
+  checklistInstanceId: true,
+  checklistQuestionKey: true,
+  source: true,
+  status: true,
+  title: true,
+  description: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
+};
+
+const createDefect = async (data) =>
+  prisma.defect.create({
+    data,
+    select: baseSelect,
+  });
+
+const findDefectById = async ({ companyId, defectId }) =>
+  prisma.defect.findFirst({
+    where: { companyId, id: defectId },
+    select: baseSelect,
+  });
+
+const listDefects = async ({ companyId, status, vehicleId, reportedByUserId, from, to, limit, offset }) =>
+  prisma.defect.findMany({
+    where: {
+      companyId,
+      ...(status ? { status } : {}),
+      ...(vehicleId ? { vehicleId } : {}),
+      ...(reportedByUserId ? { reportedByUserId } : {}),
+      ...(from || to
+        ? {
+            createdAt: {
+              ...(from ? { gte: from } : {}),
+              ...(to ? { lte: to } : {}),
+            },
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    skip: offset,
+    select: baseSelect,
+  });
+
+const updateStatus = async ({ companyId, defectId, status, resolvedAt }) =>
+  prisma.defect.updateMany({
+    where: { id: defectId, companyId },
+    data: { status, resolvedAt },
+  });
+
+const setAssignee = async ({ companyId, defectId, assignedToUserId }) =>
+  prisma.defect.updateMany({
+    where: { id: defectId, companyId },
+    data: { assignedToUserId },
+  });
+
+module.exports = {
+  createDefect,
+  findDefectById,
+  listDefects,
+  updateStatus,
+  setAssignee,
+};

@@ -1,0 +1,261 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// schema.prisma
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/* ===================== ENUMS ===================== */
+
+enum UserRole {
+  OWNER
+  ADMIN
+  DRIVER
+}
+
+enum ActivityType {
+  DRIVING          // Kjøring
+  OTHER_WORK       // Annet arbeid
+  PAUSE            // Pause
+  AVAILABILITY     // Tilgjengelighetstid
+  OVERTIME_100     // Overtid 100 %
+}
+
+enum DefectStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ChecklistAnswerValue {
+  OK
+  DEVIATION
+  NOT_APPLICABLE
+}
+
+enum DefectSource {
+  MANUAL
+  CHECKLIST
+}
+
+enum DefectEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  COMMENTED
+}
+enum Language {
+  no
+  en
+  ro
+  pl
+  lt
+}
+
+/* ===================== MODELS ===================== */
+
+model Company {
+  id               Int                 @id @default(autoincrement())
+  name             String
+  orgNumber        String?             @map("org_number")
+  defaultLanguage  Language            @default(no) @map("default_language")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relații
+  users             User[]
+  vehicles          Vehicle[]
+  shifts            Shift[]
+  checklistInstances ChecklistInstance[]
+  defects           Defect[]
+
+  @@map("companies")
+}
+
+/* ------------- USERS ------------- */
+
+model User {
+  id           Int       @id @default(autoincrement())
+  companyId    Int       @map("company_id")
+  email        String
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(DRIVER)
+  language     Language?
+  isActive     Boolean   @default(true) @map("active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relații
+  company            Company            @relation(fields: [companyId], references: [id])
+  shifts             Shift[]            // turele la care e driver
+  checklistInstances ChecklistInstance[]
+  defectsReported    Defect[]           @relation("DefectsReportedByUser")
+  defectsAssigned    Defect[]           @relation("DefectsAssignedToUser")
+  defectComments     DefectComment[]    @relation("DefectCommentsUser")
+  defectEvents       DefectEvent[]      @relation("DefectEventsActor")
+
+  @@unique([email])
+  @@index([companyId])
+  @@map("users")
+}
+
+/* ------------- VEHICLES ------------- */
+
+model Vehicle {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  regNumber String   @map("reg_number")
+  name      String
+  type      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relații
+  company            Company            @relation(fields: [companyId], references: [id])
+  shifts             Shift[]
+  checklistInstances ChecklistInstance[]
+  defects            Defect[]
+
+  @@unique([companyId, regNumber]) // aceeași firmă nu poate avea 2 vehicule cu același nr
+  @@index([companyId])
+  @@map("vehicles")
+}
+
+/* ------------- SHIFTS (ture) ------------- */
+
+model Shift {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  userId    Int      @map("user_id")
+  vehicleId Int?     @map("vehicle_id")
+  startAt   DateTime @map("start_at") @db.Timestamptz
+  endAt     DateTime? @map("end_at") @db.Timestamptz
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, userId])
+  @@index([companyId, startAt])
+  @@map("shifts")
+}
+
+/* ------------- CHECKLIST INSTANCES ------------- */
+
+model ChecklistInstance {
+  id        String   @id @default(cuid())
+  companyId Int      @map("company_id")
+  vehicleId Int      @map("vehicle_id")
+  userId    Int      @map("user_id")
+  date      DateTime @map("date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  answers   ChecklistAnswer[]
+  defects   Defect[]
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId, date])
+  @@index([companyId, vehicleId, date])
+  @@unique([companyId, vehicleId, date])
+  @@map("checklist_instances")
+}
+
+/* ------------- CHECKLIST ANSWERS ------------- */
+
+model ChecklistAnswer {
+  id                  String              @id @default(cuid())
+  checklistInstanceId String              @map("checklist_instance_id")
+  questionKey         String              @map("question_key")
+  answer              ChecklistAnswerValue
+  comment             String?
+  hasDeviation        Boolean             @default(false) @map("has_deviation")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  checklistInstance ChecklistInstance @relation(fields: [checklistInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([checklistInstanceId])
+  @@map("checklist_answers")
+}
+
+/* ------------- DEFECTS / AVVIK ------------- */
+
+model Defect {
+  id                   String        @id @default(cuid())
+  companyId            Int           @map("company_id")
+  vehicleId            Int           @map("vehicle_id")
+  reportedByUserId     Int           @map("reported_by_user_id")
+  assignedToUserId     Int?          @map("assigned_to_user_id")
+  checklistInstanceId  String?       @map("checklist_instance_id")
+  checklistQuestionKey String?       @map("checklist_question_key")
+  source               DefectSource  @default(MANUAL)
+  status               DefectStatus  @default(OPEN)
+  title                String
+  description          String?
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  resolvedAt           DateTime?     @map("resolved_at") @db.Timestamptz
+
+  company           Company           @relation(fields: [companyId], references: [id])
+  vehicle           Vehicle           @relation(fields: [vehicleId], references: [id])
+  reportedByUser    User              @relation("DefectsReportedByUser", fields: [reportedByUserId], references: [id])
+  assignedToUser    User?             @relation("DefectsAssignedToUser", fields: [assignedToUserId], references: [id])
+  checklistInstance ChecklistInstance? @relation(fields: [checklistInstanceId], references: [id])
+  comments          DefectComment[]
+  events            DefectEvent[]
+
+  @@index([companyId, status])
+  @@index([companyId, vehicleId])
+  @@index([companyId, createdAt])
+  @@unique([companyId, checklistInstanceId, checklistQuestionKey])
+  @@map("defects")
+}
+
+model DefectComment {
+  id        String   @id @default(cuid())
+  companyId Int      @map("company_id")
+  defectId  String   @map("defect_id")
+  userId    Int      @map("user_id")
+  message   String   @map("message")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  defect Defect @relation(fields: [defectId], references: [id])
+  user   User   @relation("DefectCommentsUser", fields: [userId], references: [id])
+
+  @@index([companyId, defectId])
+  @@map("defect_comments")
+}
+
+model DefectEvent {
+  id          String          @id @default(cuid())
+  companyId   Int             @map("company_id")
+  defectId    String          @map("defect_id")
+  type        DefectEventType @map("type")
+  actorUserId Int             @map("actor_user_id")
+  data        Json?           @map("data")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  defect Defect @relation(fields: [defectId], references: [id])
+  actor  User   @relation("DefectEventsActor", fields: [actorUserId], references: [id])
+
+  @@index([companyId, defectId])
+  @@map("defect_events")
+}

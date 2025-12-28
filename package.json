@@ -1,0 +1,45 @@
+{
+  "name": "transapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev:backend": "nodemon",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n BACKEND,FRONTEND -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "db:seed": "npx prisma db seed",
+    "test": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest run",
+    "test:watch": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:frontend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11",
+    "prisma": "^7.1.0",
+    "cross-env": "^7.0.3",
+    "supertest": "^7.1.1",
+    "vitest": "^2.1.4",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.1.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.16.3",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0",
+    "zod": "^4.2.1"
+  }
+}
