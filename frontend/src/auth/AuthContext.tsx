@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { getMe, login as apiLogin, MeResponse } from "../api/auth";
 import { clearToken, getToken, setToken } from "./token";
 import { ApiError } from "../api/http";
+import { setCompanySlug } from "./companySlug";
 
 type AuthContextType = {
   user: MeResponse["user"] | null;
@@ -9,7 +10,7 @@ type AuthContextType = {
   role: string | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (companySlug: string, identifier: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -45,12 +46,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     load();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (companySlug: string, identifier: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiLogin(email, password);
+      const res = await apiLogin(companySlug, identifier, password);
       setToken(res.token);
+      setCompanySlug(companySlug);
       const me = await getMe();
       setUser(me.user);
       setCompany(me.company);

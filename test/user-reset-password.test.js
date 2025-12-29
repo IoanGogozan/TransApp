@@ -2,8 +2,8 @@ const request = require("supertest");
 const app = require("../src/app");
 const { createCompany, createUser } = require("./helpers/testData");
 
-const login = async ({ email, password }) => {
-  const res = await request(app).post("/api/v1/auth/login").send({ email, password });
+const login = async ({ companySlug, email, password }) => {
+  const res = await request(app).post(`/api/v1/c/${companySlug}/auth/login`).send({ identifier: email, password });
   expect(res.status).toBe(200);
   return res.body.token;
 };
@@ -16,7 +16,7 @@ describe("User reset password", () => {
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
 
-    const token = await login({ email: admin.email, password });
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
     const newPassword = "NewPassword123!";
 
     const res = await request(app)
@@ -28,7 +28,9 @@ describe("User reset password", () => {
     expect(res.body.user).toBeDefined();
     expect(res.body.user.id).toBe(driver.id);
 
-    const loginRes = await request(app).post("/api/v1/auth/login").send({ email: driver.email, password: newPassword });
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: driver.email, password: newPassword });
     expect(loginRes.status).toBe(200);
   });
 
@@ -38,7 +40,7 @@ describe("User reset password", () => {
     const adminA = await createUser({ companyId: companyA.id, role: "ADMIN", passwordPlain: password });
     const driverB = await createUser({ companyId: companyB.id, role: "DRIVER", passwordPlain: password });
 
-    const tokenA = await login({ email: adminA.email, password });
+    const tokenA = await login({ companySlug: companyA.slug, email: adminA.email, password });
     const res = await request(app)
       .patch(`/api/v1/users/${driverB.id}/password`)
       .set("Authorization", `Bearer ${tokenA}`)
@@ -52,7 +54,7 @@ describe("User reset password", () => {
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
 
-    const tokenDriver = await login({ email: driver.email, password });
+    const tokenDriver = await login({ companySlug: company.slug, email: driver.email, password });
     const res = await request(app)
       .patch(`/api/v1/users/${admin.id}/password`)
       .set("Authorization", `Bearer ${tokenDriver}`)
@@ -61,11 +63,48 @@ describe("User reset password", () => {
     expect(res.status).toBe(403);
   });
 
+  it("rejects admin attempting to reset own password", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const res = await request(app)
+      .patch(`/api/v1/users/${admin.id}/password`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "NewPassword123!" });
+
+    expect(res.status).toBe(403);
+
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: admin.email, password });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it("rejects admin attempting to reset owner password in same company", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const res = await request(app)
+      .patch(`/api/v1/users/${owner.id}/password`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "AnotherPass123!" });
+
+    expect(res.status).toBe(403);
+
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: owner.email, password });
+    expect(loginRes.status).toBe(200);
+  });
+
   it("validates request body", async () => {
     const company = await createCompany({ name: "Company A" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
-    const token = await login({ email: admin.email, password });
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
 
     const res = await request(app)
       .patch(`/api/v1/users/${driver.id}/password`)
@@ -79,7 +118,7 @@ describe("User reset password", () => {
     const company = await createCompany({ name: "Company A" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
-    const token = await login({ email: admin.email, password });
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
 
     const res = await request(app)
       .patch(`/api/v1/users/${driver.id}/password`)

@@ -3,6 +3,7 @@ const healthRoutes = require("./healthRoutes");
 const userRoutes = require("./userRoutes");
 const vehicleRoutes = require("./vehicleRoutes");
 const authRoutes = require("./authRoutes");
+const companyRoutes = require("./companyRoutes");
 const meRoutes = require("./meRoutes");
 const shiftRoutes = require("./shiftRoutes");
 const checklistRoutes = require("./checklistRoutes");
@@ -14,6 +15,7 @@ const companyContext = require("../middlewares/companyContext");
 const router = express.Router();
 
 router.use("/health", healthRoutes);
+router.use("/c", companyRoutes);
 router.use("/auth", authRoutes);
 // Protected routes
 router.use(auth, companyContext);

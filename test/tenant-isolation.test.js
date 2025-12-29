@@ -2,8 +2,8 @@ const request = require("supertest");
 const app = require("../src/app");
 const { createCompany, createUser, createVehicle } = require("./helpers/testData");
 
-const login = async ({ email, password }) => {
-  const res = await request(app).post("/api/v1/auth/login").send({ email, password });
+const login = async ({ companySlug, email, password }) => {
+  const res = await request(app).post(`/api/v1/c/${companySlug}/auth/login`).send({ identifier: email, password });
   expect(res.status).toBe(200);
   return res.body.token;
 };
@@ -40,7 +40,7 @@ describe("Tenant isolation", () => {
       type: "Van",
     });
 
-    const tokenA = await login({ email: adminA.email, password });
+    const tokenA = await login({ companySlug: companyA.slug, email: adminA.email, password });
 
     const listRes = await request(app).get("/api/v1/vehicles").set("Authorization", `Bearer ${tokenA}`);
     expect(listRes.status).toBe(200);

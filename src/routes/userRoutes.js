@@ -4,7 +4,7 @@ const requireRole = require("../middlewares/requireRole");
 
 const router = express.Router();
 
-router.use(requireRole("OWNER", "ADMIN"));
+router.use(requireRole("PLATFORM_ADMIN", "ADMIN"));
 router.get("/", listUsers);
 router.post("/", createUser);
 router.patch("/:id/active", updateUserActive);

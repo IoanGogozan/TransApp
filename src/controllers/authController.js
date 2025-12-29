@@ -10,8 +10,8 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Valid email required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  identifier: z.string().trim().min(1, "identifier is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 const register = asyncHandler(async (req, res) => {
@@ -34,7 +34,28 @@ const login = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+const loginWithCompanySlug = asyncHandler(async (req, res) => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
+  }
+
+  const companySlug = String(req.params.companySlug || "").trim();
+  if (!companySlug) {
+    throw new AppError(404, "Company not found", "COMPANY_NOT_FOUND");
+  }
+
+  const result = await authService.loginByCompanySlug({
+    companySlug,
+    identifier: parsed.data.identifier,
+    password: parsed.data.password,
+  });
+
+  res.json(result);
+});
+
 module.exports = {
   register,
   login,
+  loginWithCompanySlug,
 };

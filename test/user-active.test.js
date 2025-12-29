@@ -2,8 +2,8 @@ const request = require("supertest");
 const app = require("../src/app");
 const { createCompany, createUser } = require("./helpers/testData");
 
-const login = async ({ email, password }) => {
-  const res = await request(app).post("/api/v1/auth/login").send({ email, password });
+const login = async ({ companySlug, email, password }) => {
+  const res = await request(app).post(`/api/v1/c/${companySlug}/auth/login`).send({ identifier: email, password });
   expect(res.status).toBe(200);
   return res.body.token;
 };
@@ -16,7 +16,7 @@ describe("User active toggle", () => {
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
 
-    const token = await login({ email: admin.email, password });
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
     const res = await request(app)
       .patch(`/api/v1/users/${driver.id}/active`)
       .set("Authorization", `Bearer ${token}`)
@@ -34,7 +34,7 @@ describe("User active toggle", () => {
     const adminA = await createUser({ companyId: companyA.id, role: "ADMIN", passwordPlain: password });
     const driverB = await createUser({ companyId: companyB.id, role: "DRIVER", passwordPlain: password });
 
-    const tokenA = await login({ email: adminA.email, password });
+    const tokenA = await login({ companySlug: companyA.slug, email: adminA.email, password });
     const res = await request(app)
       .patch(`/api/v1/users/${driverB.id}/active`)
       .set("Authorization", `Bearer ${tokenA}`)
@@ -48,10 +48,37 @@ describe("User active toggle", () => {
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
 
-    const tokenDriver = await login({ email: driver.email, password });
+    const tokenDriver = await login({ companySlug: company.slug, email: driver.email, password });
     const res = await request(app)
       .patch(`/api/v1/users/${admin.id}/active`)
       .set("Authorization", `Bearer ${tokenDriver}`)
+      .send({ active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects admin attempting to change own active state", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const res = await request(app)
+      .patch(`/api/v1/users/${admin.id}/active`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects admin attempting to deactivate owner in same company", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const res = await request(app)
+      .patch(`/api/v1/users/${owner.id}/active`)
+      .set("Authorization", `Bearer ${token}`)
       .send({ active: false });
 
     expect(res.status).toBe(403);
@@ -61,7 +88,7 @@ describe("User active toggle", () => {
     const company = await createCompany({ name: "Company A" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
-    const token = await login({ email: admin.email, password });
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
 
     const res = await request(app)
       .patch(`/api/v1/users/${driver.id}/active`)

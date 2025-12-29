@@ -8,6 +8,15 @@ const requestLogger = require("./middlewares/requestLogger");
 
 const app = express();
 
+// Disable HTTP caching for APIs and etag generation
+app.set("etag", false);
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 // Basic middleware setup
 app.use(requestId);
 app.use(express.json());

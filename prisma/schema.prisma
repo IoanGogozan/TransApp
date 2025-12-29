@@ -18,7 +18,7 @@ generator client {
 /* ===================== ENUMS ===================== */
 
 enum UserRole {
-  OWNER
+  PLATFORM_ADMIN
   ADMIN
   DRIVER
 }
@@ -56,6 +56,12 @@ enum DefectEventType {
   UNASSIGNED
   COMMENTED
 }
+
+enum Plan {
+  BASIC
+  MEDIUM
+  PRO
+}
 enum Language {
   no
   en
@@ -70,6 +76,8 @@ model Company {
   id               Int                 @id @default(autoincrement())
   name             String
   orgNumber        String?             @map("org_number")
+  slug             String              @unique
+  plan             Plan                @default(BASIC)
   defaultLanguage  Language            @default(no) @map("default_language")
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz
@@ -88,9 +96,12 @@ model Company {
 
 model User {
   id           Int       @id @default(autoincrement())
-  companyId    Int       @map("company_id")
-  email        String
+  companyId    Int?      @map("company_id")
+  email        String?
+  phone        String?
+  username     String?
   passwordHash String    @map("password_hash")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   role         UserRole  @default(DRIVER)
   language     Language?
   isActive     Boolean   @default(true) @map("active")
@@ -98,7 +109,7 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relații
-  company            Company            @relation(fields: [companyId], references: [id])
+  company            Company?           @relation(fields: [companyId], references: [id])
   shifts             Shift[]            // turele la care e driver
   checklistInstances ChecklistInstance[]
   defectsReported    Defect[]           @relation("DefectsReportedByUser")
@@ -106,8 +117,10 @@ model User {
   defectComments     DefectComment[]    @relation("DefectCommentsUser")
   defectEvents       DefectEvent[]      @relation("DefectEventsActor")
 
-  @@unique([email])
   @@index([companyId])
+  @@unique([companyId, email])
+  @@unique([companyId, phone])
+  @@unique([companyId, username])
   @@map("users")
 }
 

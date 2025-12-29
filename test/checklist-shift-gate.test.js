@@ -3,8 +3,8 @@ const app = require("../src/app");
 const { osloDateOnly } = require("../src/utils/time");
 const { createCompany, createUser, createVehicle } = require("./helpers/testData");
 
-const login = async ({ email, password }) => {
-  const res = await request(app).post("/api/v1/auth/login").send({ email, password });
+const login = async ({ companySlug, email, password }) => {
+  const res = await request(app).post(`/api/v1/c/${companySlug}/auth/login`).send({ identifier: email, password });
   expect(res.status).toBe(200);
   return res.body.token;
 };
@@ -44,7 +44,7 @@ describe("Checklist gate for starting shift", () => {
       type: "Van",
     });
 
-    const token = await login({ email: user.email, password });
+    const token = await login({ companySlug: company.slug, email: user.email, password });
 
     const firstRes = await request(app)
       .post("/api/v1/shifts/start")

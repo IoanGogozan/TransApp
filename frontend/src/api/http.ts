@@ -46,6 +46,7 @@ export async function http<T>(path: string, options: HttpOptions = {}): Promise<
 
   const res = await fetch(path, {
     method,
+    cache: "no-store",
     headers,
     body: payload,
   });

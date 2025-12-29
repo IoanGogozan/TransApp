@@ -6,10 +6,13 @@ import { useAuth } from "../auth/AuthContext";
 
 const AdminUsersPage = () => {
   const { user: me } = useAuth();
+  const myId = me?.id != null ? String(me.id) : "";
 
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   // Create user form
   const [email, setEmail] = useState("");
@@ -36,25 +39,48 @@ const AdminUsersPage = () => {
   const [showInactive, setShowInactive] = useState(false);
 
   const myEmailLower = (me?.email || "").trim().toLowerCase();
+  const isSelfUser = (u: User) => {
+    if (myId) return String(u.id) === myId;
+    return (u.email || "").trim().toLowerCase() === myEmailLower;
+  };
 
-  const loadUsers = async () => {
-    setLoading(true);
-    setError(null);
+  const loadUsers = async (mode: "initial" | "refresh" = "initial") => {
+    if (mode === "initial") {
+      setInitialLoading(true);
+      setError(null);
+    } else {
+      setRefreshing(true);
+      setRefreshError(null);
+    }
     try {
       const res = await listCompanyUsers();
       setUsers(res);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load users";
-      setError(msg);
+      if (mode === "initial") {
+        setError(msg);
+      } else {
+        setRefreshError(msg);
+      }
     } finally {
-      setLoading(false);
+      if (mode === "initial") {
+        setInitialLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadUsers();
+    loadUsers("initial");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(null), 3000);
+    return () => clearTimeout(t);
+  }, [success]);
 
   const handleCreate = async () => {
     setFormError(null);
@@ -80,10 +106,7 @@ const AdminUsersPage = () => {
       setPassword("");
       setRole("");
       setSuccess("User created");
-      await loadUsers();
-
-      // optional: auto clear success so it doesn't stick forever
-      window.setTimeout(() => setSuccess(null), 3000);
+      await loadUsers("refresh");
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to create user";
       setFormError(msg);
@@ -92,10 +115,16 @@ const AdminUsersPage = () => {
     }
   };
 
-  const handleToggleActive = async (userId: number | string, currentActive: boolean | undefined) => {
-    if (currentActive === undefined) return;
+  const handleToggleActive = async (user: User) => {
+    if (user.active === undefined) return;
 
-    const idKey = String(userId);
+    const idKey = String(user.id);
+    const isSelf = isSelfUser(user);
+    if (isSelf) {
+      setRowErrors((prev) => ({ ...prev, [idKey]: "You can't modify your own account." }));
+      return;
+    }
+
     setRowErrors((prev) => {
       const next = { ...prev };
       delete next[idKey];
@@ -104,8 +133,8 @@ const AdminUsersPage = () => {
 
     setTogglingUserId(idKey);
     try {
-      await updateUserActive(userId, !currentActive);
-      await loadUsers();
+      await updateUserActive(user.id, !user.active);
+      await loadUsers("refresh");
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to update user";
       setRowErrors((prev) => ({ ...prev, [idKey]: msg }));
@@ -114,8 +143,14 @@ const AdminUsersPage = () => {
     }
   };
 
-  const handleResetPassword = async (userId: number | string) => {
-    const idKey = String(userId);
+  const handleResetPassword = async (user: User) => {
+    const idKey = String(user.id);
+
+    const isSelf = isSelfUser(user);
+    if (isSelf) {
+      setResetRowErrors((prev) => ({ ...prev, [idKey]: "You can't modify your own account." }));
+      return;
+    }
 
     setResetRowErrors((prev) => {
       const next = { ...prev };
@@ -139,7 +174,7 @@ const AdminUsersPage = () => {
 
     setResetSavingUserId(idKey);
     try {
-      const res = await resetUserPassword(userId, resetPasswordValue);
+      const res = await resetUserPassword(user.id, resetPasswordValue);
       if (!res) {
         setResetRowErrors((prev) => ({ ...prev, [idKey]: "Unexpected response" }));
       } else {
@@ -176,7 +211,7 @@ const AdminUsersPage = () => {
         }
       : undefined;
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="page">
         <div className="card">
@@ -186,12 +221,12 @@ const AdminUsersPage = () => {
     );
   }
 
-  if (error) {
+  if (error && users.length === 0) {
     return (
       <div className="page">
         <div className="card">
           <div className="error">{error}</div>
-          <button className="button" style={{ width: "auto" }} onClick={loadUsers} disabled={loading || saving}>
+          <button className="button" style={{ width: "auto" }} onClick={() => loadUsers("initial")} disabled={initialLoading || saving}>
             Retry
           </button>
         </div>
@@ -204,9 +239,12 @@ const AdminUsersPage = () => {
       <div className="card">
         <h1>Users</h1>
 
+        {refreshing ? <span className="muted">Refreshing...</span> : null}
+        {refreshError ? <div className="error" style={{ marginBottom: "8px" }}>{refreshError}</div> : null}
+
         {myEmailLower ? (
           <div className="muted" style={{ marginBottom: "10px" }}>
-            You can’t modify your own account.
+            You can't modify your own account.
           </div>
         ) : null}
 
@@ -219,7 +257,7 @@ const AdminUsersPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || loading}
+            disabled={saving || initialLoading || refreshing}
           />
 
           <label htmlFor="password">Password</label>
@@ -229,7 +267,7 @@ const AdminUsersPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || loading}
+            disabled={saving || initialLoading || refreshing}
           />
 
           <label htmlFor="role">Role</label>
@@ -238,14 +276,14 @@ const AdminUsersPage = () => {
             value={role}
             onChange={(e) => setRole(e.target.value as "ADMIN" | "DRIVER" | "")}
             style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || loading}
+            disabled={saving || initialLoading || refreshing}
           >
             <option value="">Select role</option>
             <option value="DRIVER">DRIVER</option>
             <option value="ADMIN">ADMIN</option>
           </select>
 
-          <button className="button" style={{ width: "auto" }} onClick={handleCreate} disabled={saving || loading}>
+          <button className="button" style={{ width: "auto" }} onClick={handleCreate} disabled={saving || initialLoading || refreshing}>
             {saving ? "Creating..." : "Create user"}
           </button>
 
@@ -283,10 +321,10 @@ const AdminUsersPage = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {filteredUsers.map((u) => {
               const idKey = String(u.id);
-              const isSelf = myEmailLower !== "" && (u.email || "").trim().toLowerCase() === myEmailLower;
+              const isSelf = isSelfUser(u);
 
-              const toggleDisabled = isSelf || togglingUserId === idKey || saving || loading;
-              const resetDisabled = isSelf || resetSavingUserId === idKey || saving || loading;
+              const toggleDisabled = isSelf || togglingUserId === idKey || saving || initialLoading || refreshing;
+              const resetDisabled = isSelf || resetSavingUserId === idKey || saving || initialLoading || refreshing;
 
               return (
                 <div
@@ -317,9 +355,9 @@ const AdminUsersPage = () => {
                         <button
                           className="button"
                           style={{ width: "auto", ...(disabledStyle(toggleDisabled) || {}) }}
-                          onClick={() => handleToggleActive(u.id, u.active)}
+                          onClick={() => handleToggleActive(u)}
                           disabled={toggleDisabled}
-                          title={isSelf ? "You can’t modify your own account" : undefined}
+                          title={isSelf ? "You can't modify your own account" : undefined}
                         >
                           {u.active ? "Deactivate" : "Activate"}
                         </button>
@@ -353,7 +391,7 @@ const AdminUsersPage = () => {
                         setResetPasswordConfirm("");
                       }}
                       disabled={resetDisabled}
-                      title={isSelf ? "You can’t modify your own account" : undefined}
+                      title={isSelf ? "You can't modify your own account" : undefined}
                     >
                       Reset password
                     </button>
@@ -394,7 +432,7 @@ const AdminUsersPage = () => {
                           <button
                             className="button"
                             style={{ width: "auto", ...(disabledStyle(resetDisabled) || {}) }}
-                            onClick={() => handleResetPassword(u.id)}
+                            onClick={() => handleResetPassword(u)}
                             disabled={resetDisabled}
                           >
                             {resetSavingUserId === idKey ? "Saving..." : "Save new password"}

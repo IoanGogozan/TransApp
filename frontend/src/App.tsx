@@ -3,6 +3,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import AppLayout from "./layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
+import LoginLandingPage from "./pages/LoginLandingPage";
 import HomePage from "./pages/HomePage";
 import VehiclesPage from "./pages/VehiclesPage";
 import VehiclePage from "./pages/VehiclePage";
@@ -12,11 +13,13 @@ import TimesheetPage from "./pages/TimesheetPage";
 import DefectsListPage from "./pages/DefectsListPage";
 import DefectDetailsPage from "./pages/DefectDetailsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<LoginLandingPage />} />
+      <Route path="/c/:companySlug/login" element={<LoginPage />} />
       <Route
         element={
           <ProtectedRoute>
@@ -25,6 +28,7 @@ function App() {
         }
       >
         <Route path="/" element={<HomePage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/driver/vehicles" element={<VehiclesPage />} />
         <Route path="/driver/vehicles/:vehicleId" element={<VehiclePage />} />
         <Route path="/driver/checklist" element={<ChecklistPage />} />

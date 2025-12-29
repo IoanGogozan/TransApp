@@ -14,8 +14,8 @@ describe("Auth + Me", () => {
     });
 
     const loginRes = await request(app)
-      .post("/api/v1/auth/login")
-      .send({ email: user.email, password });
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: user.email, password });
 
     expect(loginRes.status).toBe(200);
     expect(typeof loginRes.body.token).toBe("string");
