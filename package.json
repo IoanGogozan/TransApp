@@ -4,16 +4,28 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev:backend": "nodemon",
-    "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "concurrently -n BACKEND,FRONTEND -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "db:seed": "npx prisma db seed",
-    "test": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest run",
-    "test:watch": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest",
-    "build:frontend": "npm --prefix frontend run build",
-    "build": "npm run build:frontend"
-  },
+  "start": "node src/index.js",
+  "dev:backend": "nodemon",
+  "dev:frontend": "npm --prefix frontend run dev",
+  "dev": "concurrently -n BACKEND,FRONTEND -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+
+  "db:seed": "prisma db seed",
+  "db:seed:dev": "cross-env DOTENV_CONFIG_PATH=.env prisma db seed",
+  "db:seed:test": "cross-env DOTENV_CONFIG_PATH=.env.test prisma db seed",
+
+  "test": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest run",
+  "test:watch": "cross-env NODE_ENV=test DOTENV_CONFIG_PATH=.env.test vitest",
+
+  "test:db:reset": "cross-env DOTENV_CONFIG_PATH=.env.test prisma migrate reset --force",
+  "test:db:deploy": "cross-env DOTENV_CONFIG_PATH=.env.test prisma migrate deploy",
+
+  "dev:db:reset": "cross-env DOTENV_CONFIG_PATH=.env prisma migrate reset --force",
+  "dev:db:deploy": "cross-env DOTENV_CONFIG_PATH=.env prisma migrate deploy",
+
+  "build:frontend": "npm --prefix frontend run build",
+  "build": "npm run build:frontend"
+}
+,
   "keywords": [],
   "author": "",
   "license": "ISC",

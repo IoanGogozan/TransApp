@@ -39,7 +39,16 @@ const createUser = async ({ email, phone, username, password, role, companyId, m
 const listUsersByCompany = async (companyId) => {
   return prisma.user.findMany({
     where: { companyId },
-    select: { id: true, email: true, role: true, isActive: true, companyId: true, mustChangePassword: true },
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      role: true,
+      isActive: true,
+      companyId: true,
+      mustChangePassword: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 };

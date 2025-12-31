@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
 import { getPublicCompany } from "../api/auth";
@@ -8,6 +8,7 @@ import { setCompanySlug } from "../auth/companySlug";
 const LoginPage = () => {
   const navigate = useNavigate();
   const { companySlug } = useParams();
+  const [searchParams] = useSearchParams();
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [companyError, setCompanyError] = useState<string | null>(null);
   const [companyLoading, setCompanyLoading] = useState(true);
@@ -38,7 +39,11 @@ const LoginPage = () => {
       }
     };
     load();
-  }, [companySlug]);
+    const identifierPrefill = searchParams.get("identifier");
+    if (identifierPrefill) {
+      setPhone(identifierPrefill);
+    }
+  }, [companySlug, searchParams]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,8 +51,18 @@ const LoginPage = () => {
     setError(null);
     setLoading(true);
     try {
-      await login(companySlug, phone.trim(), password);
-      navigate("/", { replace: true });
+      const me = await login(companySlug, phone.trim(), password);
+      const slug = companySlug || me.company.slug;
+      const role = me.user.role;
+      if (slug) {
+        if (role === "ADMIN" || role === "PLATFORM_ADMIN") {
+          navigate(`/c/${slug}/app`, { replace: true });
+        } else {
+          navigate(`/c/${slug}/driver/timesheet`, { replace: true });
+        }
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Login failed";
       setError(message);

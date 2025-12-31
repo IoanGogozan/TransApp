@@ -20,6 +20,8 @@ export type MeResponse = {
   user: {
     id: number;
     email: string | null;
+    phone: string | null;
+    username: string | null;
     role: string;
     active: boolean;
     mustChangePassword: boolean;
@@ -27,7 +29,7 @@ export type MeResponse = {
   company: {
     id: number;
     name: string;
-    slug?: string;
+    slug: string;
   };
 };
 
@@ -41,6 +43,14 @@ export type PublicCompanyResponse = {
   };
 };
 
+export type RegisterCompanyResponse = {
+  company: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+};
+
 export const login = (companySlug: string, identifier: string, password: string) =>
   http<LoginResponse>(`/api/v1/c/${companySlug}/auth/login`, {
     method: "POST",
@@ -48,5 +58,16 @@ export const login = (companySlug: string, identifier: string, password: string)
   });
 
 export const getPublicCompany = (companySlug: string) => http<PublicCompanyResponse>(`/api/v1/c/${companySlug}/public`);
+
+export const registerCompany = (input: {
+  companyName: string;
+  companySlug: string;
+  adminEmail: string;
+  adminPassword: string;
+}) =>
+  http<RegisterCompanyResponse>("/api/v1/public/register", {
+    method: "POST",
+    body: input,
+  });
 
 export const getMe = () => http<MeResponse>("/api/v1/me");

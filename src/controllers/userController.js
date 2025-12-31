@@ -20,7 +20,7 @@ const createSchema = z.object({
   phone: z.string().trim().optional(),
   username: z.string().trim().min(1).optional(),
   password: z.string().min(1).optional(),
-  role: z.enum(["ADMIN", "DRIVER"]).optional().default("DRIVER"),
+  role: z.enum(["ADMIN", "DRIVER", "PLATFORM_ADMIN"]).optional().default("DRIVER"),
 });
 
 const createUser = asyncHandler(async (req, res) => {
@@ -36,7 +36,9 @@ const createUser = asyncHandler(async (req, res) => {
   const normalizedPhone = data.phone?.trim() ? normalizePhone(data.phone) : undefined;
   let phone = normalizedPhone;
 
-  if (data.role === "ADMIN") {
+  const isAdminRole = data.role === "ADMIN" || data.role === "PLATFORM_ADMIN";
+
+  if (isAdminRole) {
     if (!email) {
       throw new AppError(400, "Email is required for admin users", "VALIDATION_ERROR");
     }
@@ -70,7 +72,7 @@ const createUser = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  if (data.role === "ADMIN" && adminCount >= limits.admins) {
+  if (isAdminRole && adminCount >= limits.admins) {
     throw new AppError(409, "Plan limit reached", "PLAN_LIMIT_REACHED", {
       plan,
       role: data.role,
@@ -217,4 +219,70 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   res.json({ user });
 });
 
-module.exports = { createUser, listUsers, updateUserActive, updateUserPassword };
+const updatePhoneSchema = z.object({
+  phone: z.string().trim().min(1),
+});
+
+const updateUserPhone = asyncHandler(async (req, res) => {
+  const body = updatePhoneSchema.safeParse(req.body);
+  if (!body.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", body.error.format());
+  }
+
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new AppError(400, "Invalid user id", "VALIDATION_ERROR");
+  }
+
+  await enforceAdminUserGuards(req, userId);
+
+  const target = await prisma.user.findFirst({
+    where: { id: userId, companyId: req.companyId },
+    select: { id: true, role: true },
+  });
+
+  if (!target) {
+    throw new AppError(404, "User not found", "USER_NOT_FOUND");
+  }
+
+  if (target.role !== "DRIVER") {
+    throw new AppError(400, "Only driver phone can be changed", "ONLY_DRIVER_PHONE_CAN_BE_CHANGED");
+  }
+
+  const phone = normalizePhone(body.data.phone);
+  if (!phone) {
+    throw new AppError(400, "Phone is required", "VALIDATION_ERROR");
+  }
+
+  const duplicate = await prisma.user.findFirst({
+    where: {
+      companyId: req.companyId,
+      phone,
+      NOT: { id: userId },
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    throw new AppError(409, "Phone already registered", "AUTH_PHONE_TAKEN");
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { phone },
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      role: true,
+      companyId: true,
+      isActive: true,
+      mustChangePassword: true,
+    },
+  });
+
+  res.json({ user });
+});
+
+module.exports = { createUser, listUsers, updateUserActive, updateUserPassword, updateUserPhone };

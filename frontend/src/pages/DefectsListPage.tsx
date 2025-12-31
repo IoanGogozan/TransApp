@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { listDefects } from "../api/defects";
 import { Defect, DefectStatus } from "../types/defect";
 import { listVehicles } from "../api/vehicles";
@@ -8,11 +8,14 @@ import { Vehicle } from "../types/vehicle";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
 import { formatDateTime } from "../utils/time";
+import { tenantPath } from "../utils/tenantPath";
 
 const statusOptions: Array<DefectStatus | "ALL"> = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
 
 const DefectsListPage = () => {
   const navigate = useNavigate();
+  const { companySlug } = useParams();
+  const slug = companySlug;
   const [items, setItems] = useState<Defect[]>([]);
   const [status, setStatus] = useState<DefectStatus | "ALL">("ALL");
   const [usersById, setUsersById] = useState<Record<number, User>>({});
@@ -149,7 +152,11 @@ const DefectsListPage = () => {
                     · {formatDateTime(d.createdAt)}
                   </div>
                 </div>
-                <button className="button" style={{ width: "auto" }} onClick={() => navigate(`/admin/defects/${d.id}`)}>
+                <button
+                  className="button"
+                  style={{ width: "auto" }}
+                  onClick={() => navigate(tenantPath(slug, `/admin/defects/${d.id}`))}
+                >
                   Details
                 </button>
               </div>

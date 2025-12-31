@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { getMyTimesheetToday } from "../api/reports";
 import { ApiError } from "../api/http";
 import { formatMinutes } from "../utils/time";
 import { getMyActiveShift } from "../api/shifts";
 import { Shift } from "../types/shift";
+import { tenantPath } from "../utils/tenantPath";
 
 const calcDurationMinutes = (shift: Shift): number => {
   const start = new Date(shift.startAt).getTime();
@@ -14,6 +15,8 @@ const calcDurationMinutes = (shift: Shift): number => {
 };
 
 const TimesheetPage = () => {
+  const { companySlug } = useParams();
+  const slug = companySlug;
   const [rows, setRows] = useState<Array<{ date: string; minutes: number; hours?: number }>>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
@@ -118,7 +121,7 @@ const TimesheetPage = () => {
         </div>
 
         <div className="row" style={{ marginTop: "16px" }}>
-          <Link className="button" to="/driver/shift" style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, "/driver/shift")} style={{ width: "auto" }}>
             Back to Shift
           </Link>
         </div>

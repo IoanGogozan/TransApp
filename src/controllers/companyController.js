@@ -3,7 +3,7 @@ const AppError = require("../utils/AppError");
 const prisma = require("../config/prismaClient");
 
 const getPublicCompany = asyncHandler(async (req, res) => {
-  const companySlug = String(req.params.companySlug || "").trim();
+  const companySlug = String(req.params.companySlug || "").trim().toLowerCase();
   if (!companySlug) {
     throw new AppError(404, "Company not found", "COMPANY_NOT_FOUND");
   }

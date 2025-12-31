@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { getActiveVehicleId } from "../driver/activeVehicle";
+import { tenantPath } from "../utils/tenantPath";
 
 const HomePage = () => {
   const { user, company, loading, error, logout } = useAuth();
+  const { companySlug } = useParams();
+  const slug = companySlug || company?.slug;
 
   if (loading) {
     return (
@@ -31,36 +33,49 @@ const HomePage = () => {
   return (
     <div className="page">
       <div className="card">
-        <h1>Dashboard</h1>
-        <p>
-          Logged in as <strong>{user.email}</strong> ({user.role}) at <strong>{company.name}</strong>
-        </p>
-        <p className="muted">Active vehicle: {getActiveVehicleId() || "None"}</p>
-        <div className="row">
-          <span className="muted">User ID: {user.id}</span>
-          <button className="button" onClick={logout}>
-            Logout
-          </button>
-        </div>
-        <div className="row" style={{ marginTop: "16px", flexWrap: "wrap" }}>
-          <Link className="button" to="/driver/vehicles" style={{ width: "auto" }}>
-            Driver: Vehicles
-          </Link>
-          <Link className="button" to="/driver/checklist" style={{ width: "auto" }}>
-            Driver: Daily Checklist
-          </Link>
-          <Link className="button" to="/driver/shift" style={{ width: "auto" }}>
-            Driver: Shift
-          </Link>
-          <Link className="button" to="/driver/timesheet" style={{ width: "auto" }}>
-            Driver: Timesheet
-          </Link>
-          {(user.role === "ADMIN" || user.role === "OWNER") && (
-            <Link className="button" to="/admin/defects" style={{ width: "auto" }}>
-              Admin: Defects
-            </Link>
-          )}
-        </div>
+        <h1>Admin hub</h1>
+        <p className="muted">Manage users, vehicles, routes, customers and timesheets.</p>
+        {(user.role === "ADMIN" || user.role === "PLATFORM_ADMIN") && (
+          <>
+            <div style={{ marginTop: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
+                <Link className="button" to={tenantPath(slug, "/admin/users")} style={{ width: "auto" }}>
+                  Users
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/vehicles")} style={{ width: "auto" }}>
+                  Vehicles
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/routes")} style={{ width: "auto" }}>
+                  Routes
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/customers")} style={{ width: "auto" }}>
+                  Customers
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/defects")} style={{ width: "auto" }}>
+                  Defects
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/timesheets")} style={{ width: "auto" }}>
+                  Timesheets
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/admin/reports")} style={{ width: "auto" }}>
+                  Reports / Export
+                </Link>
+                <Link className="button" to={tenantPath(slug, "/app/help")} style={{ width: "auto" }}>
+                  Help
+                </Link>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "16px" }}>
+              <h2 style={{ marginBottom: "8px" }}>Personal</h2>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+                  My Timesheet
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

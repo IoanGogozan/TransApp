@@ -57,6 +57,46 @@ describe("User creation rules", () => {
     expect(res.status).toBe(400);
   });
 
+  it("creates driver with minimum password length 6", async () => {
+    const company = await createCompany({ name: "Driver Min Pass Co" });
+    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.driver.min@example.com", passwordPlain: ownerPassword });
+    const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ phone: "+12345670000", role: "DRIVER", password: "123456" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.mustChangePassword).toBe(true);
+  });
+
+  it("rejects creating admin with password shorter than 8 characters", async () => {
+    const company = await createCompany({ name: "Admin Short Pass Co", plan: "PRO" });
+    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.admin.short@example.com", passwordPlain: ownerPassword });
+    const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ email: "admin.short@example.com", role: "ADMIN", password: "1234567" });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("creates admin with password length 8", async () => {
+    const company = await createCompany({ name: "Admin Min Pass Co", plan: "PRO" });
+    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.admin.min@example.com", passwordPlain: ownerPassword });
+    const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ email: "admin.min@example.com", role: "ADMIN", password: "12345678" });
+
+    expect(res.status).toBe(201);
+  });
+
   it("allows same phone in different companies", async () => {
     const companyA = await createCompany({ name: "Phone Company A" });
     const companyB = await createCompany({ name: "Phone Company B" });

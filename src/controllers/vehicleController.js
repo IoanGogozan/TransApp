@@ -26,7 +26,20 @@ const listVehicles = asyncHandler(async (req, res) => {
   res.json({ vehicles });
 });
 
+const getVehicle = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    throw new AppError(400, "Invalid vehicle id", "VALIDATION_ERROR");
+  }
+  const vehicle = await vehicleRepository.getVehicleById(req.companyId, id);
+  if (!vehicle) {
+    throw new AppError(404, "Vehicle not found", "NOT_FOUND");
+  }
+  res.json({ vehicle });
+});
+
 module.exports = {
   createVehicle,
   listVehicles,
+  getVehicle,
 };

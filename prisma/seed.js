@@ -6,12 +6,8 @@ const prisma = require("../src/config/prismaClient");
 const { hashPassword } = require("../src/utils/password");
 
 const DEMO_COMPANY_NAME = "Demo Transport AS";
+const DEMO_COMPANY_SLUG = "demo";
 const SEED_PASSWORD = "Password123!";
-const SEED_USERS = [
-  { email: "owner@demo.no", role: "OWNER" },
-  { email: "admin@demo.no", role: "ADMIN" },
-  { email: "driver@demo.no", role: "DRIVER" },
-];
 const SEED_VEHICLES = [
   { regNumber: "AB12345", name: "Truck 1", type: "Truck" },
   { regNumber: "CD67890", name: "Van 1", type: "Van" },
@@ -25,47 +21,122 @@ const ensureDatabaseUrl = () => {
   }
 };
 
+const normalizeEmail = (s) => s.trim().toLowerCase();
+const normalizePhone = (s) => {
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/[^\d]/g, "");
+  return (hasPlus ? "+" : "") + digits;
+};
+
 const upsertCompany = async () => {
-  const existing = await prisma.company.findFirst({
-    where: { name: DEMO_COMPANY_NAME },
+  const existing = await prisma.company.findUnique({
+    where: { slug: DEMO_COMPANY_SLUG },
   });
 
-  if (existing) return existing;
+  if (existing) {
+    return prisma.company.update({
+      where: { id: existing.id },
+      data: { name: DEMO_COMPANY_NAME },
+    });
+  }
 
   return prisma.company.create({
-    data: { name: DEMO_COMPANY_NAME },
+    data: { name: DEMO_COMPANY_NAME, slug: DEMO_COMPANY_SLUG },
   });
 };
 
-const upsertUsers = async (companyId) => {
+const upsertCompanyAdmin = async (companyId) => {
   const passwordHash = await hashPassword(SEED_PASSWORD);
+  const email = normalizeEmail("admin@demo.no");
+  const existing = await prisma.user.findFirst({
+    where: { companyId, email },
+  });
 
-  const entries = await Promise.all(
-    SEED_USERS.map((user) =>
-      prisma.user.upsert({
-        where: { email: user.email },
-        update: {
-          companyId,
-          role: user.role,
-          passwordHash,
-        },
-        create: {
-          companyId,
-          email: user.email,
-          role: user.role,
-          passwordHash,
-        },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-        },
-      })
-    )
-  );
+  const data = {
+    companyId,
+    email,
+    role: "ADMIN",
+    passwordHash,
+    isActive: true,
+    mustChangePassword: false,
+  };
 
-  const [owner, admin, driver] = entries;
-  return { owner, admin, driver };
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data,
+      select: { id: true, email: true, role: true },
+    });
+  }
+
+  return prisma.user.create({
+    data,
+    select: { id: true, email: true, role: true },
+  });
+};
+
+const upsertCompanyDriver = async (companyId) => {
+  const passwordHash = await hashPassword(SEED_PASSWORD);
+  const phone = normalizePhone("+4700000000");
+  const existing = await prisma.user.findFirst({
+    where: { companyId, phone },
+  });
+
+  const data = {
+    companyId,
+    phone,
+    email: null,
+    username: null,
+    role: "DRIVER",
+    passwordHash,
+    isActive: true,
+    mustChangePassword: true,
+  };
+
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data,
+      select: { id: true, phone: true, role: true },
+    });
+  }
+
+  return prisma.user.create({
+    data,
+    select: { id: true, phone: true, role: true },
+  });
+};
+
+const upsertPlatformAdmin = async () => {
+  const passwordHash = await hashPassword(SEED_PASSWORD);
+  const email = normalizeEmail("platform@transapp.no");
+  const existing = await prisma.user.findFirst({
+    where: { companyId: null, email },
+  });
+
+  const data = {
+    companyId: null,
+    email,
+    role: "PLATFORM_ADMIN",
+    passwordHash,
+    isActive: true,
+    mustChangePassword: false,
+  };
+
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data,
+      select: { id: true, email: true, role: true },
+    });
+  }
+
+  return prisma.user.create({
+    data,
+    select: { id: true, email: true, role: true },
+  });
 };
 
 const upsertVehicles = async (companyId) => {
@@ -153,29 +224,38 @@ const main = async () => {
   ensureDatabaseUrl();
 
   const company = await upsertCompany();
-  const users = await upsertUsers(company.id);
+  const admin = await upsertCompanyAdmin(company.id);
+  const driver = await upsertCompanyDriver(company.id);
+  const platformAdmin = await upsertPlatformAdmin();
   const vehicles = await upsertVehicles(company.id);
 
   const checklistInstance = await upsertChecklistInstance({
     companyId: company.id,
     vehicleId: vehicles.AB12345.id,
-    userId: users.driver.id,
+    userId: driver.id,
   });
 
   await upsertDefect({
     companyId: company.id,
     vehicleId: vehicles.AB12345.id,
-    reportedByUserId: users.driver.id,
-    assignedToUserId: users.admin.id,
+    reportedByUserId: driver.id,
+    assignedToUserId: admin.id,
     checklistInstanceId: checklistInstance.id,
   });
 
   console.log("Seed data ready:");
-  console.log(`Company: ${company.name}`);
-  console.log("Users (email / password):");
-  console.log(` - OWNER:  ${users.owner.email} / ${SEED_PASSWORD}`);
-  console.log(` - ADMIN:  ${users.admin.email} / ${SEED_PASSWORD}`);
-  console.log(` - DRIVER: ${users.driver.email} / ${SEED_PASSWORD}`);
+  console.log(`Company: ${company.name} (slug: ${company.slug})`);
+  console.log("Admin login:");
+  console.log(" - URL:       /c/demo/login");
+  console.log(" - identifier admin@demo.no");
+  console.log(` - password:  ${SEED_PASSWORD}`);
+  console.log("Driver login:");
+  console.log(" - URL:       /c/demo/login");
+  console.log(" - identifier +4700000000");
+  console.log(` - password:  ${SEED_PASSWORD}`);
+  console.log("Platform admin (optional):");
+  console.log(" - identifier platform@transapp.no");
+  console.log(` - password:  ${SEED_PASSWORD}`);
   console.log("Vehicles:");
   console.log(` - ${vehicles.AB12345.regNumber} (${vehicles.AB12345.name})`);
   console.log(` - ${vehicles.CD67890.regNumber} (${vehicles.CD67890.name})`);

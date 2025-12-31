@@ -24,11 +24,15 @@ enum UserRole {
 }
 
 enum ActivityType {
-  DRIVING          // Kjøring
-  OTHER_WORK       // Annet arbeid
-  PAUSE            // Pause
-  AVAILABILITY     // Tilgjengelighetstid
-  OVERTIME_100     // Overtid 100 %
+  DRIVING
+  OTHER_WORK
+  BREAK
+  AVAILABILITY
+}
+
+enum OvertimeType {
+  OT_50
+  OT_100
 }
 
 enum DefectStatus {
@@ -88,6 +92,11 @@ model Company {
   shifts            Shift[]
   checklistInstances ChecklistInstance[]
   defects           Defect[]
+  routeOptions      RouteOption[]
+  customerOptions   CustomerOption[]
+  timesheetDays     TimesheetDay[]
+  workRuns          WorkRun[]
+  vehicleCheckIns   VehicleCheckIn[]
 
   @@map("companies")
 }
@@ -116,6 +125,9 @@ model User {
   defectsAssigned    Defect[]           @relation("DefectsAssignedToUser")
   defectComments     DefectComment[]    @relation("DefectCommentsUser")
   defectEvents       DefectEvent[]      @relation("DefectEventsActor")
+  timesheetDays      TimesheetDay[]
+  workRuns           WorkRun[]
+  vehicleCheckIns    VehicleCheckIn[]
 
   @@index([companyId])
   @@unique([companyId, email])
@@ -141,6 +153,9 @@ model Vehicle {
   shifts             Shift[]
   checklistInstances ChecklistInstance[]
   defects            Defect[]
+  timesheetDays      TimesheetDay[]
+  workRuns           WorkRun[]
+  checkIns           VehicleCheckIn[]
 
   @@unique([companyId, regNumber]) // aceeași firmă nu poate avea 2 vehicule cu același nr
   @@index([companyId])
@@ -209,6 +224,126 @@ model ChecklistAnswer {
   @@map("checklist_answers")
 }
 
+model RouteOption {
+  id         String   @id @default(cuid())
+  companyId  Int      @map("company_id")
+  name       String
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  timesheetDays TimesheetDay[]
+  workRuns      WorkRun[]
+
+  @@unique([companyId, name])
+  @@index([companyId, active])
+  @@map("route_options")
+}
+
+model CustomerOption {
+  id        String   @id @default(cuid())
+  companyId Int      @map("company_id")
+  name      String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  workRuns WorkRun[]
+
+  @@unique([companyId, name])
+  @@index([companyId, active])
+  @@map("customer_options")
+}
+
+model TimesheetDay {
+  id             String        @id @default(cuid())
+  companyId      Int           @map("company_id")
+  userId         Int           @map("user_id")
+  date           DateTime      @db.Date
+  vehicleId      Int?          @map("vehicle_id")
+  routeOptionId  String?       @map("route_option_id")
+  note           String?
+  overtimeType   OvertimeType? @map("overtime_type")
+  overtimeReason String?       @map("overtime_reason")
+  status         String        @default("DRAFT")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  company     Company       @relation(fields: [companyId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  vehicle     Vehicle?      @relation(fields: [vehicleId], references: [id])
+  routeOption RouteOption?  @relation(fields: [routeOptionId], references: [id])
+  entries     TimesheetEntry[]
+
+  @@unique([userId, date])
+  @@index([companyId, date])
+  @@map("timesheet_days")
+}
+
+model TimesheetEntry {
+  id             String       @id @default(cuid())
+  timesheetDayId String       @map("timesheet_day_id")
+  activityType   ActivityType @map("activity_type")
+  startMin       Int          @map("start_min")
+  endMin         Int          @map("end_min")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  timesheetDay TimesheetDay @relation(fields: [timesheetDayId], references: [id])
+
+  @@index([timesheetDayId])
+  @@map("timesheet_entries")
+}
+
+model WorkRun {
+  id            String       @id @default(cuid())
+  companyId     Int          @map("company_id")
+  userId        Int          @map("user_id")
+  activityType  ActivityType @map("activity_type")
+  customerOptionId String?   @map("customer_option_id")
+  routeOptionId String       @map("route_option_id")
+  vehicleId     Int?         @map("vehicle_id")
+  startedAt     DateTime     @map("started_at") @db.Timestamptz
+  endedAt       DateTime?    @map("ended_at") @db.Timestamptz
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  customerOption CustomerOption? @relation(fields: [customerOptionId], references: [id])
+  routeOption    RouteOption     @relation(fields: [routeOptionId], references: [id])
+  vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, userId])
+  @@index([companyId, startedAt])
+  @@index([userId, endedAt])
+  @@map("work_runs")
+}
+
+model VehicleCheckIn {
+  id        String   @id @default(cuid())
+  companyId Int      @map("company_id")
+  userId    Int      @map("user_id")
+  vehicleId Int      @map("vehicle_id")
+  allOk     Boolean  @default(true) @map("all_ok")
+  note      String?
+  checkedAt DateTime @default(now()) @map("checked_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, checkedAt])
+  @@index([userId, checkedAt])
+  @@index([companyId, vehicleId, checkedAt])
+  @@map("vehicle_checkins")
+}
+
 /* ------------- DEFECTS / AVVIK ------------- */
 
 model Defect {
@@ -272,3 +407,4 @@ model DefectEvent {
   @@index([companyId, defectId])
   @@map("defect_events")
 }
+

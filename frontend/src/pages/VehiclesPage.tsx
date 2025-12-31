@@ -1,12 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { createVehicle, listVehicles } from "../api/vehicles";
 import { Vehicle } from "../types/vehicle";
 import { ApiError } from "../api/http";
 import { getActiveVehicleId } from "../driver/activeVehicle";
+import { tenantPath } from "../utils/tenantPath";
+import { useAuth } from "../auth/AuthContext";
 
 const VehiclesPage = () => {
   const navigate = useNavigate();
+  const { companySlug } = useParams();
+  const slug = companySlug;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +22,8 @@ const VehiclesPage = () => {
     type: "",
     active: true,
   });
+  const { role } = useAuth();
+  const isAdmin = role === "ADMIN" || role === "PLATFORM_ADMIN";
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -91,39 +97,45 @@ const VehiclesPage = () => {
     <div className="page">
       <div className="card">
         <h1>Your Vehicles</h1>
-        <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
-          <div className="field">
-            <label htmlFor="regNumber">Registration number</label>
-            <input
-              id="regNumber"
-              value={form.regNumber}
-              onChange={(e) => setForm((f) => ({ ...f, regNumber: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="name">Name (optional)</label>
-            <input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="type">Type (optional)</label>
-            <input id="type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} />
-          </div>
-          <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-            <input
-              id="active"
-              type="checkbox"
-              checked={form.active}
-              onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-              style={{ width: "16px", height: "16px" }}
-            />
-            <label htmlFor="active">Active</label>
-          </div>
-          <button className="button" type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Add vehicle"}
-          </button>
-          {success && <p className="muted" style={{ marginTop: "8px" }}>{success}</p>}
-        </form>
+        {isAdmin ? (
+          <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
+            <div className="field">
+              <label htmlFor="regNumber">Registration number</label>
+              <input
+                id="regNumber"
+                value={form.regNumber}
+                onChange={(e) => setForm((f) => ({ ...f, regNumber: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="name">Name (optional)</label>
+              <input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="type">Type (optional)</label>
+              <input id="type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} />
+            </div>
+            <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+              <input
+                id="active"
+                type="checkbox"
+                checked={form.active}
+                onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                style={{ width: "16px", height: "16px" }}
+              />
+              <label htmlFor="active">Active</label>
+            </div>
+            <button className="button" type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Add vehicle"}
+            </button>
+            {success && <p className="muted" style={{ marginTop: "8px" }}>{success}</p>}
+          </form>
+        ) : (
+          <p className="muted" style={{ marginBottom: "16px" }}>
+            Only admins can add vehicles.
+          </p>
+        )}
 
         {error && <div className="error">{error}</div>}
 
@@ -155,7 +167,14 @@ const VehiclesPage = () => {
                     {v.name || "Unnamed"} · {v.type || "Vehicle"}
                   </div>
                 </div>
-                <button className="button" style={{ width: "auto" }} onClick={() => navigate(`/driver/vehicles/${v.id}`)}>
+                <button
+                  className="button"
+                  style={{ width: "auto" }}
+                  onClick={() => {
+                    const target = isAdmin ? `/admin/vehicles/${v.id}` : `/driver/vehicles/${v.id}`;
+                    navigate(tenantPath(slug, target));
+                  }}
+                >
                   Select
                 </button>
               </div>

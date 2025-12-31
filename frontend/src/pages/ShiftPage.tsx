@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { startShift, endShift, getMyActiveShift } from "../api/shifts";
 import { Shift } from "../types/shift";
 import { ApiError } from "../api/http";
 import { getActiveVehicleId } from "../driver/activeVehicle";
 import { getVehicleById } from "../api/vehicles";
+import { tenantPath } from "../utils/tenantPath";
 
 const formatTime = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "-");
 
 const ShiftPage = () => {
+  const { companySlug } = useParams();
+  const slug = companySlug;
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,13 +128,13 @@ const ShiftPage = () => {
                 {starting ? "Starting..." : "Start without vehicle"}
               </button>
             </div>
-            <Link className="button" to="/driver/checklist" style={{ width: "auto", marginTop: "12px" }}>
+            <Link className="button" to={tenantPath(slug, "/driver/checklist")} style={{ width: "auto", marginTop: "12px" }}>
               Go to checklist
             </Link>
           </>
         )}
         <div className="row" style={{ marginTop: "12px" }}>
-          <Link className="button" to="/driver/timesheet" style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
             My Timesheet
           </Link>
         </div>

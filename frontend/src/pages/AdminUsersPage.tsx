@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { createCompanyUser, listCompanyUsers, resetUserPassword, updateUserActive } from "../api/users";
+import { createCompanyUser, listCompanyUsers, resetUserPassword, updateUserActive, updateUserPhone } from "../api/users";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
 
 const AdminUsersPage = () => {
-  const { user: me } = useAuth();
+  const { user: me, company } = useAuth();
   const myId = me?.id != null ? String(me.id) : "";
 
   const [users, setUsers] = useState<User[]>([]);
@@ -16,6 +16,7 @@ const AdminUsersPage = () => {
 
   // Create user form
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"ADMIN" | "DRIVER" | "">("");
   const [saving, setSaving] = useState(false);
@@ -33,6 +34,12 @@ const AdminUsersPage = () => {
   const [resetSavingUserId, setResetSavingUserId] = useState<string | null>(null);
   const [resetRowErrors, setResetRowErrors] = useState<Record<string, string>>({});
   const [resetRowSuccess, setResetRowSuccess] = useState<Record<string, string>>({});
+
+  // Edit phone
+  const [editPhoneUserId, setEditPhoneUserId] = useState<string | null>(null);
+  const [editPhoneValue, setEditPhoneValue] = useState("");
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editPhoneSaving, setEditPhoneSaving] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -86,23 +93,41 @@ const AdminUsersPage = () => {
     setFormError(null);
     setSuccess(null);
 
-    if (!email.trim()) {
-      setFormError("Email is required");
-      return;
-    }
-    if (!password || password.length < 8) {
-      setFormError("Password must be at least 8 characters");
-      return;
-    }
     if (!role) {
       setFormError("Role is required");
       return;
     }
+    const isDriver = role === "DRIVER";
+
+    if (isDriver) {
+      if (!phone.trim()) {
+        setFormError("Phone is required");
+        return;
+      }
+      if (!password || password.length < 6) {
+        setFormError("Password must be at least 6 characters");
+        return;
+      }
+    } else {
+      if (!email.trim()) {
+        setFormError("Email is required");
+        return;
+      }
+      if (!password || password.length < 8) {
+        setFormError("Password must be at least 8 characters");
+        return;
+      }
+    }
 
     setSaving(true);
     try {
-      await createCompanyUser({ email: email.trim(), password, role });
+      const payload =
+        role === "DRIVER"
+          ? { role, phone: phone.trim(), password }
+          : { role, email: email.trim(), password };
+      await createCompanyUser(payload);
       setEmail("");
+      setPhone("");
       setPassword("");
       setRole("");
       setSuccess("User created");
@@ -196,7 +221,9 @@ const AdminUsersPage = () => {
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const emailValue = (u.email || "").toLowerCase();
-      const matchesSearch = q === "" || emailValue.includes(q);
+      const phoneValue = (u.phone || "").toLowerCase();
+      const usernameValue = (u.username || "").toLowerCase();
+      const matchesSearch = q === "" || emailValue.includes(q) || phoneValue.includes(q) || usernameValue.includes(q);
       const includeInactive = showInactive || u.active !== false;
       return matchesSearch && includeInactive;
     });
@@ -250,26 +277,6 @@ const AdminUsersPage = () => {
 
         {/* Create user form */}
         <div className="field" style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || initialLoading || refreshing}
-          />
-
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || initialLoading || refreshing}
-          />
-
           <label htmlFor="role">Role</label>
           <select
             id="role"
@@ -283,6 +290,42 @@ const AdminUsersPage = () => {
             <option value="ADMIN">ADMIN</option>
           </select>
 
+          {role !== "DRIVER" ? (
+            <>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+                disabled={saving || initialLoading || refreshing}
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="phone">Phone</label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+                disabled={saving || initialLoading || refreshing}
+              />
+            </>
+          )}
+
+          <label htmlFor="password">Password {role === "DRIVER" ? "(min 6)" : "(min 8)"}</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+            disabled={saving || initialLoading || refreshing}
+          />
+
           <button className="button" style={{ width: "auto" }} onClick={handleCreate} disabled={saving || initialLoading || refreshing}>
             {saving ? "Creating..." : "Create user"}
           </button>
@@ -293,7 +336,7 @@ const AdminUsersPage = () => {
 
         {/* Filters */}
         <div className="field" style={{ marginBottom: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label htmlFor="search">Search by email</label>
+          <label htmlFor="search">Search by email / phone / username</label>
           <input
             id="search"
             type="text"
@@ -322,6 +365,7 @@ const AdminUsersPage = () => {
             {filteredUsers.map((u) => {
               const idKey = String(u.id);
               const isSelf = isSelfUser(u);
+              const identifier = u.email || u.phone || u.username || `User ${u.id}`;
 
               const toggleDisabled = isSelf || togglingUserId === idKey || saving || initialLoading || refreshing;
               const resetDisabled = isSelf || resetSavingUserId === idKey || saving || initialLoading || refreshing;
@@ -340,9 +384,10 @@ const AdminUsersPage = () => {
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: 700 }}>{u.email}</span>
+                    <span style={{ fontWeight: 700 }}>{identifier}</span>
                     <span className="muted">Role: {u.role || "-"}</span>
                     {isSelf ? <span className="muted">This is you</span> : null}
+                    {u.phone ? <span className="muted">Phone: {u.phone}</span> : null}
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
@@ -370,31 +415,72 @@ const AdminUsersPage = () => {
                       </>
                     ) : null}
 
-                    <button
-                      className="button"
-                      style={{ width: "auto", ...(disabledStyle(resetDisabled) || {}) }}
-                      onClick={() => {
-                        setResetOpenUserId((prev) => (prev === idKey ? null : idKey));
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button
+                        className="button"
+                        style={{ width: "auto", ...(disabledStyle(resetDisabled) || {}) }}
+                        onClick={() => {
+                          setResetOpenUserId((prev) => (prev === idKey ? null : idKey));
 
-                        setResetRowErrors((prev) => {
-                          const next = { ...prev };
-                          delete next[idKey];
-                          return next;
-                        });
-                        setResetRowSuccess((prev) => {
-                          const next = { ...prev };
-                          delete next[idKey];
-                          return next;
-                        });
+                          setResetRowErrors((prev) => {
+                            const next = { ...prev };
+                            delete next[idKey];
+                            return next;
+                          });
+                          setResetRowSuccess((prev) => {
+                            const next = { ...prev };
+                            delete next[idKey];
+                            return next;
+                          });
 
-                        setResetPasswordValue("");
-                        setResetPasswordConfirm("");
-                      }}
-                      disabled={resetDisabled}
-                      title={isSelf ? "You can't modify your own account" : undefined}
-                    >
-                      Reset password
-                    </button>
+                          setResetPasswordValue("");
+                          setResetPasswordConfirm("");
+                        }}
+                        disabled={resetDisabled}
+                        title={isSelf ? "You can't modify your own account" : undefined}
+                      >
+                        Reset password
+                      </button>
+
+                      {u.role === "DRIVER" && company?.slug ? (
+                        <>
+                          <button
+                            className="button secondary"
+                            style={{ width: "auto" }}
+                            onClick={() => {
+                              const url = `${window.location.origin}/c/${company.slug}/login`;
+                              window.open(url, "_blank");
+                            }}
+                          >
+                            Login link
+                          </button>
+                          <button
+                            className="button secondary"
+                            style={{ width: "auto", ...(disabledStyle(!u.phone) || {}) }}
+                            onClick={() => {
+                              if (!u.phone) return;
+                              const url = `${window.location.origin}/c/${company.slug}/login?identifier=${encodeURIComponent(u.phone)}`;
+                              navigator.clipboard?.writeText(url);
+                            }}
+                            disabled={!u.phone}
+                          >
+                            Copy link
+                          </button>
+                          <button
+                            className="button secondary"
+                            style={{ width: "auto" }}
+                            onClick={() => {
+                              setEditPhoneUserId(idKey);
+                              setEditPhoneValue(u.phone || "");
+                              setEditPhoneError(null);
+                            }}
+                            disabled={saving || initialLoading || refreshing}
+                          >
+                            Edit phone
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
 
                     {resetRowErrors[idKey] ? (
                       <div className="error" style={{ marginTop: "4px" }}>
@@ -457,6 +543,60 @@ const AdminUsersPage = () => {
                               });
                             }}
                             disabled={resetDisabled}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {editPhoneUserId === idKey ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "240px" }}>
+                        <input
+                          type="tel"
+                          placeholder="Phone"
+                          value={editPhoneValue}
+                          onChange={(e) => setEditPhoneValue(e.target.value)}
+                          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                          disabled={editPhoneSaving}
+                        />
+                        {editPhoneError ? <div className="error">{editPhoneError}</div> : null}
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            className="button"
+                            style={{ width: "auto", ...(disabledStyle(editPhoneSaving) || {}) }}
+                            onClick={async () => {
+                              setEditPhoneError(null);
+                              if (!editPhoneValue.trim()) {
+                                setEditPhoneError("Phone is required");
+                                return;
+                              }
+                              setEditPhoneSaving(true);
+                              try {
+                                await updateUserPhone(u.id, editPhoneValue.trim());
+                                setEditPhoneUserId(null);
+                                setEditPhoneValue("");
+                                await loadUsers("refresh");
+                              } catch (err) {
+                                const msg = err instanceof ApiError ? err.message : "Failed to update phone";
+                                setEditPhoneError(msg);
+                              } finally {
+                                setEditPhoneSaving(false);
+                              }
+                            }}
+                            disabled={editPhoneSaving}
+                          >
+                            {editPhoneSaving ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            className="button secondary"
+                            style={{ width: "auto" }}
+                            onClick={() => {
+                              setEditPhoneUserId(null);
+                              setEditPhoneValue("");
+                              setEditPhoneError(null);
+                            }}
+                            disabled={editPhoneSaving}
                           >
                             Cancel
                           </button>

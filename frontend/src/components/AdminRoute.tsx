@@ -32,7 +32,7 @@ const AdminRoute = ({ children }: Props) => {
     );
   }
 
-  if (user.role !== "ADMIN" && user.role !== "OWNER") {
+  if (user.role !== "ADMIN" && user.role !== "PLATFORM_ADMIN") {
     return (
       <div className="page">
         <div className="card">

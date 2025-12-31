@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getChecklistStatus, submitChecklist } from "../api/checklists";
+import { createVehicleCheckIn } from "../api/timesheets";
 import { getVehicleById } from "../api/vehicles";
 import { ApiError } from "../api/http";
-import { getActiveVehicleId } from "../driver/activeVehicle";
 import { ChecklistQuestion, ChecklistAnswerInput, ChecklistStatus } from "../types/checklist";
 import { Vehicle } from "../types/vehicle";
+import { tenantPath } from "../utils/tenantPath";
 
 const QUESTIONS: ChecklistQuestion[] = [
   { key: "lights_ok", label: "Do the lights work properly?", required: true },
@@ -21,12 +22,21 @@ const QUESTIONS: ChecklistQuestion[] = [
 type AnswerState = Record<string, { answer: "OK" | "DEVIATION" | "NOT_APPLICABLE" | ""; comment?: string }>;
 
 const ChecklistPage = () => {
-  const activeVehicleId = getActiveVehicleId();
+  const { companySlug } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const slug = companySlug;
+  const vehicleIdParam = searchParams.get("vehicleId");
+  const returnToParam = searchParams.get("returnTo");
+  const returnTo = returnToParam || "/driver/timesheet";
+  const parsedVehicleId = vehicleIdParam ? Number(vehicleIdParam) : null;
+  const isValidVehicleId = parsedVehicleId !== null && Number.isFinite(parsedVehicleId) && parsedVehicleId > 0;
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [status, setStatus] = useState<ChecklistStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [answers, setAnswers] = useState<AnswerState>(() =>
@@ -43,11 +53,11 @@ const ChecklistPage = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!activeVehicleId) return;
+      if (!vehicleIdParam || !isValidVehicleId) return;
       setLoading(true);
       setError(null);
       try {
-        const [veh, stat] = await Promise.all([getVehicleById(activeVehicleId), getChecklistStatus(activeVehicleId)]);
+        const [veh, stat] = await Promise.all([getVehicleById(vehicleIdParam), getChecklistStatus(vehicleIdParam)]);
         setVehicle(veh);
         setStatus(stat);
       } catch (err) {
@@ -58,7 +68,7 @@ const ChecklistPage = () => {
       }
     };
     load();
-  }, [activeVehicleId]);
+  }, [vehicleIdParam, isValidVehicleId]);
 
   const handleSelectChange = (key: string, value: "OK" | "DEVIATION" | "NOT_APPLICABLE" | "") => {
     setAnswers((prev) => ({
@@ -75,13 +85,14 @@ const ChecklistPage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!activeVehicleId) return;
+    if (!vehicleIdParam || !isValidVehicleId) return;
     if (!allAnswered) {
       setSubmitError("Please answer all questions.");
       return;
     }
     setSubmitError(null);
     setSuccess(null);
+    setAlreadySubmitted(false);
     setSubmitting(true);
     try {
       const payload: ChecklistAnswerInput[] = QUESTIONS.map((q) => {
@@ -92,26 +103,83 @@ const ChecklistPage = () => {
           comment: a.comment?.trim() ? a.comment.trim() : undefined,
         };
       });
-      await submitChecklist(activeVehicleId, payload);
-      setSuccess("Checklist submitted");
-      const stat = await getChecklistStatus(activeVehicleId);
-      setStatus(stat);
+      await submitChecklist(vehicleIdParam, payload);
+      const hasDeviation = payload.some((a) => a.answer === "DEVIATION");
+      await createVehicleCheckIn({
+        vehicleId: Number(vehicleIdParam),
+        allOk: !hasDeviation,
+      });
+      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to submit checklist";
+      if (err instanceof ApiError && err.code === "CHECKLIST_ALREADY_SUBMITTED") {
+        setAlreadySubmitted(true);
+        setSubmitError("Checklist already submitted today.");
+      } else {
+        const message = err instanceof ApiError ? err.message : "Failed to submit checklist";
+        setSubmitError(message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleQuickCheckIn = async () => {
+    if (!vehicleIdParam || !isValidVehicleId) return;
+    setSubmitError(null);
+    setSuccess(null);
+    setAlreadySubmitted(false);
+    setSubmitting(true);
+    try {
+      const payload: ChecklistAnswerInput[] = QUESTIONS.map((q) => ({
+        questionKey: q.key,
+        answer: "OK",
+      }));
+      await submitChecklist(vehicleIdParam, payload);
+      await createVehicleCheckIn({
+        vehicleId: Number(vehicleIdParam),
+        allOk: true,
+      });
+      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "CHECKLIST_ALREADY_SUBMITTED") {
+        setAlreadySubmitted(true);
+        setSubmitError("Checklist already submitted today.");
+      } else {
+        const message = err instanceof ApiError ? err.message : "Failed to submit checklist";
+        setSubmitError(message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateCheckInNow = async () => {
+    if (!vehicleIdParam || !isValidVehicleId) return;
+    setSubmitError(null);
+    setSuccess(null);
+    setSubmitting(true);
+    try {
+      await createVehicleCheckIn({
+        vehicleId: Number(vehicleIdParam),
+        allOk: true,
+      });
+      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Failed to create vehicle check-in";
       setSubmitError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!activeVehicleId) {
+  if (!vehicleIdParam || !isValidVehicleId) {
     return (
       <div className="page">
         <div className="card">
           <h1>Daily Checklist</h1>
-          <p className="muted">No active vehicle selected.</p>
-          <Link className="button" to="/driver/vehicles" style={{ width: "auto" }}>
-            Select a vehicle
+          <p className="muted">No vehicle selected.</p>
+          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+            Back to timesheet
           </Link>
         </div>
       </div>
@@ -133,8 +201,8 @@ const ChecklistPage = () => {
       <div className="page">
         <div className="card">
           <div className="error">{error}</div>
-          <Link className="button" to="/driver/vehicles" style={{ width: "auto" }}>
-            Back to vehicles
+          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+            Back to timesheet
           </Link>
         </div>
       </div>
@@ -148,7 +216,7 @@ const ChecklistPage = () => {
       <div className="card">
         <h1>Daily Checklist</h1>
         <p className="muted">
-          Vehicle: {vehicle?.regNumber || activeVehicleId} {vehicle?.name ? `(${vehicle.name})` : ""}
+          Vehicle: {vehicle?.regNumber || vehicleIdParam} {vehicle?.name ? `(${vehicle.name})` : ""}
         </p>
         <p className="muted">Status: {completed ? "Completed" : "Pending"}</p>
         {status?.checklistId && <p className="muted">Checklist ID: {status.checklistId}</p>}
@@ -160,7 +228,25 @@ const ChecklistPage = () => {
         ) : (
           <>
             {submitError && <div className="error">{submitError}</div>}
+            {alreadySubmitted && (
+              <button
+                className="button primary"
+                style={{ marginBottom: "12px" }}
+                disabled={submitting}
+                onClick={handleCreateCheckInNow}
+              >
+                {submitting ? "Submitting..." : "Create vehicle check-in now"}
+              </button>
+            )}
             {success && <p className="muted">{success}</p>}
+            <button
+              className="button primary"
+              style={{ marginBottom: "12px" }}
+              disabled={submitting}
+              onClick={handleQuickCheckIn}
+            >
+              {submitting ? "Submitting..." : "Quick check-in (All OK)"}
+            </button>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {QUESTIONS.map((q) => {
                 const ans = answers[q.key];
@@ -221,10 +307,7 @@ const ChecklistPage = () => {
           </>
         )}
         <div className="row" style={{ marginTop: "12px" }}>
-          <Link className="button" to="/driver/shift" style={{ width: "auto" }}>
-            Go to Shift
-          </Link>
-          <Link className="button" to="/driver/timesheet" style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
             My Timesheet
           </Link>
         </div>

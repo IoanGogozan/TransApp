@@ -4,13 +4,15 @@ import { User } from "../types/user";
 
 export const isUser = (value: unknown): value is User => {
   if (!isRecord(value)) return false;
-  const { id, email, role, active, isActive } = value as Record<string, unknown>;
+  const { id, email, phone, username, role, active, isActive } = value as Record<string, unknown>;
   const hasId = typeof id === "number" || typeof id === "string";
-  const hasEmail = typeof email === "string";
+  const hasEmail = email === undefined || email === null || typeof email === "string";
+  const hasPhone = phone === undefined || phone === null || typeof phone === "string";
+  const hasUsername = username === undefined || username === null || typeof username === "string";
   const roleValid = role === undefined || typeof role === "string";
   const activeValid = active === undefined || typeof active === "boolean";
   const isActiveValid = isActive === undefined || typeof isActive === "boolean";
-  return hasId && hasEmail && roleValid && activeValid && isActiveValid;
+  return hasId && hasEmail && hasPhone && hasUsername && roleValid && activeValid && isActiveValid;
 };
 
 const isUserArray = (value: unknown): value is User[] => Array.isArray(value) && value.every(isUser);
@@ -43,7 +45,8 @@ export async function listCompanyUsers(): Promise<User[]> {
 }
 
 export async function createCompanyUser(input: {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
   role: "ADMIN" | "DRIVER";
 }): Promise<User | null> {
@@ -100,6 +103,31 @@ export async function resetUserPassword(userId: number | string, password: strin
   const res = await http<unknown>(`/api/v1/users/${userId}/password`, {
     method: "PATCH",
     body: { password },
+  });
+
+  if (isUser(res)) {
+    return normalizeActive(res);
+  }
+
+  if (isRecord(res)) {
+    if (isUser((res as { user?: unknown }).user)) {
+      return normalizeActive((res as { user: User }).user);
+    }
+    if (isUser((res as { item?: unknown }).item)) {
+      return normalizeActive((res as { item: User }).item);
+    }
+    if (isUser((res as { data?: unknown }).data)) {
+      return normalizeActive((res as { data: User }).data);
+    }
+  }
+
+  return null;
+}
+
+export async function updateUserPhone(userId: number | string, phone: string): Promise<User | null> {
+  const res = await http<unknown>(`/api/v1/users/${userId}/phone`, {
+    method: "PATCH",
+    body: { phone },
   });
 
   if (isUser(res)) {

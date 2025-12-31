@@ -13,11 +13,13 @@ import { listCompanyUsers } from "../api/users";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
 import { formatDateTime } from "../utils/time";
+import { tenantPath } from "../utils/tenantPath";
 
 const statusOptions: DefectStatus[] = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
 
 const DefectDetailsPage = () => {
-  const { defectId } = useParams<{ defectId: string }>();
+  const { defectId, companySlug } = useParams<{ defectId: string; companySlug?: string }>();
+  const slug = companySlug;
   const [defect, setDefect] = useState<Defect | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +191,7 @@ const DefectDetailsPage = () => {
       <div className="page">
         <div className="card">
           <div className="error">{error || "Defect not found"}</div>
-          <Link className="button" to="/admin/defects" style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, "/admin/defects")} style={{ width: "auto" }}>
             Back to list
           </Link>
         </div>
@@ -331,7 +333,7 @@ const DefectDetailsPage = () => {
           </div>
         </div>
         <div className="row" style={{ marginTop: "12px" }}>
-          <Link className="button" to="/admin/defects" style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, "/admin/defects")} style={{ width: "auto" }}>
             Back to list
           </Link>
         </div>

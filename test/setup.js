@@ -3,6 +3,9 @@ require("../src/config/env");
 const prisma = require("../src/config/prismaClient");
 
 const tables = [
+  "timesheet_entries",
+  "timesheet_days",
+  "route_options",
   "defect_events",
   "defect_comments",
   "defects",

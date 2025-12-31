@@ -10,7 +10,7 @@ type AuthContextType = {
   role: string | null;
   loading: boolean;
   error: string | null;
-  login: (companySlug: string, identifier: string, password: string) => Promise<void>;
+  login: (companySlug: string, identifier: string, password: string) => Promise<MeResponse>;
   logout: () => void;
 };
 
@@ -35,6 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const res = await getMe();
         setUser(res.user);
         setCompany(res.company);
+        if (res.company?.slug) {
+          setCompanySlug(res.company.slug);
+        }
       } catch (err) {
         clearToken();
         const msg = err instanceof ApiError ? err.message : "Session expired";
@@ -52,10 +55,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await apiLogin(companySlug, identifier, password);
       setToken(res.token);
-      setCompanySlug(companySlug);
+      const slugToStore = res.company?.slug || companySlug;
+      if (slugToStore) setCompanySlug(slugToStore);
       const me = await getMe();
       setUser(me.user);
       setCompany(me.company);
+      return me;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Login failed";
       setError(msg);
