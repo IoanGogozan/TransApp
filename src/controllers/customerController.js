@@ -6,22 +6,35 @@ const prisma = require("../config/prismaClient");
 const listCustomers = asyncHandler(async (req, res) => {
   const customers = await prisma.customerOption.findMany({
     where: { companyId: req.companyId },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    orderBy: [{ name: "asc" }],
   });
   res.json({ customers });
 });
 
 const createSchema = z.object({
   name: z.string().trim().min(1),
-  sortOrder: z.number().int().optional().default(0),
+  orgNumber: z.string().trim().optional().nullable(),
+  address: z.string().trim().optional().nullable(),
+  email: z.string().trim().optional().nullable(),
+  phone: z.string().trim().optional().nullable(),
   active: z.boolean().optional().default(true),
 });
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
-  sortOrder: z.number().int().optional(),
+  orgNumber: z.string().trim().optional().nullable(),
+  address: z.string().trim().optional().nullable(),
+  email: z.string().trim().optional().nullable(),
+  phone: z.string().trim().optional().nullable(),
   active: z.boolean().optional(),
 });
+
+const normalizeOptional = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+};
 
 const ensureUniqueName = async ({ companyId, name, excludeId }) => {
   if (!name) return;
@@ -46,13 +59,20 @@ const createCustomer = asyncHandler(async (req, res) => {
 
   const name = parsed.data.name.trim();
   await ensureUniqueName({ companyId: req.companyId, name });
+  const orgNumber = normalizeOptional(parsed.data.orgNumber);
+  const address = normalizeOptional(parsed.data.address);
+  const email = normalizeOptional(parsed.data.email);
+  const phone = normalizeOptional(parsed.data.phone);
 
   try {
     const customer = await prisma.customerOption.create({
       data: {
         companyId: req.companyId,
         name,
-        sortOrder: parsed.data.sortOrder,
+        orgNumber,
+        address,
+        email,
+        phone,
         active: parsed.data.active,
       },
     });
@@ -78,13 +98,20 @@ const updateCustomer = asyncHandler(async (req, res) => {
 
   const name = parsed.data.name !== undefined ? parsed.data.name.trim() : undefined;
   await ensureUniqueName({ companyId: req.companyId, name, excludeId: id });
+  const orgNumber = normalizeOptional(parsed.data.orgNumber);
+  const address = normalizeOptional(parsed.data.address);
+  const email = normalizeOptional(parsed.data.email);
+  const phone = normalizeOptional(parsed.data.phone);
 
   try {
     const updated = await prisma.customerOption.updateMany({
       where: { id, companyId: req.companyId },
       data: {
         ...(name !== undefined ? { name } : {}),
-        ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
+        ...(orgNumber !== undefined ? { orgNumber } : {}),
+        ...(address !== undefined ? { address } : {}),
+        ...(email !== undefined ? { email } : {}),
+        ...(phone !== undefined ? { phone } : {}),
         ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
       },
     });

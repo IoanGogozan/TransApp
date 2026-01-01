@@ -19,6 +19,9 @@ frontend/.env.*
 coverage
 frontend/coverage
 
+# uploads
+uploads
+
 # misc
 .DS_Store
 

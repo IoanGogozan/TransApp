@@ -32,7 +32,8 @@ const DriverRoute = ({ children }: Props) => {
     );
   }
 
-  if (user.role !== "DRIVER") {
+  const allowedRoles = new Set(["DRIVER", "ADMIN", "PLATFORM_ADMIN"]);
+  if (!allowedRoles.has(user.role)) {
     return (
       <div className="page">
         <div className="card">

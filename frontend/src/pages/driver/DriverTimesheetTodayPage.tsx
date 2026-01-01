@@ -41,6 +41,9 @@ const activityLabels: Record<WorkRun["activityType"], string> = {
   AVAILABILITY: "Availability",
 };
 
+const isActivityType = (value: string | null): value is WorkRun["activityType"] =>
+  value === "DRIVING" || value === "OTHER_WORK" || value === "BREAK" || value === "AVAILABILITY";
+
 const minutesToHoursLabel = (minutes: number) => {
   const total = Math.max(0, Math.round(minutes));
   const h = Math.floor(total / 60);
@@ -52,16 +55,21 @@ const minutesToHoursLabel = (minutes: number) => {
 const DriverTimesheetTodayPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const todayStr = useMemo(() => formatYYYYMMDD(new Date()), []);
+  const activityParam = searchParams.get("activity");
+  const initialActivity = isActivityType(activityParam) ? activityParam : "DRIVING";
+  const initialCustomer = searchParams.get("customer") ?? "";
+  const initialRoute = searchParams.get("route") ?? "";
+  const initialVehicle = searchParams.get("vehicle") ?? "";
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [routes, setRoutes] = useState<RouteOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [runs, setRuns] = useState<WorkRun[]>([]);
   const [activeRun, setActiveRun] = useState<WorkRun | null>(null);
-  const [activityType, setActivityType] = useState<WorkRun["activityType"]>("DRIVING");
-  const [customerOptionId, setCustomerOptionId] = useState("");
-  const [routeOptionId, setRouteOptionId] = useState("");
-  const [vehicleId, setVehicleId] = useState("");
+  const [activityType, setActivityType] = useState<WorkRun["activityType"]>(initialActivity);
+  const [customerOptionId, setCustomerOptionId] = useState(initialCustomer);
+  const [routeOptionId, setRouteOptionId] = useState(initialRoute);
+  const [vehicleId, setVehicleId] = useState(initialVehicle);
   const [loading, setLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(true);
   const [weekLoading, setWeekLoading] = useState(false);
@@ -79,6 +87,7 @@ const DriverTimesheetTodayPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { companySlug } = useParams();
+  const [hasInitializedParams, setHasInitializedParams] = useState(false);
 
   const hasCustomer = !!customerOptionId;
   const hasRoute = !!routeOptionId;
@@ -91,6 +100,16 @@ const DriverTimesheetTodayPage = () => {
     : recentCheckIns.some((checkIn) => checkIn.vehicleId === selectedVehicleId);
   const requiresCheckIn = selectedVehicleId !== null && !hasValidCheckIn;
   const checkInHelperText = "Vehicle check-in required (valid for 24h).";
+
+  const buildTimesheetParams = () => {
+    const params = new URLSearchParams();
+    params.set("date", selectedDate);
+    params.set("activity", activityType);
+    params.set("customer", customerOptionId);
+    params.set("route", routeOptionId);
+    params.set("vehicle", vehicleId);
+    return params;
+  };
 
   const load = async (dateStr: string) => {
     setLoading(true);
@@ -157,6 +176,7 @@ const DriverTimesheetTodayPage = () => {
       return;
     }
     setSelectedDate(dateParam);
+    setHasInitializedParams(true);
   }, [searchParams, setSearchParams, todayStr]);
 
   useEffect(() => {
@@ -164,6 +184,13 @@ const DriverTimesheetTodayPage = () => {
     setLastAction(null);
     setCheckInGateError(null);
   }, [activityType, customerOptionId, routeOptionId, vehicleId]);
+
+  useEffect(() => {
+    if (!hasInitializedParams) return;
+    const params = buildTimesheetParams();
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInitializedParams, selectedDate, activityType, customerOptionId, routeOptionId, vehicleId]);
 
   useEffect(() => {
     load(selectedDate);
@@ -408,7 +435,7 @@ const DriverTimesheetTodayPage = () => {
                   type="button"
                   onClick={() => {
                     if (!hasVehicle || !isTodaySelected) return;
-                    const returnTo = `/driver/timesheet?date=${selectedDate}`;
+                    const returnTo = `/driver/timesheet?${buildTimesheetParams().toString()}`;
                     const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
                     navigate(tenantPath(companySlug, path));
                   }}

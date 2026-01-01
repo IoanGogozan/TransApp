@@ -13,6 +13,7 @@ const publicRoutes = require("./publicRoutes");
 const routeRoutes = require("./routeRoutes");
 const customerRoutes = require("./customerRoutes");
 const timesheetAdminRoutes = require("./timesheetAdminRoutes");
+const documentAdminRoutes = require("./documentAdminRoutes");
 const auth = require("../middlewares/auth");
 const companyContext = require("../middlewares/companyContext");
 
@@ -28,6 +29,7 @@ router.use("/users", userRoutes);
 router.use("/routes", routeRoutes);
 router.use("/customers", customerRoutes);
 router.use("/timesheets", timesheetAdminRoutes);
+router.use("/admin/documents", documentAdminRoutes);
 router.use("/vehicles", vehicleRoutes);
 router.use("/me", meRoutes);
 router.use("/shifts", shiftRoutes);

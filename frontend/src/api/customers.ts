@@ -3,7 +3,11 @@ import { http } from "./http";
 export type CustomerAdmin = {
   id: string;
   name: string;
-  sortOrder: number;
+  orgNumber?: string | null;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  sortOrder?: number | null;
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -22,13 +26,21 @@ export const listCustomers = async (): Promise<CustomerAdmin[]> => {
 
 export const createCustomer = async (input: {
   name: string;
-  sortOrder?: number;
+  orgNumber?: string | null;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  sortOrder?: number | null;
   active?: boolean;
 }): Promise<CustomerAdmin> => {
   const res = await http<CustomerSingleResponse>("/api/v1/customers", {
     method: "POST",
     body: {
       name: input.name,
+      orgNumber: input.orgNumber,
+      address: input.address,
+      email: input.email,
+      phone: input.phone,
       sortOrder: input.sortOrder,
       active: input.active,
     },
@@ -42,7 +54,15 @@ export const createCustomer = async (input: {
 
 export const updateCustomer = async (
   id: string,
-  patch: { name?: string; sortOrder?: number; active?: boolean },
+  patch: {
+    name?: string;
+    orgNumber?: string | null;
+    address?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    sortOrder?: number | null;
+    active?: boolean;
+  },
 ): Promise<CustomerAdmin> => {
   const res = await http<CustomerSingleResponse>(`/api/v1/customers/${id}`, {
     method: "PATCH",

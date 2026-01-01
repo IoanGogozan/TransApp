@@ -1,15 +1,17 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const dashboardPathForRole = (role?: string | null) => {
   if (role === "ADMIN" || role === "PLATFORM_ADMIN") return "/app";
-  if (role === "DRIVER") return "/app";
+  if (role === "DRIVER") return "/driver/profile";
   return "/app";
 };
 
 const AppLayout = () => {
   const { user, role, company, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isDriver = role === "DRIVER";
   const isAdmin = role === "ADMIN" || role === "PLATFORM_ADMIN";
   const identifier = user ? user.email || user.phone || user.username || `User ${user.id}` : "Not signed in";
@@ -18,6 +20,16 @@ const AppLayout = () => {
   const missingSlug =
     !location.pathname.startsWith("/c/") &&
     (location.pathname.startsWith("/admin") || location.pathname.startsWith("/driver"));
+
+  useEffect(() => {
+    if (!isDriver) return;
+    if (!company?.slug) return;
+    if (!location.pathname.includes("/admin")) return;
+    const target = pathWithSlug("/driver/timesheet");
+    if (location.pathname !== target) {
+      navigate(target, { replace: true });
+    }
+  }, [company?.slug, isDriver, location.pathname, navigate]);
 
   return (
     <div>
@@ -45,8 +57,8 @@ const AppLayout = () => {
               <Link to={pathWithSlug("/driver/timesheet")} style={{ color: "#e5e7eb" }}>
                 Timesheet
               </Link>
-              <Link to={pathWithSlug("/driver/checklist")} style={{ color: "#e5e7eb" }}>
-                Checklist
+              <Link to={pathWithSlug("/driver/documents")} style={{ color: "#e5e7eb" }}>
+                Documents
               </Link>
             </>
           ) : null}
@@ -61,6 +73,9 @@ const AppLayout = () => {
               <Link to={pathWithSlug("/admin/routes")} style={{ color: "#e5e7eb" }}>
                 Routes
               </Link>
+              <Link to={pathWithSlug("/admin/documents")} style={{ color: "#e5e7eb" }}>
+                Documents
+              </Link>
               <Link to={pathWithSlug("/admin/customers")} style={{ color: "#e5e7eb" }}>
                 Customers
               </Link>
@@ -69,6 +84,9 @@ const AppLayout = () => {
               </Link>
               <Link to={pathWithSlug("/admin/timesheets")} style={{ color: "#e5e7eb" }}>
                 Timesheets
+              </Link>
+              <Link to={pathWithSlug("/driver/timesheet")} style={{ color: "#e5e7eb" }}>
+                My Timesheet
               </Link>
               <Link to={pathWithSlug("/admin/reports")} style={{ color: "#e5e7eb" }}>
                 Reports / Export

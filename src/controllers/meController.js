@@ -315,7 +315,7 @@ const listMyCustomers = asyncHandler(async (req, res) => {
   const customers = await prisma.customerOption.findMany({
     where: { companyId: req.companyId, active: true },
     select: { id: true, name: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    orderBy: [{ name: "asc" }],
   });
 
   res.json({
@@ -337,7 +337,8 @@ const CHECKIN_VALID_HOURS = 24;
 const CHECKIN_VALID_MS = CHECKIN_VALID_HOURS * 60 * 60 * 1000;
 
 const ensureDriverActive = (req) => {
-  if (req.user.role !== "DRIVER") {
+  const allowedRoles = new Set(["DRIVER", "ADMIN", "PLATFORM_ADMIN"]);
+  if (!allowedRoles.has(req.user.role)) {
     throw new AppError(403, "Forbidden", "FORBIDDEN");
   }
   if (!req.companyId) {

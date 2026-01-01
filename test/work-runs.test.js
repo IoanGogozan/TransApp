@@ -66,6 +66,19 @@ describe("Work runs", () => {
     expect(listAfter.body.runs[0].endedAt).toBeTruthy();
   });
 
+  it("allows admin to list runs for their company", async () => {
+    const company = await createCompany({ name: "Runs Admin Co" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.runs@example.com", passwordPlain: password });
+    const token = await login({ companySlug: company.slug, identifier: admin.email });
+
+    const res = await request(app)
+      .get(`/api/v1/me/runs?date=${today()}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.runs).toBeDefined();
+  });
+
   it("rejects starting a second active run", async () => {
     const company = await createCompany({ name: "Runs Co 2" });
     const route = await createRoute({ companyId: company.id, name: "Route 2" });

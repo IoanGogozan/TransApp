@@ -59,7 +59,7 @@ describe("Vehicle check-ins", () => {
     expect(res.status).toBe(404);
   });
 
-  it("forbids admin from checking in", async () => {
+  it("allows admin to check in", async () => {
     const company = await createCompany({ name: "Admin Forbid Check" });
     const vehicle = await createVehicle({ companyId: company.id, regNumber: "ADMINCHK" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin-check@example.com", passwordPlain: password });
@@ -70,7 +70,7 @@ describe("Vehicle check-ins", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ vehicleId: vehicle.id, allOk: true });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(201);
   });
 
   it("lists recent check-ins scoped to user, company, and hours window", async () => {

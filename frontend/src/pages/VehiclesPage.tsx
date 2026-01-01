@@ -3,9 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createVehicle, listVehicles } from "../api/vehicles";
 import { Vehicle } from "../types/vehicle";
 import { ApiError } from "../api/http";
-import { getActiveVehicleId } from "../driver/activeVehicle";
 import { tenantPath } from "../utils/tenantPath";
-import { useAuth } from "../auth/AuthContext";
 
 const VehiclesPage = () => {
   const navigate = useNavigate();
@@ -22,8 +20,6 @@ const VehiclesPage = () => {
     type: "",
     active: true,
   });
-  const { role } = useAuth();
-  const isAdmin = role === "ADMIN" || role === "PLATFORM_ADMIN";
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -97,45 +93,39 @@ const VehiclesPage = () => {
     <div className="page">
       <div className="card">
         <h1>Your Vehicles</h1>
-        {isAdmin ? (
-          <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
-            <div className="field">
-              <label htmlFor="regNumber">Registration number</label>
-              <input
-                id="regNumber"
-                value={form.regNumber}
-                onChange={(e) => setForm((f) => ({ ...f, regNumber: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="name">Name (optional)</label>
-              <input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="field">
-              <label htmlFor="type">Type (optional)</label>
-              <input id="type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} />
-            </div>
-            <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input
-                id="active"
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                style={{ width: "16px", height: "16px" }}
-              />
-              <label htmlFor="active">Active</label>
-            </div>
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Add vehicle"}
-            </button>
-            {success && <p className="muted" style={{ marginTop: "8px" }}>{success}</p>}
-          </form>
-        ) : (
-          <p className="muted" style={{ marginBottom: "16px" }}>
-            Only admins can add vehicles.
-          </p>
-        )}
+        <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
+          <div className="field">
+            <label htmlFor="regNumber">Registration number</label>
+            <input
+              id="regNumber"
+              value={form.regNumber}
+              onChange={(e) => setForm((f) => ({ ...f, regNumber: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="name">Name (optional)</label>
+            <input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          </div>
+          <div className="field">
+            <label htmlFor="type">Type (optional)</label>
+            <input id="type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} />
+          </div>
+          <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+            <input
+              id="active"
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+              style={{ width: "16px", height: "16px" }}
+            />
+            <label htmlFor="active">Active</label>
+          </div>
+          <button className="button" type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Add vehicle"}
+          </button>
+          {success && <p className="muted" style={{ marginTop: "8px" }}>{success}</p>}
+        </form>
 
         {error && <div className="error">{error}</div>}
 
@@ -157,11 +147,8 @@ const VehiclesPage = () => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, display: "flex", gap: "8px", alignItems: "center" }}>
+                  <div style={{ fontWeight: 700 }}>
                     <span>{v.regNumber}</span>
-                    {String(getActiveVehicleId()) === String(v.id) && (
-                      <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 700 }}>Active</span>
-                    )}
                   </div>
                   <div className="muted">
                     {v.name || "Unnamed"} · {v.type || "Vehicle"}
@@ -171,7 +158,7 @@ const VehiclesPage = () => {
                   className="button"
                   style={{ width: "auto" }}
                   onClick={() => {
-                    const target = isAdmin ? `/admin/vehicles/${v.id}` : `/driver/vehicles/${v.id}`;
+                    const target = `/admin/vehicles/${v.id}`;
                     navigate(tenantPath(slug, target));
                   }}
                 >

@@ -97,6 +97,7 @@ model Company {
   timesheetDays     TimesheetDay[]
   workRuns          WorkRun[]
   vehicleCheckIns   VehicleCheckIn[]
+  documents         Document[]
 
   @@map("companies")
 }
@@ -128,6 +129,7 @@ model User {
   timesheetDays      TimesheetDay[]
   workRuns           WorkRun[]
   vehicleCheckIns    VehicleCheckIn[]
+  uploadedDocuments  Document[]        @relation("DocumentsUploadedByUser")
 
   @@index([companyId])
   @@unique([companyId, email])
@@ -246,6 +248,10 @@ model CustomerOption {
   id        String   @id @default(cuid())
   companyId Int      @map("company_id")
   name      String
+  orgNumber String?  @map("org_number")
+  address   String?
+  email     String?
+  phone     String?
   active    Boolean  @default(true)
   sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -342,6 +348,24 @@ model VehicleCheckIn {
   @@index([userId, checkedAt])
   @@index([companyId, vehicleId, checkedAt])
   @@map("vehicle_checkins")
+}
+
+model Document {
+  id               String   @id @default(cuid())
+  companyId        Int      @map("company_id")
+  title            String
+  mimeType         String   @map("mime_type")
+  size             Int
+  storagePath      String   @map("storage_path")
+  uploadedByUserId Int      @map("uploaded_by_user_id")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company    Company @relation(fields: [companyId], references: [id])
+  uploadedBy User    @relation("DocumentsUploadedByUser", fields: [uploadedByUserId], references: [id])
+
+  @@index([companyId])
+  @@index([uploadedByUserId])
+  @@map("documents")
 }
 
 /* ------------- DEFECTS / AVVIK ------------- */

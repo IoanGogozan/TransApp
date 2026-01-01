@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { getVehicleById } from "../api/vehicles";
 import { Vehicle } from "../types/vehicle";
 import { ApiError } from "../api/http";
-import { getActiveVehicleId, setActiveVehicleId } from "../driver/activeVehicle";
 import { tenantPath } from "../utils/tenantPath";
-import { useAuth } from "../auth/AuthContext";
 
 const VehiclePage = () => {
   const { vehicleId, companySlug } = useParams<{ vehicleId: string; companySlug?: string }>();
@@ -13,17 +11,13 @@ const VehiclePage = () => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const { role } = useAuth();
-  const isAdmin = role === "ADMIN" || role === "PLATFORM_ADMIN";
-  const vehiclesPath = isAdmin ? "/admin/vehicles" : "/driver/vehicles";
+  const vehiclesPath = "/admin/vehicles";
 
   useEffect(() => {
     const load = async () => {
       if (!vehicleId) return;
       setLoading(true);
       setError(null);
-      setInfo(null);
       try {
         const v = await getVehicleById(vehicleId);
         setVehicle(v);
@@ -36,14 +30,6 @@ const VehiclePage = () => {
     };
     load();
   }, [vehicleId]);
-
-  const handleSetActive = () => {
-    if (!vehicle) return;
-    setActiveVehicleId(vehicle.id);
-    setInfo(`Active vehicle set to ${vehicle.regNumber}`);
-  };
-
-  const activeId = getActiveVehicleId();
 
   if (loading) {
     return (
@@ -76,19 +62,7 @@ const VehiclePage = () => {
           {vehicle.name || "Unnamed"} · {vehicle.type || "Vehicle"}
         </p>
         <p className="muted">Status: {vehicle.active === false ? "Inactive" : "Active"}</p>
-        <p className="muted">Current active vehicle: {activeId ? activeId : "None"}</p>
-        {info && <p className="muted">{info}</p>}
         <div className="row" style={{ marginTop: "12px" }}>
-          {!isAdmin && (
-            <>
-              <button className="button" style={{ width: "auto" }} onClick={handleSetActive}>
-                Set as active vehicle
-              </button>
-              <Link className="button" to={tenantPath(slug, "/driver/checklist")} style={{ width: "auto" }}>
-                Go to checklist
-              </Link>
-            </>
-          )}
           <Link className="button" to={tenantPath(slug, vehiclesPath)} style={{ width: "auto" }}>
             Back to vehicles
           </Link>

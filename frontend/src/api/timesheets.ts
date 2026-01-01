@@ -35,15 +35,16 @@ export const getMyCustomers = () => http<{ customers: CustomerOption[] }>("/api/
 export type AdminTimesheetRow = {
   date: string;
   driver: { id: number; email: string | null; phone: string | null; username: string | null };
-  route: { id: string; name: string } | null;
   totalsMinutes: {
     DRIVING: number;
     OTHER_WORK: number;
     BREAK: number;
     AVAILABILITY: number;
   };
-  overtimeType: "OT_50" | "OT_100" | null;
-  overtimeReason: string | null;
+  routes: RouteOption[];
+  vehicles: VehicleOption[];
+  customers: CustomerOption[];
+  runsCount: number;
 };
 
 export const getAdminTimesheets = (params: { from: string; to: string; driverId?: number; routeId?: string }) => {
@@ -74,6 +75,12 @@ export type WorkRunsResponse = {
   runs: WorkRun[];
 };
 
+export type AdminWorkRunDetailsResponse = {
+  date: string;
+  driverId: number;
+  runs: WorkRun[];
+};
+
 export type RecentVehicleCheckIn = {
   vehicleId: number;
   checkedInAt: string;
@@ -82,6 +89,13 @@ export type RecentVehicleCheckIn = {
 export const getMyRuns = (date?: string) => {
   const qs = date ? `?date=${encodeURIComponent(date)}` : "";
   return http<WorkRunsResponse>(`/api/v1/me/runs${qs}`);
+};
+
+export const getAdminWorkRunDetails = (params: { date: string; driverId: number }) => {
+  const qs = new URLSearchParams();
+  qs.set("date", params.date);
+  qs.set("driverId", String(params.driverId));
+  return http<AdminWorkRunDetailsResponse>(`/api/v1/timesheets/work-runs/details?${qs.toString()}`);
 };
 
 export const startMyRun = (payload: {

@@ -43,7 +43,7 @@ const ChecklistPage = () => {
     QUESTIONS.reduce(
       (acc, q) => ({
         ...acc,
-        [q.key]: { answer: "", comment: "" },
+        [q.key]: { answer: "OK", comment: "" },
       }),
       {} as AnswerState
     )
@@ -222,9 +222,19 @@ const ChecklistPage = () => {
         {status?.checklistId && <p className="muted">Checklist ID: {status.checklistId}</p>}
 
         {completed ? (
-          <div className="error" style={{ borderColor: "#d1fae5", background: "#ecfdf3", color: "#166534" }}>
-            Checklist already submitted for today.
-          </div>
+          <>
+            <div className="error" style={{ borderColor: "#d1fae5", background: "#ecfdf3", color: "#166534" }}>
+              Checklist already submitted for today.
+            </div>
+            <button
+              className="button primary"
+              style={{ marginTop: "12px" }}
+              disabled={submitting}
+              onClick={handleCreateCheckInNow}
+            >
+              {submitting ? "Submitting..." : "Create vehicle check-in now"}
+            </button>
+          </>
         ) : (
           <>
             {submitError && <div className="error">{submitError}</div>}
@@ -307,7 +317,7 @@ const ChecklistPage = () => {
           </>
         )}
         <div className="row" style={{ marginTop: "12px" }}>
-          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+          <Link className="button" to={tenantPath(slug, returnTo)} style={{ width: "auto" }}>
             My Timesheet
           </Link>
         </div>

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import DriverRoute from "./components/DriverRoute";
@@ -11,8 +11,8 @@ import HomePage from "./pages/HomePage";
 import VehiclesPage from "./pages/VehiclesPage";
 import VehiclePage from "./pages/VehiclePage";
 import ChecklistPage from "./pages/ChecklistPage";
-import TimesheetTodayPage from "./pages/driver/TimesheetTodayPage";
 import DriverTimesheetTodayPage from "./pages/driver/DriverTimesheetTodayPage";
+import DriverProfilePage from "./pages/driver/DriverProfilePage";
 import DefectsListPage from "./pages/DefectsListPage";
 import DefectDetailsPage from "./pages/DefectDetailsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -22,6 +22,20 @@ import TimesheetsAdminPage from "./pages/admin/TimesheetsAdminPage";
 import RoutesPage from "./pages/admin/RoutesPage";
 import AdminHelpPage from "./pages/admin/AdminHelpPage";
 import CustomersPage from "./pages/admin/CustomersPage";
+import AdminDocumentsPage from "./pages/admin/DocumentsPage";
+import DriverDocumentsPage from "./pages/driver/DocumentsPage";
+
+const AdminAliasRoute = () => {
+  const location = useLocation();
+  const { companySlug } = useParams();
+  const slugPrefix = companySlug ? `/c/${companySlug}` : "";
+  const fromPrefix = `${slugPrefix}/admin`;
+  const toPrefix = `${slugPrefix}/app/admin`;
+  const targetPath = location.pathname.startsWith(fromPrefix)
+    ? location.pathname.replace(fromPrefix, toPrefix)
+    : location.pathname;
+  return <Navigate to={`${targetPath}${location.search}${location.hash}`} replace />;
+};
 
 function App() {
   return (
@@ -38,15 +52,37 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="app" element={<HomePage />} />
+        <Route
+          path="app"
+          element={
+            <AdminRoute>
+              <HomePage />
+            </AdminRoute>
+          }
+        />
         <Route path="change-password" element={<ChangePasswordPage />} />
-        <Route path="admin" element={<Navigate to="admin/users" replace />} />
         <Route path="driver" element={<Navigate to="driver/timesheet" replace />} />
+        <Route
+          path="driver/profile"
+          element={
+            <DriverRoute>
+              <DriverProfilePage />
+            </DriverRoute>
+          }
+        />
         <Route
           path="driver/checklist"
           element={
             <DriverRoute>
               <ChecklistPage />
+            </DriverRoute>
+          }
+        />
+        <Route
+          path="driver/documents"
+          element={
+            <DriverRoute>
+              <DriverDocumentsPage />
             </DriverRoute>
           }
         />
@@ -58,8 +94,10 @@ function App() {
             </DriverRoute>
           }
         />
+        <Route path="admin/*" element={<AdminAliasRoute />} />
+        <Route path="app/admin" element={<Navigate to="app/admin/users" replace />} />
         <Route
-          path="admin/vehicles"
+          path="app/admin/vehicles"
           element={
             <AdminRoute>
               <VehiclesPage />
@@ -67,7 +105,7 @@ function App() {
           }
         />
         <Route
-          path="admin/vehicles/:vehicleId"
+          path="app/admin/vehicles/:vehicleId"
           element={
             <AdminRoute>
               <VehiclePage />
@@ -75,7 +113,7 @@ function App() {
           }
         />
         <Route
-          path="admin/defects"
+          path="app/admin/defects"
           element={
             <AdminRoute>
               <DefectsListPage />
@@ -83,7 +121,7 @@ function App() {
           }
         />
         <Route
-          path="admin/users"
+          path="app/admin/users"
           element={
             <AdminRoute>
               <AdminUsersPage />
@@ -91,7 +129,7 @@ function App() {
           }
         />
         <Route
-          path="admin/reports"
+          path="app/admin/reports"
           element={
             <AdminRoute>
               <AdminReportsPage />
@@ -99,7 +137,7 @@ function App() {
           }
         />
         <Route
-          path="admin/routes"
+          path="app/admin/routes"
           element={
             <AdminRoute>
               <RoutesPage />
@@ -107,7 +145,15 @@ function App() {
           }
         />
         <Route
-          path="admin/customers"
+          path="app/admin/documents"
+          element={
+            <AdminRoute>
+              <AdminDocumentsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="app/admin/customers"
           element={
             <AdminRoute>
               <CustomersPage />
@@ -115,7 +161,7 @@ function App() {
           }
         />
         <Route
-          path="admin/timesheets"
+          path="app/admin/timesheets"
           element={
             <AdminRoute>
               <TimesheetsAdminPage />
@@ -131,7 +177,7 @@ function App() {
           }
         />
         <Route
-          path="admin/defects/:defectId"
+          path="app/admin/defects/:defectId"
           element={
             <AdminRoute>
               <DefectDetailsPage />

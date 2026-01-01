@@ -32,7 +32,9 @@ describe("Admin work-run timesheets listing", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.timesheets).toHaveLength(1);
-    expect(res.body.timesheets[0].route.name).toBe("WR Route");
+    expect(res.body.timesheets[0].routes).toHaveLength(1);
+    expect(res.body.timesheets[0].routes[0].name).toBe("WR Route");
+    expect(res.body.timesheets[0].runsCount).toBe(1);
     expect(res.body.timesheets[0].totalsMinutes.DRIVING).toBe(60);
   });
 

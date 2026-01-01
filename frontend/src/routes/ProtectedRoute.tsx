@@ -46,6 +46,16 @@ const ProtectedRoute = ({ children }: Props) => {
   if (user.mustChangePassword && !location.pathname.includes("/change-password")) {
     return <Navigate to={changePasswordPath} replace />;
   }
+  const tenantSlug = authSlug || storedSlug || companySlug;
+  if (user.role === "DRIVER") {
+    if (location.pathname.includes("/app/admin")) {
+      return <Navigate to={tenantPath(tenantSlug, "/driver/timesheet")} replace />;
+    }
+    const appPath = tenantSlug ? `/c/${tenantSlug}/app` : "/app";
+    if (location.pathname === appPath) {
+      return <Navigate to={tenantPath(tenantSlug, "/driver/profile")} replace />;
+    }
+  }
   const slug = getCompanySlug();
   if (slug && !location.pathname.startsWith("/c/") && (location.pathname.startsWith("/admin") || location.pathname.startsWith("/driver") || location.pathname === "/app" || location.pathname.startsWith("/change-password"))) {
     return <Navigate to={tenantPath(slug, location.pathname)} replace />;
