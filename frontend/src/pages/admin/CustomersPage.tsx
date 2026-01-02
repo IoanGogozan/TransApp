@@ -1,6 +1,7 @@
 ﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
 import { CustomerAdmin, createCustomer, listCustomers, updateCustomer } from "../../api/customers";
+import "./CustomersPage.css";
 
 const emptyForm = {
   name: "",
@@ -8,13 +9,12 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
-  sortOrder: "0",
   active: true,
 };
 
 const displayValue = (value?: string | null) => {
   const trimmed = (value ?? "").trim();
-  return trimmed ? trimmed : "—";
+  return trimmed ? trimmed : "-";
 };
 
 const CustomersPage = () => {
@@ -96,7 +96,6 @@ const CustomersPage = () => {
       email: customer.email ?? "",
       phone: customer.phone ?? "",
       address: customer.address ?? "",
-      sortOrder: String(customer.sortOrder ?? 0),
       active: customer.active ?? true,
     });
     setModalOpen(true);
@@ -113,18 +112,13 @@ const CustomersPage = () => {
       setModalError("Org nr must be 9 digits");
       return null;
     }
-    const parsedSort = Number.parseInt(form.sortOrder, 10);
-    if (Number.isNaN(parsedSort) || parsedSort < 0) {
-      setModalError("Sort order must be an integer >= 0");
-      return null;
-    }
     return {
       name: trimmedName,
       orgNumber: orgNumber || null,
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
       address: form.address.trim() || null,
-      sortOrder: parsedSort,
+      sortOrder: 0,
       active: form.active,
     };
   };
@@ -172,159 +166,60 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="page">
+    <div className="page customers-page">
       <style>
         {`
-          .customers-container {
-            margin: 0 auto;
-            max-width: 1280px;
-            padding: 32px 24px;
-          }
-          .customers-topbar {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-          }
-          .customers-header {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          }
-          .customers-header-actions {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-          }
-          .customers-search {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 240px;
-          }
-          .customers-table-wrap {
-            overflow: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fff;
-          }
-          .customers-table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .customers-table thead th {
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            z-index: 1;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            text-align: left;
-            padding: 10px 12px;
-          }
-          .customers-table tbody td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-          }
-          .customers-table tbody tr:nth-child(even) {
-            background: #fcfcfd;
-          }
-          .customers-row--inactive {
-            color: #6b7280;
-          }
-          .customers-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-          }
-          .customers-truncate {
-            max-width: 220px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          .customers-status {
+          .customers-page .button {
+            width: auto;
             display: inline-flex;
             align-items: center;
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-            background: #eef2ff;
-            color: #3730a3;
+            justify-content: center;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
           }
-          .customers-status.inactive {
-            background: #f3f4f6;
-            color: #6b7280;
+          .customers-page .customers-actions .button {
+            padding: 8px 12px;
+            font-size: 14px;
+            min-width: 120px;
           }
-          .customers-table-desktop {
-            display: none;
+          .customers-page .customers-header-actions .button {
+            min-width: 180px;
           }
-          .customers-cards-mobile {
-            display: block;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-          }
-          .customers-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 12px;
+          .customers-page .customers-toolbar {
             background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
           }
-          .customers-card h3 {
-            margin: 0 0 6px 0;
-          }
-          .customers-card-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            font-size: 13px;
-            margin-bottom: 4px;
-          }
-          .customers-card-row span {
-            color: #6b7280;
-          }
-          @media (min-width: 768px) {
-            .customers-table-desktop {
-              display: block;
-            }
-            .customers-cards-mobile {
-              display: none;
-            }
-            .customers-topbar {
-              align-items: center;
-            }
+          .customers-page .customers-table-wrap {
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
           }
         `}
       </style>
       <div className="customers-container">
-        <div className="customers-topbar">
-          <div className="customers-header">
-            <h1 style={{ margin: 0 }}>Customers</h1>
-            <p className="muted" style={{ margin: 0 }}>
-              Manage customer details and activation status.
-            </p>
-            <div className="customers-header-actions">
+        <div className="customers-toolbar">
+          <div className="customers-toolbar-row">
+            <div className="customers-header">
+              <h1>Customers</h1>
+              <p className="muted">Manage customer details and activation status.</p>
+            </div>
+            <div className="customers-toolbar-actions customers-header-actions">
+              <div className="customers-search">
+                <label htmlFor="customers-search-input">Search</label>
+                <input
+                  id="customers-search-input"
+                  type="text"
+                  placeholder="Name, org nr, email, phone"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
               <button className="button" type="button" onClick={openCreate} disabled={loading}>
                 Add customer
               </button>
             </div>
-          </div>
-          <div className="customers-search">
-            <label htmlFor="customers-search-input">Search</label>
-            <input
-              id="customers-search-input"
-              type="text"
-              placeholder="Name, org nr, email, phone"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
           </div>
         </div>
 
@@ -332,7 +227,7 @@ const CustomersPage = () => {
         {successMessage && <div className="success">{successMessage}</div>}
 
         <div className="customers-table-desktop">
-          <div className="customers-table-wrap">
+          <div className="customers-card-container customers-table-wrap">
             <table className="customers-table">
               <thead>
                 <tr>
@@ -341,7 +236,6 @@ const CustomersPage = () => {
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Address</th>
-                  <th>Sort</th>
                   <th>Active</th>
                   <th>Actions</th>
                 </tr>
@@ -349,13 +243,13 @@ const CustomersPage = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center" }}>
+                    <td colSpan={8} className="customers-cell-center">
                       Loading...
                     </td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center" }}>
+                    <td colSpan={8} className="customers-cell-center">
                       No customers yet.
                     </td>
                   </tr>
@@ -370,7 +264,6 @@ const CustomersPage = () => {
                         <td className="customers-truncate">{displayValue(customer.email)}</td>
                         <td>{displayValue(customer.phone)}</td>
                         <td className="customers-truncate">{displayValue(customer.address)}</td>
-                        <td>{Number.isFinite(customer.sortOrder) ? customer.sortOrder : 0}</td>
                         <td>
                           <span className={`customers-status ${isActive ? "" : "inactive"}`}>
                             {isActive ? "Active" : "Inactive"}
@@ -407,13 +300,9 @@ const CustomersPage = () => {
 
         <div className="customers-cards-mobile">
           {loading ? (
-            <div className="customers-card" style={{ textAlign: "center" }}>
-              Loading...
-            </div>
+            <div className="customers-card customers-card-center">Loading...</div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="customers-card" style={{ textAlign: "center" }}>
-              No customers yet.
-            </div>
+            <div className="customers-card customers-card-center">No customers yet.</div>
           ) : (
             filteredCustomers.map((customer) => {
               const isUpdating = updatingId === customer.id;
@@ -441,7 +330,7 @@ const CustomersPage = () => {
                     <span>Sort</span>
                     <strong>{Number.isFinite(customer.sortOrder) ? customer.sortOrder : 0}</strong>
                   </div>
-                  <div style={{ marginTop: "8px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div className="customers-card-actions">
                     <span className={`customers-status ${isActive ? "" : "inactive"}`}>
                       {isActive ? "Active" : "Inactive"}
                     </span>
@@ -472,40 +361,18 @@ const CustomersPage = () => {
       </div>
 
       {modalOpen ? (
-        <div
-          role="presentation"
-          onClick={closeModal}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(17, 24, 39, 0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-            zIndex: 50,
-          }}
-        >
+        <div role="presentation" onClick={closeModal} className="customers-modal-overlay">
           <div
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
-            style={{
-              background: "#fff",
-              width: "100%",
-              maxWidth: "520px",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
+            className="customers-modal"
           >
             <form onSubmit={handleSubmit}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+              <div className="customers-modal-header">
                 <div>
-                  <h2 style={{ margin: 0 }}>{editingCustomer ? "Edit customer" : "Add customer"}</h2>
-                  <p className="muted" style={{ margin: 0 }}>
+                  <h2>{editingCustomer ? "Edit customer" : "Add customer"}</h2>
+                  <p className="muted">
                     {editingCustomer ? "Update customer details." : "Fill in the customer details."}
                   </p>
                 </div>
@@ -514,9 +381,9 @@ const CustomersPage = () => {
                 </button>
               </div>
 
-              {modalError && <div className="error" style={{ marginTop: "12px" }}>{modalError}</div>}
+              {modalError && <div className="error customers-modal-error">{modalError}</div>}
 
-              <div style={{ marginTop: "16px", display: "grid", gap: "12px" }}>
+              <div className="customers-modal-fields">
                 <label className="field">
                   <span>Name *</span>
                   <input
@@ -561,29 +428,18 @@ const CustomersPage = () => {
                     disabled={saving}
                   />
                 </label>
-                <label className="field">
-                  <span>Sort order</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.sortOrder}
-                    onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+                <label className="field customers-field-inline">
                   <input
                     type="checkbox"
                     checked={form.active}
                     onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
                     disabled={saving}
-                    style={{ width: "16px", height: "16px" }}
                   />
                   <span>Active</span>
                 </label>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+              <div className="customers-modal-actions">
                 <button className="button secondary" type="button" onClick={closeModal} disabled={saving}>
                   Cancel
                 </button>

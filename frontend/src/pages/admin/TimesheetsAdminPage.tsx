@@ -165,13 +165,42 @@ const TimesheetsAdminPage = () => {
   };
 
   return (
-    <div className="page">
+    <div className="page timesheets-page">
       <style>
         {`
+          .timesheets-page {
+            align-items: flex-start;
+            justify-content: flex-start;
+          }
           .timesheets-container {
             margin: 0 auto;
             max-width: 1280px;
-            padding: 20px 16px 28px;
+            padding: 32px 24px;
+          }
+          .timesheets-topcard {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+          }
+          .timesheets-page .button {
+            width: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
+          }
+          .timesheets-page .timesheets-filters .button {
+            padding: 10px 16px;
+            min-width: 110px;
+          }
+          .timesheets-page .timesheets-table .button {
+            padding: 8px 12px;
+            min-width: 110px;
           }
           .timesheets-topbar {
             display: flex;
@@ -187,11 +216,96 @@ const TimesheetsAdminPage = () => {
             flex-wrap: wrap;
             align-items: flex-end;
           }
+          .timesheets-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 160px;
+          }
+          .timesheets-field.search {
+            min-width: 240px;
+          }
+          .timesheets-modal {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+            padding: 24px;
+            max-width: 1100px;
+            width: calc(100vw - 96px);
+          }
+          .timesheets-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+          }
+          .timesheets-modal-title {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+          }
+          .timesheets-modal-subtitle {
+            margin-top: 6px;
+            color: #64748b;
+          }
+          .timesheets-modal-close {
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 12px;
+            width: auto;
+          }
+          .timesheets-modal .timesheets-modal-table {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: auto;
+            background: #fff;
+          }
+          .timesheets-modal .timesheets-modal-table table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+          }
+          .timesheets-modal .timesheets-modal-table thead th {
+            background: #f9fafb;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 12px 14px;
+          }
+          .timesheets-modal .timesheets-modal-table tbody td {
+            padding: 14px;
+            border-top: 1px solid #f1f5f9;
+          }
+          .timesheets-modal .button {
+            width: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: 700;
+            min-width: 96px;
+            border-radius: 12px;
+          }
+          @media (max-width: 640px) {
+            .timesheets-modal {
+              width: calc(100vw - 24px);
+              padding: 16px;
+            }
+            .timesheets-modal .timesheets-modal-table {
+              border-radius: 10px;
+            }
+          }
           .timesheets-table-wrap {
             overflow: auto;
             max-height: 70vh;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
           }
           .timesheets-table thead th {
             position: sticky;
@@ -248,38 +362,40 @@ const TimesheetsAdminPage = () => {
         `}
       </style>
       <div className="timesheets-container">
-        <div className="timesheets-topbar">
-          <div>
-            <h1 style={{ marginBottom: "4px" }}>Timesheets</h1>
-            <p className="muted" style={{ margin: 0 }}>
-              {from} to {to}
-            </p>
-          </div>
-          <div className="timesheets-filters">
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label>From</label>
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <div className="timesheets-topcard">
+          <div className="timesheets-topbar">
+            <div>
+              <h1 style={{ marginBottom: "4px" }}>Timesheets</h1>
+                    <p className="timesheets-modal-subtitle">
+                {from} to {to}
+              </p>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label>To</label>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label>Search driver</label>
-              <input
-                type="text"
-                placeholder="Name, email, phone, ID"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
-              <button className="button" type="button" onClick={load} disabled={loading}>
-                {loading ? "Loading..." : "Load"}
-              </button>
-              <button className="button" type="button" onClick={exportCsv} disabled={rows.length === 0}>
-                Export CSV
-              </button>
+            <div className="timesheets-filters">
+              <div className="timesheets-field">
+                <label>From</label>
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              </div>
+              <div className="timesheets-field">
+                <label>To</label>
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              </div>
+              <div className="timesheets-field search">
+                <label>Search driver</label>
+                <input
+                  type="text"
+                  placeholder="Name, email, phone, ID"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
+                <button className="button" type="button" onClick={load} disabled={loading}>
+                  {loading ? "Loading..." : "Load"}
+                </button>
+                <button className="button" type="button" onClick={exportCsv} disabled={rows.length === 0}>
+                  Export CSV
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -354,7 +470,7 @@ const TimesheetsAdminPage = () => {
                           </div>
                         </td>
                         <td>
-                          <button className="button" type="button" style={{ width: "auto" }} onClick={() => openDetails(row)}>
+                          <button className="button" type="button" onClick={() => openDetails(row)}>
                             Details
                           </button>
                         </td>
@@ -443,7 +559,7 @@ const TimesheetsAdminPage = () => {
                       )}
                     </div>
                     <div style={{ marginTop: "12px" }}>
-                      <button className="button" type="button" style={{ width: "auto" }} onClick={() => openDetails(row)}>
+                      <button className="button" type="button" onClick={() => openDetails(row)}>
                         Details
                       </button>
                     </div>
@@ -473,34 +589,29 @@ const TimesheetsAdminPage = () => {
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
+            className="timesheets-modal"
             style={{
-              background: "#fff",
-              width: "100%",
-              maxWidth: "1000px",
-              borderRadius: "12px",
-              padding: "16px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
               maxHeight: "90vh",
               overflowY: "auto",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+              <div className="timesheets-modal-header">
               <div>
-                <h2 style={{ margin: 0 }}>Work run details</h2>
+                <h2 className="timesheets-modal-title">Work run details</h2>
                 {detailsDriver && detailsDate ? (
                   <p className="muted" style={{ margin: 0 }}>
                     {detailsDate} · {driverLabel(detailsDriver)}
                   </p>
                 ) : null}
               </div>
-              <button className="button" type="button" style={{ width: "auto" }} onClick={closeDetails}>
+              <button className="button timesheets-modal-close" type="button" onClick={closeDetails}>
                 Close
               </button>
             </div>
 
             {detailsError ? <div className="error" style={{ marginTop: "12px" }}>{detailsError}</div> : null}
 
-            <div style={{ overflowX: "auto", marginTop: "12px" }}>
+            <div className="timesheets-modal-table" style={{ marginTop: "12px" }}>
               <table className="table">
                 <thead>
                   <tr>
@@ -535,7 +646,6 @@ const TimesheetsAdminPage = () => {
                           <button
                             className="button"
                             type="button"
-                            style={{ width: "auto" }}
                             onClick={() => {
                               // Placeholder for upcoming edit flow.
                               // eslint-disable-next-line no-console
