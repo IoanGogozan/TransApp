@@ -53,9 +53,25 @@ export async function http<T>(path: string, options: HttpOptions = {}): Promise<
 
   const contentType = res.headers.get("content-type") || "";
   const isJson = contentType.includes("application/json");
-  const data: ApiErrorShape | T | undefined = isJson ? await res.json() : undefined;
+  const data: ApiErrorShape | T | { error?: string; status?: string | null } | undefined =
+    isJson ? await res.json() : undefined;
 
   if (!res.ok) {
+    if (res.status === 402 && (data as { error?: string })?.error === "SUBSCRIPTION_INACTIVE") {
+      const status = (data as { status?: string | null })?.status ?? null;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("subscription-inactive", { detail: { status } }),
+        );
+      }
+      throw new ApiError(
+        res.status,
+        "Subscription inactive",
+        "SUBSCRIPTION_INACTIVE",
+        { status },
+      );
+    }
+
     const apiErr = (data as ApiErrorShape)?.error;
     const message = apiErr?.message || res.statusText || "Request failed";
     const code = apiErr?.code;

@@ -19,6 +19,16 @@ export type TimesheetDayResponse = {
 export type RouteOption = { id: string; name: string };
 export type VehicleOption = { id: number; regNumber: string; name: string | null };
 export type CustomerOption = { id: string; name: string };
+export type WorkEntry = {
+  id: string;
+  date: string;
+  activityType: "DRIVING" | "OTHER_WORK" | "BREAK" | "AVAILABILITY";
+  durationMin: number;
+  note?: string | null;
+  customerOption?: { id: string; name: string } | null;
+  routeOption?: { id: string; name: string } | null;
+  vehicle?: { id: number; regNumber: string; name: string | null } | null;
+};
 
 export const getMyTimesheet = (date: string) => http<TimesheetDayResponse>(`/api/v1/me/timesheet/${date}`);
 
@@ -44,7 +54,7 @@ export type AdminTimesheetRow = {
   routes: RouteOption[];
   vehicles: VehicleOption[];
   customers: CustomerOption[];
-  runsCount: number;
+  entriesCount: number;
 };
 
 export const getAdminTimesheets = (params: { from: string; to: string; driverId?: number; routeId?: string }) => {
@@ -75,10 +85,19 @@ export type WorkRunsResponse = {
   runs: WorkRun[];
 };
 
+export type WorkEntryDetail = {
+  activityType: "DRIVING" | "OTHER_WORK" | "BREAK" | "AVAILABILITY";
+  durationMin: number;
+  customer: { name: string } | null;
+  route: { name: string } | null;
+  vehicle: { regNumber: string; name: string | null } | null;
+  note: string | null;
+};
+
 export type AdminWorkRunDetailsResponse = {
   date: string;
   driverId: number;
-  runs: WorkRun[];
+  entries: WorkEntryDetail[];
 };
 
 export type RecentVehicleCheckIn = {
@@ -90,6 +109,45 @@ export const getMyRuns = (date?: string) => {
   const qs = date ? `?date=${encodeURIComponent(date)}` : "";
   return http<WorkRunsResponse>(`/api/v1/me/runs${qs}`);
 };
+
+export const getMyEntries = (date: string) =>
+  http<{ items: WorkEntry[] }>(`/api/v1/me/entries?date=${encodeURIComponent(date)}`);
+
+export const createMyEntry = (payload: {
+  date: string;
+  activityType: WorkEntry["activityType"];
+  durationMin: number;
+  customerOptionId?: string | null;
+  routeOptionId?: string | null;
+  vehicleId?: number | null;
+  note?: string | null;
+}) =>
+  http<WorkEntry>("/api/v1/me/entries", {
+    method: "POST",
+    body: payload,
+  });
+
+export const updateMyEntry = (
+  id: string,
+  payload: {
+    date?: string;
+    activityType?: WorkEntry["activityType"];
+    durationMin?: number;
+    customerOptionId?: string | null;
+    routeOptionId?: string | null;
+    vehicleId?: number | null;
+    note?: string | null;
+  },
+) =>
+  http<WorkEntry>(`/api/v1/me/entries/${id}`, {
+    method: "PATCH",
+    body: payload,
+  });
+
+export const deleteMyEntry = (id: string) =>
+  http<void>(`/api/v1/me/entries/${id}`, {
+    method: "DELETE",
+  });
 
 export const getAdminWorkRunDetails = (params: { date: string; driverId: number }) => {
   const qs = new URLSearchParams();

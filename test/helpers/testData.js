@@ -21,9 +21,21 @@ const createCompany = async ({ name, plan } = {}) => {
     const existing = await prisma.company.findUnique({ where: { slug: candidate }, select: { id: true } });
     return Boolean(existing);
   });
-  return prisma.company.create({
+  const company = await prisma.company.create({
     data: { name: companyName, plan: plan || "BASIC", slug },
   });
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  await prisma.subscription.create({
+    data: {
+      companyId: company.id,
+      plan: "BASIC",
+      status: "TRIALING",
+      trialStart: now,
+      trialEnd,
+    },
+  });
+  return company;
 };
 
 const createUser = async ({

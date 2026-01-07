@@ -4,6 +4,7 @@ import { Vehicle } from "../types/vehicle";
 type VehicleListResponse = { items?: Vehicle[]; vehicles?: Vehicle[]; meta?: unknown } | Vehicle[];
 type VehicleCreateResponse = { vehicle?: Vehicle } | Vehicle;
 type VehicleSingleResponse = { vehicle?: Vehicle } | Vehicle;
+type VehicleUpdateResponse = { vehicle?: Vehicle } | Vehicle;
 
 export const listVehicles = async (): Promise<Vehicle[]> => {
   const res = await http<VehicleListResponse>("/api/v1/vehicles");
@@ -56,4 +57,21 @@ export const getVehicleById = async (id: string | number): Promise<Vehicle> => {
     if (!found) throw new Error("Vehicle not found");
     return found;
   }
+};
+
+export const updateVehicle = async (
+  id: number,
+  payload: { regNumber?: string; name?: string; active?: boolean },
+): Promise<Vehicle> => {
+  const res = await http<VehicleUpdateResponse>(`/api/v1/vehicles/${id}`, {
+    method: "PATCH",
+    body: payload,
+  });
+  if (!res) {
+    throw new Error("Empty response");
+  }
+  if (!Array.isArray(res) && (res as { vehicle?: Vehicle }).vehicle) {
+    return (res as { vehicle: Vehicle }).vehicle;
+  }
+  return res as Vehicle;
 };

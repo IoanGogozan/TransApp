@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
-import { AdminTimesheetRow, WorkRun, getAdminTimesheets, getAdminWorkRunDetails } from "../../api/timesheets";
+import { AdminTimesheetRow, WorkEntryDetail, getAdminTimesheets, getAdminWorkRunDetails } from "../../api/timesheets";
 
 const toDateInput = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -36,19 +36,13 @@ const formatList = (items: string[]) => {
   return `${items[0]}, ${items[1]} +${items.length - 2}`;
 };
 
-const formatTime = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
-
-const formatDuration = (start?: string | null, end?: string | null) => {
-  if (!start || !end) return "-";
-  const startMs = new Date(start).getTime();
-  const endMs = new Date(end).getTime();
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return "-";
-  return `${Math.round((endMs - startMs) / 60000)} min`;
+const formatDurationMinutes = (minutes?: number | null) => {
+  const safeMinutes = Number.isFinite(minutes) && (minutes ?? 0) > 0 ? (minutes ?? 0) : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
 };
 
 const TimesheetsAdminPage = () => {
@@ -62,7 +56,7 @@ const TimesheetsAdminPage = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [detailsRuns, setDetailsRuns] = useState<WorkRun[]>([]);
+  const [detailsRuns, setDetailsRuns] = useState<WorkEntryDetail[]>([]);
   const [detailsDriver, setDetailsDriver] = useState<AdminTimesheetRow["driver"] | null>(null);
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
@@ -94,7 +88,7 @@ const TimesheetsAdminPage = () => {
     setDetailsDate(row.date);
     try {
       const res = await getAdminWorkRunDetails({ date: row.date, driverId: row.driver.id });
-      setDetailsRuns(res.runs || []);
+      setDetailsRuns(res.entries || []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load work runs";
       setDetailsError(msg);
@@ -125,7 +119,7 @@ const TimesheetsAdminPage = () => {
       .toLowerCase();
     return haystack.includes(query);
   });
-  const showRuns = rows.some((row) => typeof row.runsCount === "number");
+  const showRuns = rows.some((row) => typeof row.entriesCount === "number");
 
   const exportCsv = () => {
     const header = [
@@ -138,7 +132,7 @@ const TimesheetsAdminPage = () => {
       "Break (min)",
       "Availability (min)",
       "Total (min)",
-      "Runs",
+      "Entries",
     ];
     const lines = rows.map((row) => [
       row.date,
@@ -150,7 +144,7 @@ const TimesheetsAdminPage = () => {
       row.totalsMinutes.BREAK,
       row.totalsMinutes.AVAILABILITY,
       row.totalsMinutes.DRIVING + row.totalsMinutes.OTHER_WORK + row.totalsMinutes.BREAK + row.totalsMinutes.AVAILABILITY,
-      row.runsCount,
+      row.entriesCount,
     ]);
     const csv = [header, ...lines]
       .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
@@ -411,7 +405,7 @@ const TimesheetsAdminPage = () => {
                   <th>Driver</th>
                   <th>Vehicles</th>
                   <th>Routes</th>
-                  {showRuns ? <th>Runs</th> : null}
+                  {showRuns ? <th>Entries</th> : null}
                   <th>Total</th>
                   <th>Breakdown</th>
                   <th>Actions</th>
@@ -458,7 +452,7 @@ const TimesheetsAdminPage = () => {
                         </td>
                         <td>{vehiclesLabel}</td>
                         <td>{routesLabel}</td>
-                        {showRuns ? <td>{row.runsCount}</td> : null}
+                        {showRuns ? <td>{row.entriesCount}</td> : null}
                         <td style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</td>
                         <td>
                           <div className="timesheets-breakdown">
@@ -513,7 +507,7 @@ const TimesheetsAdminPage = () => {
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</div>
-                        {showRuns ? <div className="muted">{row.runsCount} runs</div> : null}
+                        {showRuns ? <div className="muted">{row.entriesCount} entries</div> : null}
                       </div>
                     </div>
                     <div style={{ marginTop: "10px" }}>
@@ -615,33 +609,29 @@ const TimesheetsAdminPage = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>Duration</th>
                     <th>Activity</th>
                     <th>Customer</th>
                     <th>Route</th>
                     <th>Vehicle</th>
+                    <th>Duration</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detailsRuns.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center" }}>
+                      <td colSpan={6} style={{ textAlign: "center" }}>
                         {detailsLoading ? "Loading..." : "No runs"}
                       </td>
                     </tr>
                   ) : (
-                    detailsRuns.map((run) => (
-                      <tr key={run.id}>
-                        <td>{formatTime(run.startedAt)}</td>
-                        <td>{formatTime(run.endedAt)}</td>
-                        <td>{formatDuration(run.startedAt, run.endedAt)}</td>
+                    detailsRuns.map((run, idx) => (
+                      <tr key={`${run.activityType}-${idx}`}>
                         <td>{run.activityType}</td>
-                        <td>{run.customerOption?.name || "-"}</td>
-                        <td>{run.routeOption?.name || "-"}</td>
+                        <td>{run.customer?.name || "-"}</td>
+                        <td>{run.route?.name || "-"}</td>
                         <td>{run.vehicle?.regNumber || "-"}</td>
+                        <td>{formatDurationMinutes(run.durationMin)}</td>
                         <td>
                           <button
                             className="button"
@@ -649,7 +639,7 @@ const TimesheetsAdminPage = () => {
                             onClick={() => {
                               // Placeholder for upcoming edit flow.
                               // eslint-disable-next-line no-console
-                              console.log("edit run", run.id);
+                              console.log("edit entry", idx);
                             }}
                           >
                             Edit

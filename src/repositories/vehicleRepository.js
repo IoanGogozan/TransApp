@@ -22,8 +22,20 @@ const getVehicleById = async (companyId, id) => {
   });
 };
 
+const updateVehicle = async (companyId, id, data) => {
+  const existing = await prisma.vehicle.findFirst({
+    where: { companyId: Number(companyId), id: Number(id) },
+  });
+  if (!existing) return null;
+  return prisma.vehicle.update({
+    where: { id: Number(id) },
+    data,
+  });
+};
+
 module.exports = {
   listVehicles,
   createVehicle,
   getVehicleById,
+  updateVehicle,
 };

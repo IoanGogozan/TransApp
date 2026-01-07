@@ -1,118 +1,103 @@
-import { useEffect } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-
-const dashboardPathForRole = (role?: string | null) => {
-  if (role === "ADMIN" || role === "PLATFORM_ADMIN") return "/app";
-  if (role === "DRIVER") return "/driver/profile";
-  return "/app";
-};
+import AppShell from "../layouts/AppShell";
+import { getBillingStatus } from "../api/billing";
 
 const AppLayout = () => {
-  const { user, role, company, logout } = useAuth();
+  const { company } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  const isDriver = role === "DRIVER";
-  const isAdmin = role === "ADMIN" || role === "PLATFORM_ADMIN";
-  const identifier = user ? user.email || user.phone || user.username || `User ${user.id}` : "Not signed in";
   const slugPrefix = company?.slug ? `/c/${company.slug}` : "";
-  const pathWithSlug = (path: string) => (slugPrefix ? `${slugPrefix}${path}` : path);
+  const [subscriptionInactive, setSubscriptionInactive] = useState<string | null>(null);
   const missingSlug =
     !location.pathname.startsWith("/c/") &&
     (location.pathname.startsWith("/admin") || location.pathname.startsWith("/driver"));
 
   useEffect(() => {
-    if (!isDriver) return;
-    if (!company?.slug) return;
-    if (!location.pathname.includes("/admin")) return;
-    const target = pathWithSlug("/driver/timesheet");
-    if (location.pathname !== target) {
-      navigate(target, { replace: true });
-    }
-  }, [company?.slug, isDriver, location.pathname, navigate]);
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ status?: string | null }>).detail;
+      setSubscriptionInactive(detail?.status ?? null);
+    };
+    window.addEventListener("subscription-inactive", handler);
+    return () => window.removeEventListener("subscription-inactive", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!company?.slug) return undefined;
+
+    let cancelled = false;
+    const graceMs = 7 * 24 * 60 * 60 * 1000;
+
+    const refreshStatus = async () => {
+      try {
+        const res = await getBillingStatus(company.slug);
+        const status = res.subscription?.status;
+        if (!status) return;
+
+        if (status === "CANCELED") {
+          if (!cancelled) setSubscriptionInactive("CANCELED");
+          return;
+        }
+        if (status === "ACTIVE" || status === "TRIALING") {
+          if (!cancelled) setSubscriptionInactive(null);
+          return;
+        }
+        if (status === "PAST_DUE") {
+          const pastDueAt = res.subscription?.pastDueAt
+            ? new Date(res.subscription.pastDueAt).getTime()
+            : null;
+          const expired = pastDueAt ? Date.now() >= pastDueAt + graceMs : false;
+          if (!cancelled) setSubscriptionInactive(expired ? "PAST_DUE" : null);
+        }
+      } catch {
+        // Ignore billing status errors to avoid blocking the UI.
+      }
+    };
+
+    refreshStatus();
+    const intervalId = setInterval(refreshStatus, 30_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [company?.slug]);
 
   return (
     <div>
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 16px",
-          background: "#111827",
-          color: "#fff",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          <Link to="/" style={{ color: "#fff", fontWeight: 700 }}>
-            TransApp
-          </Link>
-          <Link to={pathWithSlug(dashboardPathForRole(role))} style={{ color: "#e5e7eb" }}>
-            Dashboard
-          </Link>
-          {isDriver ? (
-            <>
-              <Link to={pathWithSlug("/driver/timesheet")} style={{ color: "#e5e7eb" }}>
-                Timesheet
-              </Link>
-              <Link to={pathWithSlug("/driver/documents")} style={{ color: "#e5e7eb" }}>
-                Documents
-              </Link>
-            </>
-          ) : null}
-          {isAdmin ? (
-            <>
-              <Link to={pathWithSlug("/admin/users")} style={{ color: "#e5e7eb" }}>
-                Users
-              </Link>
-              <Link to={pathWithSlug("/admin/vehicles")} style={{ color: "#e5e7eb" }}>
-                Vehicles
-              </Link>
-              <Link to={pathWithSlug("/admin/routes")} style={{ color: "#e5e7eb" }}>
-                Routes
-              </Link>
-              <Link to={pathWithSlug("/admin/documents")} style={{ color: "#e5e7eb" }}>
-                Documents
-              </Link>
-              <Link to={pathWithSlug("/admin/customers")} style={{ color: "#e5e7eb" }}>
-                Customers
-              </Link>
-              <Link to={pathWithSlug("/admin/defects")} style={{ color: "#e5e7eb" }}>
-                Defects
-              </Link>
-              <Link to={pathWithSlug("/admin/timesheets")} style={{ color: "#e5e7eb" }}>
-                Timesheets
-              </Link>
-              <Link to={pathWithSlug("/driver/timesheet")} style={{ color: "#e5e7eb" }}>
-                My Timesheet
-              </Link>
-              <Link to={pathWithSlug("/admin/reports")} style={{ color: "#e5e7eb" }}>
-                Reports / Export
-              </Link>
-              <Link to={pathWithSlug("/app/help")} style={{ color: "#e5e7eb" }}>
-                Help
-              </Link>
-            </>
-          ) : null}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-          {company ? (
-            <span style={{ color: "#a5b4fc", fontWeight: 600 }}>
-              {company.name} ({company.slug})
-            </span>
-          ) : null}
-          <span style={{ color: "#e5e7eb" }}>{user ? `${identifier} (${user.role})` : "Not signed in"}</span>
-          <button
-            className="button"
-            style={{ width: "auto", background: "#f43f5e", color: "#fff" }}
-            onClick={logout}
+      <AppShell>
+        {subscriptionInactive !== null ? (
+          <div
+            className="sticky top-0 z-50"
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 50,
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: "10px 16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+              marginBottom: "12px",
+            }}
           >
-            Logout
-          </button>
-        </div>
-      </nav>
+            <div>Subscription inactive. Go to Billing to reactivate.</div>
+            {company?.slug ? (
+              <Link
+                className="button"
+                to={`/c/${company.slug}/app/admin/billing`}
+                style={{ width: "auto" }}
+              >
+                Open Billing
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+        <Outlet />
+      </AppShell>
       {missingSlug && company?.slug ? (
         <div
           style={{
@@ -131,7 +116,6 @@ const AppLayout = () => {
           </Link>
         </div>
       ) : null}
-      <Outlet />
     </div>
   );
 };

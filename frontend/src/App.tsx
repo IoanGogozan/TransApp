@@ -24,6 +24,8 @@ import AdminHelpPage from "./pages/admin/AdminHelpPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import AdminDocumentsPage from "./pages/admin/DocumentsPage";
 import DriverDocumentsPage from "./pages/driver/DocumentsPage";
+import BillingPage from "./pages/admin/BillingPage";
+import VippsReturnPage from "./pages/admin/VippsReturnPage";
 
 const AdminAliasRoute = () => {
   const location = useLocation();
@@ -153,6 +155,14 @@ function App() {
           }
         />
         <Route
+          path="app/admin/billing"
+          element={
+            <AdminRoute>
+              <BillingPage />
+            </AdminRoute>
+          }
+        />
+        <Route
           path="app/admin/customers"
           element={
             <AdminRoute>
@@ -181,6 +191,22 @@ function App() {
           element={
             <AdminRoute>
               <DefectDetailsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="billing"
+          element={
+            <AdminRoute>
+              <BillingPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="billing/vipps/return"
+          element={
+            <AdminRoute>
+              <VippsReturnPage />
             </AdminRoute>
           }
         />

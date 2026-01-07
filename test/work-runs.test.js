@@ -23,8 +23,8 @@ const createRoute = async ({ companyId, name }) =>
 const createCustomer = async ({ companyId, name, active = true }) =>
   prisma.customerOption.create({ data: { companyId, name, active } });
 
-describe("Work runs", () => {
-  it("allows driver to start and stop a run and list runs", async () => {
+describe("Work entries", () => {
+  it("allows driver to create an entry and list entries", async () => {
     const company = await createCompany({ name: "Runs Co" });
     const route = await createRoute({ companyId: company.id, name: "Route 1" });
     const customer = await createCustomer({ companyId: company.id, name: "Customer 1" });
@@ -38,68 +38,57 @@ describe("Work runs", () => {
       .send({ vehicleId: vehicle.id });
     expect(checkInRes.status).toBe(201);
 
-    const startRes = await request(app)
-      .post("/api/v1/me/runs/start")
+    const createRes = await request(app)
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ activityType: "DRIVING", customerOptionId: customer.id, routeOptionId: route.id, vehicleId: vehicle.id });
-    expect(startRes.status).toBe(201);
-    expect(startRes.body.startedAt).toBeTruthy();
-    expect(startRes.body.endedAt).toBeNull();
+      .send({
+        date: today(),
+        activityType: "DRIVING",
+        durationMin: 120,
+        customerOptionId: customer.id,
+        routeOptionId: route.id,
+        vehicleId: vehicle.id,
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.activityType).toBe("DRIVING");
+    expect(createRes.body.durationMin).toBe(120);
 
     const listActive = await request(app)
-      .get(`/api/v1/me/runs?date=${today()}`)
+      .get(`/api/v1/me/entries?date=${today()}`)
       .set("Authorization", `Bearer ${token}`);
     expect(listActive.status).toBe(200);
-    expect(listActive.body.activeRun).not.toBeNull();
-    expect(listActive.body.runs).toHaveLength(1);
-    expect(listActive.body.runs[0].endedAt).toBeNull();
-
-    const stopRes = await request(app).post("/api/v1/me/runs/stop").set("Authorization", `Bearer ${token}`);
-    expect(stopRes.status).toBe(200);
-    expect(stopRes.body.endedAt).toBeTruthy();
-
-    const listAfter = await request(app)
-      .get(`/api/v1/me/runs?date=${today()}`)
-      .set("Authorization", `Bearer ${token}`);
-    expect(listAfter.status).toBe(200);
-    expect(listAfter.body.activeRun).toBeNull();
-    expect(listAfter.body.runs[0].endedAt).toBeTruthy();
+    expect(listActive.body.items).toHaveLength(1);
+    expect(listActive.body.items[0].activityType).toBe("DRIVING");
   });
 
-  it("allows admin to list runs for their company", async () => {
+  it("allows admin to list entries for their company", async () => {
     const company = await createCompany({ name: "Runs Admin Co" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.runs@example.com", passwordPlain: password });
     const token = await login({ companySlug: company.slug, identifier: admin.email });
 
     const res = await request(app)
-      .get(`/api/v1/me/runs?date=${today()}`)
+      .get(`/api/v1/me/entries?date=${today()}`)
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.runs).toBeDefined();
+    expect(res.body.items).toBeDefined();
   });
 
-  it("rejects starting a second active run", async () => {
+  it("requires customer for driving activity", async () => {
     const company = await createCompany({ name: "Runs Co 2" });
     const route = await createRoute({ companyId: company.id, name: "Route 2" });
-    const customer = await createCustomer({ companyId: company.id, name: "Customer 2" });
     const driver = await createUser({ companyId: company.id, role: "DRIVER", email: "driver.run2@example.com", passwordPlain: password });
     const token = await login({ companySlug: company.slug, identifier: driver.email });
 
-    const first = await request(app)
-      .post("/api/v1/me/runs/start")
+    const res = await request(app)
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ activityType: "OTHER_WORK", customerOptionId: customer.id, routeOptionId: route.id });
-    expect(first.status).toBe(201);
-
-    const second = await request(app)
-      .post("/api/v1/me/runs/start")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ activityType: "DRIVING", customerOptionId: customer.id, routeOptionId: route.id });
-    expect(second.status).toBe(409);
+      .send({ date: today(), activityType: "DRIVING", durationMin: 30, routeOptionId: route.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error?.code).toBe("VALIDATION_ERROR");
   });
 
-  it("rejects starting a run with vehicle without recent check-in", async () => {
+  it("rejects driving entry with vehicle without recent check-in", async () => {
     const company = await createCompany({ name: "Runs Checkin Required" });
     const route = await createRoute({ companyId: company.id, name: "Route Checkin" });
     const customer = await createCustomer({ companyId: company.id, name: "Customer Checkin" });
@@ -108,12 +97,19 @@ describe("Work runs", () => {
     const token = await login({ companySlug: company.slug, identifier: driver.email });
 
     const res = await request(app)
-      .post("/api/v1/me/runs/start")
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ activityType: "DRIVING", customerOptionId: customer.id, routeOptionId: route.id, vehicleId: vehicle.id });
+      .send({
+        date: today(),
+        activityType: "DRIVING",
+        durationMin: 45,
+        customerOptionId: customer.id,
+        routeOptionId: route.id,
+        vehicleId: vehicle.id,
+      });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error?.code).toBe("VEHICLE_CHECKIN_REQUIRED");
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("VEHICLE_CHECKIN_REQUIRED");
   });
 
   it("enforces tenant scoping for route and vehicle", async () => {
@@ -128,19 +124,34 @@ describe("Work runs", () => {
     const tokenA = await login({ companySlug: companyA.slug, identifier: driverA.email });
 
     const wrongRoute = await request(app)
-      .post("/api/v1/me/runs/start")
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${tokenA}`)
-      .send({ activityType: "DRIVING", customerOptionId: customerA.id, routeOptionId: routeB.id });
-    expect(wrongRoute.status).toBe(404);
+      .send({
+        date: today(),
+        activityType: "DRIVING",
+        durationMin: 30,
+        customerOptionId: customerA.id,
+        routeOptionId: routeB.id,
+      });
+    expect(wrongRoute.status).toBe(400);
+    expect(wrongRoute.body.error?.code).toBe("INVALID_ROUTE_OPTION");
 
     const wrongVehicle = await request(app)
-      .post("/api/v1/me/runs/start")
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${tokenA}`)
-      .send({ activityType: "DRIVING", customerOptionId: customerA.id, routeOptionId: routeA.id, vehicleId: vehicleB.id });
-    expect(wrongVehicle.status).toBe(404);
+      .send({
+        date: today(),
+        activityType: "DRIVING",
+        durationMin: 30,
+        customerOptionId: customerA.id,
+        routeOptionId: routeA.id,
+        vehicleId: vehicleB.id,
+      });
+    expect(wrongVehicle.status).toBe(400);
+    expect(wrongVehicle.body.error?.code).toBe("INVALID_VEHICLE");
   });
 
-  it("rejects starting a run with invalid customer option", async () => {
+  it("rejects entry with invalid customer option", async () => {
     const companyA = await createCompany({ name: "Runs Customer A" });
     const companyB = await createCompany({ name: "Runs Customer B" });
     const routeA = await createRoute({ companyId: companyA.id, name: "Route C" });
@@ -149,11 +160,17 @@ describe("Work runs", () => {
     const tokenA = await login({ companySlug: companyA.slug, identifier: driverA.email });
 
     const res = await request(app)
-      .post("/api/v1/me/runs/start")
+      .post("/api/v1/me/entries")
       .set("Authorization", `Bearer ${tokenA}`)
-      .send({ activityType: "DRIVING", customerOptionId: customerB.id, routeOptionId: routeA.id });
+      .send({
+        date: today(),
+        activityType: "DRIVING",
+        durationMin: 30,
+        customerOptionId: customerB.id,
+        routeOptionId: routeA.id,
+      });
 
-    expect(res.status).toBe(404);
-    expect(res.body.error?.code).toBe("CUSTOMER_NOT_FOUND");
+    expect(res.status).toBe(400);
+    expect(res.body.error?.code).toBe("INVALID_CUSTOMER_OPTION");
   });
 });

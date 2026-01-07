@@ -162,7 +162,7 @@ const VehiclesPage = () => {
                     navigate(tenantPath(slug, target));
                   }}
                 >
-                  Select
+                  Edit
                 </button>
               </div>
             ))}

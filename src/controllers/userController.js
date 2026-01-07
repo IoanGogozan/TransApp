@@ -194,7 +194,7 @@ const updateUserActive = asyncHandler(async (req, res) => {
 });
 
 const updatePasswordSchema = z.object({
-  password: z.string().min(8),
+  password: z.string().min(6),
 });
 
 const updateUserPassword = asyncHandler(async (req, res) => {
@@ -210,10 +210,32 @@ const updateUserPassword = asyncHandler(async (req, res) => {
 
   await enforceAdminUserGuards(req, userId);
 
+  const target = await prisma.user.findFirst({
+    where: { id: userId, companyId: req.companyId },
+    select: { role: true },
+  });
+
+  if (!target) {
+    throw new AppError(404, "User not found", "USER_NOT_FOUND");
+  }
+
+  const password = body.data.password;
+  if (target.role === "DRIVER") {
+    if (password.length < 6) {
+      throw new AppError(
+        400,
+        "Password must be at least 6 characters for drivers",
+        "VALIDATION_ERROR",
+      );
+    }
+  } else if (password.length < 8) {
+    throw new AppError(400, "Password must be at least 8 characters", "VALIDATION_ERROR");
+  }
+
   const user = await userService.updateUserPassword({
     companyId: req.companyId,
     userId,
-    password: body.data.password,
+    password,
   });
 
   res.json({ user });

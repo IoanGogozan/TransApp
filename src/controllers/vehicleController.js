@@ -38,8 +38,52 @@ const getVehicle = asyncHandler(async (req, res) => {
   res.json({ vehicle });
 });
 
+const updateVehicle = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    throw new AppError(400, "Invalid vehicle id", "VALIDATION_ERROR");
+  }
+
+  const data = {};
+
+  if (req.body.regNumber !== undefined) {
+    const regNumber = String(req.body.regNumber).trim();
+    if (!regNumber) {
+      throw new AppError(400, "Registration number is required", "VALIDATION_ERROR");
+    }
+    data.regNumber = regNumber;
+  }
+
+  if (req.body.name !== undefined) {
+    const name = String(req.body.name).trim();
+    data.name = name;
+  }
+
+  if (req.body.active !== undefined) {
+    if (typeof req.body.active !== "boolean") {
+      throw new AppError(400, "Active must be a boolean", "VALIDATION_ERROR");
+    }
+    data.active = req.body.active;
+  }
+
+  try {
+    const vehicle = await vehicleRepository.updateVehicle(req.companyId, id, data);
+    if (!vehicle) {
+      throw new AppError(404, "Vehicle not found", "NOT_FOUND");
+    }
+    res.json({ vehicle });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    if (err?.code === "P2002") {
+      throw new AppError(409, "Vehicle regNumber already exists", "VEHICLE_REGNUMBER_TAKEN");
+    }
+    throw err;
+  }
+});
+
 module.exports = {
   createVehicle,
   listVehicles,
   getVehicle,
+  updateVehicle,
 };

@@ -47,6 +47,30 @@ const upsertCompany = async () => {
   });
 };
 
+const upsertSubscription = async (companyId) => {
+  const existing = await prisma.subscription.findUnique({
+    where: { companyId },
+  });
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const data = {
+    companyId,
+    plan: "BASIC",
+    status: "TRIALING",
+    trialStart: now,
+    trialEnd,
+  };
+
+  if (existing) {
+    return prisma.subscription.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  return prisma.subscription.create({ data });
+};
+
 const upsertCompanyAdmin = async (companyId) => {
   const passwordHash = await hashPassword(SEED_PASSWORD);
   const email = normalizeEmail("admin@demo.no");
@@ -224,6 +248,7 @@ const main = async () => {
   ensureDatabaseUrl();
 
   const company = await upsertCompany();
+  await upsertSubscription(company.id);
   const admin = await upsertCompanyAdmin(company.id);
   const driver = await upsertCompanyDriver(company.id);
   const platformAdmin = await upsertPlatformAdmin();

@@ -13,6 +13,9 @@ const uploadSchema = z.object({
 const mimeToExt = {
   "application/pdf": ".pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "text/plain": ".txt",
 };
 
 const mapDocument = (doc) => ({

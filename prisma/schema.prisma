@@ -10,12 +10,13 @@ datasource db {
   provider = "postgresql"
 }
 
-
 generator client {
   provider = "prisma-client-js"
 }
 
-/* ===================== ENUMS ===================== */
+/**
+ * ===================== ENUMS =====================
+ */
 
 enum UserRole {
   PLATFORM_ADMIN
@@ -66,6 +67,7 @@ enum Plan {
   MEDIUM
   PRO
 }
+
 enum Language {
   no
   en
@@ -74,71 +76,156 @@ enum Language {
   lt
 }
 
-/* ===================== MODELS ===================== */
+enum WorkEntrySource {
+  MANUAL
+  TACHOGRAPH
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum WebhookProvider {
+  STRIPE
+  VIPPS
+}
+
+/**
+ * ===================== MODELS =====================
+ */
 
 model Company {
-  id               Int                 @id @default(autoincrement())
-  name             String
-  orgNumber        String?             @map("org_number")
-  slug             String              @unique
-  plan             Plan                @default(BASIC)
-  defaultLanguage  Language            @default(no) @map("default_language")
-  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  id              Int      @id @default(autoincrement())
+  name            String
+  orgNumber       String?  @map("org_number")
+  slug            String   @unique
+  plan            Plan     @default(BASIC)
+  defaultLanguage Language @default(no) @map("default_language")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relații
-  users             User[]
-  vehicles          Vehicle[]
-  shifts            Shift[]
+  users              User[]
+  vehicles           Vehicle[]
+  shifts             Shift[]
   checklistInstances ChecklistInstance[]
-  defects           Defect[]
-  routeOptions      RouteOption[]
-  customerOptions   CustomerOption[]
-  timesheetDays     TimesheetDay[]
-  workRuns          WorkRun[]
-  vehicleCheckIns   VehicleCheckIn[]
-  documents         Document[]
+  defects            Defect[]
+  routeOptions       RouteOption[]
+  customerOptions    CustomerOption[]
+  workEntries        WorkEntry[]
+  vehicleCheckIns    VehicleCheckIn[]
+  documents          Document[]
+  subscription       Subscription?
 
   @@map("companies")
 }
 
-/* ------------- USERS ------------- */
+model Subscription {
+  id        Int                @id @default(autoincrement())
+  companyId Int                @unique @map("company_id")
+  plan      Plan               @default(BASIC)
+  status    SubscriptionStatus @default(TRIALING)
+
+  stripeCustomerId     String? @map("stripe_customer_id")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  vippsAgreementId     String? @map("vipps_agreement_id")
+  vippsAgreementStatus String? @map("vipps_agreement_status")
+
+  trialStart DateTime @default(now()) @map("trial_start") @db.Timestamptz
+  trialEnd   DateTime @map("trial_end") @db.Timestamptz
+  pastDueAt  DateTime? @map("past_due_at") @db.Timestamptz
+
+  currentPeriodStart DateTime? @map("current_period_start") @db.Timestamptz
+  currentPeriodEnd   DateTime? @map("current_period_end") @db.Timestamptz
+
+  cancelAtPeriodEnd Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt        DateTime? @map("canceled_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  vippsCharges VippsCharge[]
+
+  @@map("subscriptions")
+}
+
+model VippsCharge {
+  id             Int      @id @default(autoincrement())
+  subscriptionId Int      @map("subscription_id")
+  agreementId    String   @map("agreement_id")
+  chargeId       String?  @map("charge_id")
+  externalId     String   @map("external_id")
+  dueDate        DateTime @map("due_date") @db.Timestamptz
+  amount         Int      @map("amount_minor")
+  currency       String   @default("NOK")
+  status         String   @default("CREATED")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([agreementId, externalId])
+  @@index([subscriptionId])
+  @@map("vipps_charges")
+}
+
+model WebhookEvent {
+  id          Int             @id @default(autoincrement())
+  provider    WebhookProvider
+  eventId     String          @map("event_id")
+  receivedAt  DateTime        @default(now()) @map("received_at") @db.Timestamptz
+  processedAt DateTime?       @map("processed_at") @db.Timestamptz
+  payload     Json            @map("payload")
+
+  @@unique([provider, eventId])
+  @@map("webhook_events")
+}
+
+/**
+ * ------------- USERS -------------
+ */
 
 model User {
-  id           Int       @id @default(autoincrement())
-  companyId    Int?      @map("company_id")
-  email        String?
-  phone        String?
-  username     String?
-  passwordHash String    @map("password_hash")
-  mustChangePassword Boolean @default(false) @map("must_change_password")
-  role         UserRole  @default(DRIVER)
-  language     Language?
-  isActive     Boolean   @default(true) @map("active")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                 Int       @id @default(autoincrement())
+  companyId          Int?      @map("company_id")
+  email              String?
+  phone              String?
+  username           String?
+  passwordHash       String    @map("password_hash")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  role               UserRole  @default(DRIVER)
+  language           Language?
+  isActive           Boolean   @default(true) @map("active")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relații
-  company            Company?           @relation(fields: [companyId], references: [id])
-  shifts             Shift[]            // turele la care e driver
+  company            Company?            @relation(fields: [companyId], references: [id])
+  shifts             Shift[] // turele la care e driver
   checklistInstances ChecklistInstance[]
-  defectsReported    Defect[]           @relation("DefectsReportedByUser")
-  defectsAssigned    Defect[]           @relation("DefectsAssignedToUser")
-  defectComments     DefectComment[]    @relation("DefectCommentsUser")
-  defectEvents       DefectEvent[]      @relation("DefectEventsActor")
-  timesheetDays      TimesheetDay[]
-  workRuns           WorkRun[]
+  defectsReported    Defect[]            @relation("DefectsReportedByUser")
+  defectsAssigned    Defect[]            @relation("DefectsAssignedToUser")
+  defectComments     DefectComment[]     @relation("DefectCommentsUser")
+  defectEvents       DefectEvent[]       @relation("DefectEventsActor")
+  workEntries        WorkEntry[]
   vehicleCheckIns    VehicleCheckIn[]
-  uploadedDocuments  Document[]        @relation("DocumentsUploadedByUser")
+  uploadedDocuments  Document[]          @relation("DocumentsUploadedByUser")
 
-  @@index([companyId])
   @@unique([companyId, email])
   @@unique([companyId, phone])
   @@unique([companyId, username])
+  @@index([companyId])
   @@map("users")
 }
 
-/* ------------- VEHICLES ------------- */
+/**
+ * ------------- VEHICLES -------------
+ */
 
 model Vehicle {
   id        Int      @id @default(autoincrement())
@@ -151,12 +238,11 @@ model Vehicle {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relații
-  company            Company            @relation(fields: [companyId], references: [id])
+  company            Company             @relation(fields: [companyId], references: [id])
   shifts             Shift[]
   checklistInstances ChecklistInstance[]
   defects            Defect[]
-  timesheetDays      TimesheetDay[]
-  workRuns           WorkRun[]
+  workEntries        WorkEntry[]
   checkIns           VehicleCheckIn[]
 
   @@unique([companyId, regNumber]) // aceeași firmă nu poate avea 2 vehicule cu același nr
@@ -164,21 +250,23 @@ model Vehicle {
   @@map("vehicles")
 }
 
-/* ------------- SHIFTS (ture) ------------- */
+/**
+ * ------------- SHIFTS (ture) -------------
+ */
 
 model Shift {
-  id        Int      @id @default(autoincrement())
-  companyId Int      @map("company_id")
-  userId    Int      @map("user_id")
-  vehicleId Int?     @map("vehicle_id")
-  startAt   DateTime @map("start_at") @db.Timestamptz
+  id        Int       @id @default(autoincrement())
+  companyId Int       @map("company_id")
+  userId    Int       @map("user_id")
+  vehicleId Int?      @map("vehicle_id")
+  startAt   DateTime  @map("start_at") @db.Timestamptz
   endAt     DateTime? @map("end_at") @db.Timestamptz
   notes     String?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  company Company @relation(fields: [companyId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
+  company Company  @relation(fields: [companyId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
 
   @@index([companyId, userId])
@@ -186,16 +274,18 @@ model Shift {
   @@map("shifts")
 }
 
-/* ------------- CHECKLIST INSTANCES ------------- */
+/**
+ * ------------- CHECKLIST INSTANCES -------------
+ */
 
 model ChecklistInstance {
-  id        String   @id @default(cuid())
-  companyId Int      @map("company_id")
-  vehicleId Int      @map("vehicle_id")
-  userId    Int      @map("user_id")
-  date      DateTime @map("date") @db.Date
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id        String            @id @default(cuid())
+  companyId Int               @map("company_id")
+  vehicleId Int               @map("vehicle_id")
+  userId    Int               @map("user_id")
+  date      DateTime          @map("date") @db.Date
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz
   answers   ChecklistAnswer[]
   defects   Defect[]
 
@@ -203,22 +293,24 @@ model ChecklistInstance {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
+  @@unique([companyId, vehicleId, date])
   @@index([companyId, date])
   @@index([companyId, vehicleId, date])
-  @@unique([companyId, vehicleId, date])
   @@map("checklist_instances")
 }
 
-/* ------------- CHECKLIST ANSWERS ------------- */
+/**
+ * ------------- CHECKLIST ANSWERS -------------
+ */
 
 model ChecklistAnswer {
-  id                  String              @id @default(cuid())
-  checklistInstanceId String              @map("checklist_instance_id")
-  questionKey         String              @map("question_key")
+  id                  String               @id @default(cuid())
+  checklistInstanceId String               @map("checklist_instance_id")
+  questionKey         String               @map("question_key")
   answer              ChecklistAnswerValue
   comment             String?
-  hasDeviation        Boolean             @default(false) @map("has_deviation")
-  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  hasDeviation        Boolean              @default(false) @map("has_deviation")
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz
 
   checklistInstance ChecklistInstance @relation(fields: [checklistInstanceId], references: [id], onDelete: Cascade)
 
@@ -227,17 +319,16 @@ model ChecklistAnswer {
 }
 
 model RouteOption {
-  id         String   @id @default(cuid())
-  companyId  Int      @map("company_id")
-  name       String
-  active     Boolean  @default(true)
-  sortOrder  Int      @default(0) @map("sort_order")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id        String   @id @default(cuid())
+  companyId Int      @map("company_id")
+  name      String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company       Company        @relation(fields: [companyId], references: [id])
-  timesheetDays TimesheetDay[]
-  workRuns      WorkRun[]
+  company     Company     @relation(fields: [companyId], references: [id])
+  workEntries WorkEntry[]
 
   @@unique([companyId, name])
   @@index([companyId, active])
@@ -257,77 +348,41 @@ model CustomerOption {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company  Company   @relation(fields: [companyId], references: [id])
-  workRuns WorkRun[]
+  company     Company     @relation(fields: [companyId], references: [id])
+  workEntries WorkEntry[]
 
   @@unique([companyId, name])
   @@index([companyId, active])
   @@map("customer_options")
 }
 
-model TimesheetDay {
-  id             String        @id @default(cuid())
-  companyId      Int           @map("company_id")
-  userId         Int           @map("user_id")
-  date           DateTime      @db.Date
-  vehicleId      Int?          @map("vehicle_id")
-  routeOptionId  String?       @map("route_option_id")
-  note           String?
-  overtimeType   OvertimeType? @map("overtime_type")
-  overtimeReason String?       @map("overtime_reason")
-  status         String        @default("DRAFT")
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
-
-  company     Company       @relation(fields: [companyId], references: [id])
-  user        User          @relation(fields: [userId], references: [id])
-  vehicle     Vehicle?      @relation(fields: [vehicleId], references: [id])
-  routeOption RouteOption?  @relation(fields: [routeOptionId], references: [id])
-  entries     TimesheetEntry[]
-
-  @@unique([userId, date])
-  @@index([companyId, date])
-  @@map("timesheet_days")
-}
-
-model TimesheetEntry {
-  id             String       @id @default(cuid())
-  timesheetDayId String       @map("timesheet_day_id")
-  activityType   ActivityType @map("activity_type")
-  startMin       Int          @map("start_min")
-  endMin         Int          @map("end_min")
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
-
-  timesheetDay TimesheetDay @relation(fields: [timesheetDayId], references: [id])
-
-  @@index([timesheetDayId])
-  @@map("timesheet_entries")
-}
-
-model WorkRun {
-  id            String       @id @default(cuid())
-  companyId     Int          @map("company_id")
-  userId        Int          @map("user_id")
-  activityType  ActivityType @map("activity_type")
-  customerOptionId String?   @map("customer_option_id")
-  routeOptionId String       @map("route_option_id")
-  vehicleId     Int?         @map("vehicle_id")
-  startedAt     DateTime     @map("started_at") @db.Timestamptz
-  endedAt       DateTime?    @map("ended_at") @db.Timestamptz
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+model WorkEntry {
+  id               String          @id @default(cuid())
+  companyId        Int             @map("company_id")
+  userId           Int             @map("user_id")
+  date             DateTime        @map("date") @db.Date
+  activityType     ActivityType    @map("activity_type")
+  durationMin      Int             @map("duration_min")
+  customerOptionId String?         @map("customer_option_id")
+  routeOptionId    String?         @map("route_option_id")
+  vehicleId        Int?            @map("vehicle_id")
+  note             String?
+  source           WorkEntrySource @default(MANUAL)
+  externalRef      String?         @map("external_ref")
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
   company        Company         @relation(fields: [companyId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
   customerOption CustomerOption? @relation(fields: [customerOptionId], references: [id])
-  routeOption    RouteOption     @relation(fields: [routeOptionId], references: [id])
+  routeOption    RouteOption?    @relation(fields: [routeOptionId], references: [id])
   vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id])
 
-  @@index([companyId, userId])
-  @@index([companyId, startedAt])
-  @@index([userId, endedAt])
-  @@map("work_runs")
+  @@index([companyId, userId, date])
+  @@index([companyId, date])
+  @@index([userId, date])
+  @@index([companyId, source])
+  @@map("work_entries")
 }
 
 model VehicleCheckIn {
@@ -368,36 +423,38 @@ model Document {
   @@map("documents")
 }
 
-/* ------------- DEFECTS / AVVIK ------------- */
+/**
+ * ------------- DEFECTS / AVVIK -------------
+ */
 
 model Defect {
-  id                   String        @id @default(cuid())
-  companyId            Int           @map("company_id")
-  vehicleId            Int           @map("vehicle_id")
-  reportedByUserId     Int           @map("reported_by_user_id")
-  assignedToUserId     Int?          @map("assigned_to_user_id")
-  checklistInstanceId  String?       @map("checklist_instance_id")
-  checklistQuestionKey String?       @map("checklist_question_key")
-  source               DefectSource  @default(MANUAL)
-  status               DefectStatus  @default(OPEN)
+  id                   String       @id @default(cuid())
+  companyId            Int          @map("company_id")
+  vehicleId            Int          @map("vehicle_id")
+  reportedByUserId     Int          @map("reported_by_user_id")
+  assignedToUserId     Int?         @map("assigned_to_user_id")
+  checklistInstanceId  String?      @map("checklist_instance_id")
+  checklistQuestionKey String?      @map("checklist_question_key")
+  source               DefectSource @default(MANUAL)
+  status               DefectStatus @default(OPEN)
   title                String
   description          String?
-  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
-  resolvedAt           DateTime?     @map("resolved_at") @db.Timestamptz
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  resolvedAt           DateTime?    @map("resolved_at") @db.Timestamptz
 
-  company           Company           @relation(fields: [companyId], references: [id])
-  vehicle           Vehicle           @relation(fields: [vehicleId], references: [id])
-  reportedByUser    User              @relation("DefectsReportedByUser", fields: [reportedByUserId], references: [id])
-  assignedToUser    User?             @relation("DefectsAssignedToUser", fields: [assignedToUserId], references: [id])
+  company           Company            @relation(fields: [companyId], references: [id])
+  vehicle           Vehicle            @relation(fields: [vehicleId], references: [id])
+  reportedByUser    User               @relation("DefectsReportedByUser", fields: [reportedByUserId], references: [id])
+  assignedToUser    User?              @relation("DefectsAssignedToUser", fields: [assignedToUserId], references: [id])
   checklistInstance ChecklistInstance? @relation(fields: [checklistInstanceId], references: [id])
   comments          DefectComment[]
   events            DefectEvent[]
 
+  @@unique([companyId, checklistInstanceId, checklistQuestionKey])
   @@index([companyId, status])
   @@index([companyId, vehicleId])
   @@index([companyId, createdAt])
-  @@unique([companyId, checklistInstanceId, checklistQuestionKey])
   @@map("defects")
 }
 
@@ -431,4 +488,3 @@ model DefectEvent {
   @@index([companyId, defectId])
   @@map("defect_events")
 }
-

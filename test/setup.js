@@ -3,18 +3,22 @@ require("../src/config/env");
 const prisma = require("../src/config/prismaClient");
 
 const tables = [
-  "timesheet_entries",
-  "timesheet_days",
+  "work_entries",
+  "customer_options",
   "route_options",
+  "vehicle_checkins",
   "defect_events",
   "defect_comments",
   "defects",
   "checklist_answers",
   "checklist_instances",
+  "documents",
   "shifts",
   "vehicles",
   "users",
   "companies",
+  "subscriptions",
+  "webhook_events",
 ];
 
 beforeEach(async () => {

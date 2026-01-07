@@ -13,15 +13,16 @@ describe("Admin work-run timesheets listing", () => {
     const driver = await createUser({ companyId: company.id, role: "DRIVER", email: "driver.wr@example.com", passwordPlain: password });
     const route = await prisma.routeOption.create({ data: { companyId: company.id, name: "WR Route" } });
 
-    await prisma.workRun.create({
+    await prisma.workEntry.create({
       data: {
         companyId: company.id,
         userId: driver.id,
         activityType: "DRIVING",
         routeOptionId: route.id,
         vehicleId: null,
-        startedAt: new Date("2024-05-01T08:00:00.000Z"),
-        endedAt: new Date("2024-05-01T09:00:00.000Z"),
+        date: new Date("2024-05-01T00:00:00.000Z"),
+        durationMin: 60,
+        source: "MANUAL",
       },
     });
 
@@ -34,7 +35,7 @@ describe("Admin work-run timesheets listing", () => {
     expect(res.body.timesheets).toHaveLength(1);
     expect(res.body.timesheets[0].routes).toHaveLength(1);
     expect(res.body.timesheets[0].routes[0].name).toBe("WR Route");
-    expect(res.body.timesheets[0].runsCount).toBe(1);
+    expect(res.body.timesheets[0].entriesCount).toBe(1);
     expect(res.body.timesheets[0].totalsMinutes.DRIVING).toBe(60);
   });
 
@@ -45,15 +46,16 @@ describe("Admin work-run timesheets listing", () => {
     const driverB = await createUser({ companyId: companyB.id, role: "DRIVER", email: "driver.wrb@example.com", passwordPlain: password });
     const routeB = await prisma.routeOption.create({ data: { companyId: companyB.id, name: "WR Route B" } });
 
-    await prisma.workRun.create({
+    await prisma.workEntry.create({
       data: {
         companyId: companyB.id,
         userId: driverB.id,
         activityType: "DRIVING",
         routeOptionId: routeB.id,
         vehicleId: null,
-        startedAt: new Date("2024-06-01T10:00:00.000Z"),
-        endedAt: new Date("2024-06-01T10:30:00.000Z"),
+        date: new Date("2024-06-01T00:00:00.000Z"),
+        durationMin: 30,
+        source: "MANUAL",
       },
     });
 
@@ -76,5 +78,79 @@ describe("Admin work-run timesheets listing", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(403);
+  });
+
+  it("allows access for a valid trial subscription", async () => {
+    const company = await createCompany({ name: "WorkRun Trial OK" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.wrtrial@example.com", passwordPlain: password });
+
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.subscription.update({
+      where: { companyId: company.id },
+      data: { status: "TRIALING", trialEnd: future },
+    });
+
+    const token = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password })).body.token;
+    const res = await request(app)
+      .get("/api/v1/timesheets/work-runs?from=2024-08-01&to=2024-08-01")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("allows access during past-due grace period", async () => {
+    const company = await createCompany({ name: "WorkRun Past Due Grace" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.wrgrace@example.com", passwordPlain: password });
+
+    const pastDueAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    await prisma.subscription.update({
+      where: { companyId: company.id },
+      data: { status: "PAST_DUE", pastDueAt },
+    });
+
+    const token = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password })).body.token;
+    const res = await request(app)
+      .get("/api/v1/timesheets/work-runs?from=2024-08-01&to=2024-08-01")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("denies access after past-due grace period", async () => {
+    const company = await createCompany({ name: "WorkRun Past Due Expired" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.wrgraceexpired@example.com", passwordPlain: password });
+
+    const pastDueAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    await prisma.subscription.update({
+      where: { companyId: company.id },
+      data: { status: "PAST_DUE", pastDueAt },
+    });
+
+    const token = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password })).body.token;
+    const res = await request(app)
+      .get("/api/v1/timesheets/work-runs?from=2024-08-01&to=2024-08-01")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(402);
+    expect(res.body).toEqual({ error: "SUBSCRIPTION_INACTIVE", status: "PAST_DUE" });
+  });
+
+  it("denies access when subscription is inactive", async () => {
+    const company = await createCompany({ name: "WorkRun Trial Expired" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.wrexpired@example.com", passwordPlain: password });
+
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await prisma.subscription.update({
+      where: { companyId: company.id },
+      data: { status: "TRIALING", trialEnd: past },
+    });
+
+    const token = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password })).body.token;
+    const res = await request(app)
+      .get("/api/v1/timesheets/work-runs?from=2024-08-01&to=2024-08-01")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(402);
+    expect(res.body).toEqual({ error: "SUBSCRIPTION_INACTIVE", status: "TRIALING" });
   });
 });

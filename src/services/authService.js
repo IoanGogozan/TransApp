@@ -37,6 +37,18 @@ const registerOwner = async ({ companyName, email, password }) => {
       },
     });
 
+    const now = new Date();
+    const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    await tx.subscription.create({
+      data: {
+        companyId: company.id,
+        plan: "BASIC",
+        status: "TRIALING",
+        trialStart: now,
+        trialEnd,
+      },
+    });
+
     const user = await tx.user.create({
       data: {
         email: normalizedEmail,

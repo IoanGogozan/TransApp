@@ -188,8 +188,12 @@ const AdminUsersPage = () => {
       return next;
     });
 
-    if (!resetPasswordValue || resetPasswordValue.length < 8) {
-      setResetRowErrors((prev) => ({ ...prev, [idKey]: "Password must be at least 8 characters" }));
+    const minLen = user.role === "DRIVER" ? 6 : 8;
+    if (!resetPasswordValue || resetPasswordValue.length < minLen) {
+      setResetRowErrors((prev) => ({
+        ...prev,
+        [idKey]: `Password must be at least ${minLen} characters`,
+      }));
       return;
     }
     if (resetPasswordValue !== resetPasswordConfirm) {

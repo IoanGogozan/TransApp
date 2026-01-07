@@ -14,27 +14,33 @@ const routeRoutes = require("./routeRoutes");
 const customerRoutes = require("./customerRoutes");
 const timesheetAdminRoutes = require("./timesheetAdminRoutes");
 const documentAdminRoutes = require("./documentAdminRoutes");
+const webhookRoutes = require("./webhookRoutes");
+const createRateLimiter = require("../middleware/rateLimiterGeneral");
 const auth = require("../middlewares/auth");
 const companyContext = require("../middlewares/companyContext");
+const subscriptionContext = require("../middlewares/subscriptionContext");
+const requireActiveSubscription = require("../middlewares/requireActiveSubscription");
 
 const router = express.Router();
+const webhookLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 300 });
 
 router.use("/public", publicRoutes);
 router.use("/health", healthRoutes);
+router.use("/webhooks", webhookLimiter, webhookRoutes);
 router.use("/c", companyRoutes);
 router.use("/auth", authRoutes);
 // Protected routes
-router.use(auth, companyContext);
+router.use(auth, companyContext, subscriptionContext);
 router.use("/users", userRoutes);
-router.use("/routes", routeRoutes);
-router.use("/customers", customerRoutes);
-router.use("/timesheets", timesheetAdminRoutes);
-router.use("/admin/documents", documentAdminRoutes);
-router.use("/vehicles", vehicleRoutes);
+router.use("/routes", requireActiveSubscription, routeRoutes);
+router.use("/customers", requireActiveSubscription, customerRoutes);
+router.use("/timesheets", requireActiveSubscription, timesheetAdminRoutes);
+router.use("/admin/documents", requireActiveSubscription, documentAdminRoutes);
+router.use("/vehicles", requireActiveSubscription, vehicleRoutes);
 router.use("/me", meRoutes);
-router.use("/shifts", shiftRoutes);
-router.use("/checklists", checklistRoutes);
-router.use("/defects", defectRoutes);
-router.use("/reports", reportRoutes);
+router.use("/shifts", requireActiveSubscription, shiftRoutes);
+router.use("/checklists", requireActiveSubscription, checklistRoutes);
+router.use("/defects", requireActiveSubscription, defectRoutes);
+router.use("/reports", requireActiveSubscription, reportRoutes);
 
 module.exports = router;

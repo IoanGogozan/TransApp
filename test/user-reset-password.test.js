@@ -114,6 +114,43 @@ describe("User reset password", () => {
     expect(res.status).toBe(400);
   });
 
+  it("accepts 6-char password for drivers", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+    const driver = await createUser({ companyId: company.id, role: "DRIVER", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const newPassword = "123456";
+
+    const res = await request(app)
+      .patch(`/api/v1/users/${driver.id}/password`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: newPassword });
+
+    expect(res.status).toBe(200);
+
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: driver.email, password: newPassword });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it("rejects short password for admin users", async () => {
+    const company = await createCompany({ name: "Company A" });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+    const targetAdmin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
+
+    const token = await login({ companySlug: company.slug, email: admin.email, password });
+    const res = await request(app)
+      .patch(`/api/v1/users/${targetAdmin.id}/password`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "1234567" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error?.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error?.message).toContain("at least 8");
+  });
+
   it("returns 400 when password is missing", async () => {
     const company = await createCompany({ name: "Company A" });
     const admin = await createUser({ companyId: company.id, role: "ADMIN", passwordPlain: password });
