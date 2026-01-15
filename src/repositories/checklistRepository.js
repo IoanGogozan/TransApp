@@ -20,9 +20,14 @@ const baseChecklistSelect = {
   },
 };
 
-const findInstanceByVehicleAndDate = async ({ companyId, vehicleId, date }) =>
+const findInstanceByVehicleAndDate = async ({ companyId, vehicleId, date, userId }) =>
   prisma.checklistInstance.findFirst({
-    where: { companyId, vehicleId, date },
+    where: {
+      companyId,
+      vehicleId,
+      date,
+      ...(userId ? { userId } : {}),
+    },
     select: baseChecklistSelect,
   });
 

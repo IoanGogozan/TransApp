@@ -39,6 +39,8 @@ const ChecklistPage = () => {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [defectDialogOpen, setDefectDialogOpen] = useState(false);
+  const [defectFocusId, setDefectFocusId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<AnswerState>(() =>
     QUESTIONS.reduce(
       (acc, q) => ({
@@ -103,43 +105,18 @@ const ChecklistPage = () => {
           comment: a.comment?.trim() ? a.comment.trim() : undefined,
         };
       });
-      await submitChecklist(vehicleIdParam, payload);
+      const submitResult = await submitChecklist(vehicleIdParam, payload);
       const hasDeviation = payload.some((a) => a.answer === "DEVIATION");
       await createVehicleCheckIn({
         vehicleId: Number(vehicleIdParam),
         allOk: !hasDeviation,
       });
-      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "CHECKLIST_ALREADY_SUBMITTED") {
-        setAlreadySubmitted(true);
-        setSubmitError("Checklist already submitted today.");
+      if (submitResult.createdDefectIds && submitResult.createdDefectIds.length > 0) {
+        setDefectFocusId(String(submitResult.createdDefectIds[0]));
+        setDefectDialogOpen(true);
       } else {
-        const message = err instanceof ApiError ? err.message : "Failed to submit checklist";
-        setSubmitError(message);
+        navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
       }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleQuickCheckIn = async () => {
-    if (!vehicleIdParam || !isValidVehicleId) return;
-    setSubmitError(null);
-    setSuccess(null);
-    setAlreadySubmitted(false);
-    setSubmitting(true);
-    try {
-      const payload: ChecklistAnswerInput[] = QUESTIONS.map((q) => ({
-        questionKey: q.key,
-        answer: "OK",
-      }));
-      await submitChecklist(vehicleIdParam, payload);
-      await createVehicleCheckIn({
-        vehicleId: Number(vehicleIdParam),
-        allOk: true,
-      });
-      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
     } catch (err) {
       if (err instanceof ApiError && err.code === "CHECKLIST_ALREADY_SUBMITTED") {
         setAlreadySubmitted(true);
@@ -224,7 +201,7 @@ const ChecklistPage = () => {
         {completed ? (
           <>
             <div className="error" style={{ borderColor: "#d1fae5", background: "#ecfdf3", color: "#166534" }}>
-              Checklist already submitted for today.
+              You already submitted a checklist for this vehicle today.
             </div>
             <button
               className="button primary"
@@ -249,14 +226,6 @@ const ChecklistPage = () => {
               </button>
             )}
             {success && <p className="muted">{success}</p>}
-            <button
-              className="button primary"
-              style={{ marginBottom: "12px" }}
-              disabled={submitting}
-              onClick={handleQuickCheckIn}
-            >
-              {submitting ? "Submitting..." : "Quick check-in (All OK)"}
-            </button>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {QUESTIONS.map((q) => {
                 const ans = answers[q.key];
@@ -322,6 +291,53 @@ const ChecklistPage = () => {
           </Link>
         </div>
       </div>
+      {defectDialogOpen ? (
+        <div
+          role="presentation"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 50,
+          }}
+        >
+          <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
+            <h2 style={{ marginTop: 0 }}>Defects recorded</h2>
+            <p className="muted">Defects were recorded from your checklist. Do you want to add photos now?</p>
+            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <button
+                className="button"
+                type="button"
+                style={{ width: "auto" }}
+                onClick={() => {
+                  setDefectDialogOpen(false);
+                  const addPhotosTarget = defectFocusId
+                    ? `/driver/defects/${defectFocusId}`
+                    : "/driver/defects";
+                  navigate(tenantPath(slug, addPhotosTarget));
+                }}
+              >
+                Add photos
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                style={{ width: "auto" }}
+                onClick={() => {
+                  setDefectDialogOpen(false);
+                  navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

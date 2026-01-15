@@ -28,12 +28,13 @@ const ensureVehicle = async (companyId, vehicleId) => {
   return vehicle.id;
 };
 
-const getStatus = async ({ companyId, vehicleId, date }) => {
+const getStatus = async ({ companyId, user, vehicleId, date }) => {
   const dateValue = parseDateOnly(date || todayOsloDate());
   const existing = await checklistRepository.findInstanceByVehicleAndDate({
     companyId: Number(companyId),
     vehicleId: Number(vehicleId),
     date: dateValue,
+    ...(user.role === "DRIVER" ? { userId: Number(user.id) } : {}),
   });
   return {
     done: Boolean(existing),
@@ -54,6 +55,7 @@ const submitChecklist = async ({ companyId, user, vehicleId, date, answers }) =>
     companyId: company,
     vehicleId: vehicleIdNumber,
     date: dateValue,
+    userId,
   });
   if (existing) {
     throw new AppError(409, "Checklist already submitted", "CHECKLIST_ALREADY_SUBMITTED");
@@ -79,6 +81,7 @@ const submitChecklist = async ({ companyId, user, vehicleId, date, answers }) =>
     answers: preparedAnswers,
   });
 
+  const createdDefectIds = [];
   // Auto-create defects for deviations
   const deviations = preparedAnswers.filter((a) => a.answer === "DEVIATION");
   for (const dev of deviations) {
@@ -99,6 +102,7 @@ const submitChecklist = async ({ companyId, user, vehicleId, date, answers }) =>
         defectId: defect.id,
         actorUserId: userId,
       });
+      createdDefectIds.push(defect.id);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         // Ignore duplicates due to unique constraint
@@ -108,7 +112,7 @@ const submitChecklist = async ({ companyId, user, vehicleId, date, answers }) =>
     }
   }
 
-  return checklist;
+  return { checklist, createdDefectIds };
 };
 
 const listChecklists = async ({ companyId, user, from, to, vehicleId, userId, limit, offset }) => {

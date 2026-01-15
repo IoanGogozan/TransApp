@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
 import { getPublicCompany } from "../api/auth";
 import { setCompanySlug } from "../auth/companySlug";
+import PublicHeader from "../components/PublicHeader";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -72,14 +73,31 @@ const LoginPage = () => {
   };
 
   const title = companyName ? `Sign in to ${companyName}` : "Sign in";
+  const forgotSlug = companySlug || "";
 
   return (
-    <div className="page">
-      <div className="card">
+    <>
+      <PublicHeader />
+      <div className="page page-top">
+        <div className="container">
+          <div className="auth-wrap">
+            <div className="card auth-card">
         <h1>{title}</h1>
         <p className="muted">
           {companyLoading ? "Loading company..." : companyError ? companyError : "Enter your phone and password to continue."}
         </p>
+        {!companyLoading ? (
+          <div style={{ marginBottom: "8px" }}>
+            <Link to="/login" style={{ fontSize: "14px", textDecoration: "none", color: "#2563eb" }}>
+              Not your company? Enter a different slug
+            </Link>
+          </div>
+        ) : null}
+        {companyError ? (
+          <Link className="button secondary" to="/login" style={{ width: "auto", marginBottom: "12px" }}>
+            Back to company slug
+          </Link>
+        ) : null}
         {error && <div className="error">{error}</div>}
         <form onSubmit={onSubmit}>
           <div className="field">
@@ -109,10 +127,24 @@ const LoginPage = () => {
           <button className="button" type="submit" disabled={loading || companyLoading || Boolean(companyError)}>
             {loading ? "Signing in..." : "Sign in"}
           </button>
+          <div style={{ marginTop: "8px" }}>
+            <Link
+              to={`/forgot-password?companySlug=${encodeURIComponent(forgotSlug)}`}
+              className="muted"
+              style={{ fontSize: 14, textDecoration: "none" }}
+            >
+              Forgot password?
+            </Link>
+          </div>
         </form>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
 export default LoginPage;
+
+

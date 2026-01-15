@@ -75,6 +75,7 @@ const listComments = asyncHandler(async (req, res) => {
     defectId: params.data.id,
     limit: query.data.limit,
     offset: query.data.offset,
+    user: req.user,
   });
 
   res.json({ items, meta: { limit: query.data.limit, offset: query.data.offset } });
@@ -95,6 +96,7 @@ const listHistory = asyncHandler(async (req, res) => {
     defectId: params.data.id,
     limit: query.data.limit,
     offset: query.data.offset,
+    user: req.user,
   });
 
   res.json({ items, meta: { limit: query.data.limit, offset: query.data.offset } });

@@ -1,18 +1,76 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
-import { AdminTimesheetRow, WorkEntryDetail, getAdminTimesheets, getAdminWorkRunDetails } from "../../api/timesheets";
+import { listCompanyUsers } from "../../api/users";
+import {
+  AdminTimesheetRow,
+  AdminWorkRunDetailsResponse,
+  WorkEntryDetail,
+  getAdminTimesheets,
+  getAdminWorkRunDetails,
+  updateAdminWorkEntry,
+} from "../../api/timesheets";
 
 const toDateInput = (d: Date) => d.toISOString().slice(0, 10);
 
+const osloToday = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return `${year}-${month}-${day}`;
+};
+
+const osloWeekStart = (todayYYYYMMDD: string) => {
+  const [yearStr, monthStr, dayStr] = todayYYYYMMDD.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  const utcNoon = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const isoDay = ((utcNoon.getUTCDay() + 6) % 7) + 1;
+  const diffDays = isoDay - 1;
+  const weekStart = new Date(utcNoon);
+  weekStart.setUTCDate(weekStart.getUTCDate() - diffDays);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(weekStart);
+  const yearOut = parts.find((part) => part.type === "year")?.value;
+  const monthOut = parts.find((part) => part.type === "month")?.value;
+  const dayOut = parts.find((part) => part.type === "day")?.value;
+  return `${yearOut}-${monthOut}-${dayOut}`;
+};
+
+const osloMonthStart = (todayYYYYMMDD: string) => {
+  const [yearStr, monthStr] = todayYYYYMMDD.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const utcNoon = new Date(Date.UTC(year, month - 1, 1, 12, 0, 0));
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(utcNoon);
+  const yearOut = parts.find((part) => part.type === "year")?.value;
+  const monthOut = parts.find((part) => part.type === "month")?.value;
+  const dayOut = parts.find((part) => part.type === "day")?.value;
+  return `${yearOut}-${monthOut}-${dayOut}`;
+};
+
 const defaultRange = () => {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(to.getDate() - 6);
-  return { from: toDateInput(from), to: toDateInput(to) };
+  const today = osloToday();
+  return { from: today, to: today };
 };
 
 const bestIdentifier = (driver: AdminTimesheetRow["driver"]) =>
-  driver.username || driver.email || driver.phone || `User ${driver.id}`;
+  driver.username || driver.phone || driver.email || "Unknown driver";
 
 const driverLabel = (driver: AdminTimesheetRow["driver"]) => `${bestIdentifier(driver)} (id:${driver.id})`;
 
@@ -31,7 +89,7 @@ const formatDurationHours = (minutes: number) => {
 };
 
 const formatList = (items: string[]) => {
-  if (items.length === 0) return "—";
+  if (items.length === 0) return "";
   if (items.length <= 2) return items.join(", ");
   return `${items[0]}, ${items[1]} +${items.length - 2}`;
 };
@@ -45,6 +103,40 @@ const formatDurationMinutes = (minutes?: number | null) => {
   return `${hours}h ${mins}m`;
 };
 
+const formatMinutesAsHM = (minutes: number) => {
+  const safeMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${hours}h ${mins}m`;
+};
+
+const minutesToHHMM = (minutes: number) => {
+  const safeMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+};
+
+const parseDurationToMinutes = (value: string) => {
+  const trimmed = value.trim();
+  const match = /^(\d+):([0-5]\d)$/.exec(trimmed);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const mins = Number(match[2]);
+  const total = hours * 60 + mins;
+  if (total <= 0) return null;
+  return total;
+};
+
+const fmtCheckIn = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Oslo",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 const TimesheetsAdminPage = () => {
   const initialRange = useMemo(() => defaultRange(), []);
   const [from, setFrom] = useState(initialRange.from);
@@ -52,19 +144,29 @@ const TimesheetsAdminPage = () => {
   const [rows, setRows] = useState<AdminTimesheetRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [drivers, setDrivers] = useState<Array<{ id: number; label: string }>>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("ALL");
+  const [activeQuickRange, setActiveQuickRange] = useState<"WEEK" | "MONTH" | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailsRuns, setDetailsRuns] = useState<WorkEntryDetail[]>([]);
+  const [detailsCheckIns, setDetailsCheckIns] = useState<AdminWorkRunDetailsResponse["checkIns"]>([]);
   const [detailsDriver, setDetailsDriver] = useState<AdminTimesheetRow["driver"] | null>(null);
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<WorkEntryDetail | null>(null);
+  const [editActivityType, setEditActivityType] = useState("DRIVING");
+  const [editDuration, setEditDuration] = useState("00:00");
+  const [editNote, setEditNote] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
-  const load = async () => {
+  const loadWithRange = async (fromStr: string, toStr: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getAdminTimesheets({ from, to });
+      const res = await getAdminTimesheets({ from: fromStr, to: toStr });
       setRows(res.timesheets || []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load timesheets";
@@ -74,9 +176,37 @@ const TimesheetsAdminPage = () => {
     }
   };
 
+  const load = async () => loadWithRange(from, to);
+
+  const applyDefaultRangeAndLoad = () => {
+    const today = osloToday();
+    setFrom(today);
+    setTo(today);
+    loadWithRange(today, today);
+  };
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const loadDrivers = async () => {
+      try {
+        const users = await listCompanyUsers();
+        const nextDrivers = users
+          .filter((user) => user.role === "DRIVER" && user.active === true)
+          .map((user) => ({
+            id: Number(user.id),
+            label: user.username || user.phone || user.email || "Unknown driver",
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+        setDrivers(nextDrivers);
+      } catch (err) {
+        setDrivers([]);
+      }
+    };
+    loadDrivers();
   }, []);
 
   const openDetails = async (row: AdminTimesheetRow) => {
@@ -84,11 +214,13 @@ const TimesheetsAdminPage = () => {
     setDetailsLoading(true);
     setDetailsError(null);
     setDetailsRuns([]);
+    setDetailsCheckIns([]);
     setDetailsDriver(row.driver);
     setDetailsDate(row.date);
     try {
       const res = await getAdminWorkRunDetails({ date: row.date, driverId: row.driver.id });
       setDetailsRuns(res.entries || []);
+      setDetailsCheckIns(res.checkIns || []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load work runs";
       setDetailsError(msg);
@@ -100,52 +232,124 @@ const TimesheetsAdminPage = () => {
   const closeDetails = () => {
     setDetailsOpen(false);
     setDetailsRuns([]);
+    setDetailsCheckIns([]);
     setDetailsDriver(null);
     setDetailsDate(null);
     setDetailsError(null);
+    setEditOpen(false);
+    setEditEntry(null);
+    setEditError(null);
+    setEditSaving(false);
   };
 
-  const filteredRows = rows.filter((row) => {
-    const query = search.trim().toLowerCase();
-    if (!query) return true;
-    const haystack = [
-      row.driver.username,
-      row.driver.email,
-      row.driver.phone,
-      String(row.driver.id),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(query);
-  });
+  const openEditModal = (entry: WorkEntryDetail) => {
+    setEditEntry(entry);
+    setEditActivityType(entry.activityType);
+    setEditDuration(minutesToHHMM(entry.durationMin));
+    setEditNote(entry.note ?? "");
+    setEditError(null);
+    setEditOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditOpen(false);
+    setEditEntry(null);
+    setEditError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editEntry) return;
+    const nextDurationMin = parseDurationToMinutes(editDuration);
+    if (!nextDurationMin) {
+      setEditError("Duration must be in HH:MM format and greater than 00:00.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await updateAdminWorkEntry(editEntry.id, {
+        activityType: editActivityType as WorkEntryDetail["activityType"],
+        durationMin: nextDurationMin,
+        note: editNote.trim() ? editNote.trim() : null,
+      });
+      if (detailsDate && detailsDriver) {
+        const res = await getAdminWorkRunDetails({ date: detailsDate, driverId: detailsDriver.id });
+        setDetailsRuns(res.entries || []);
+        setDetailsCheckIns(res.checkIns || []);
+      }
+      await loadWithRange(from, to);
+      closeEditModal();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Failed to update entry";
+      setEditError(msg);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const filteredRows = selectedDriverId === "ALL"
+    ? rows
+    : rows.filter((row) => String(row.driver.id) === selectedDriverId);
   const showRuns = rows.some((row) => typeof row.entriesCount === "number");
+  const latestCheckInByVehicleId = useMemo(() => {
+    const map = new Map<number, AdminWorkRunDetailsResponse["checkIns"][number]>();
+    detailsCheckIns.forEach((checkIn) => {
+      const key = checkIn.vehicleId;
+      const existing = map.get(key);
+      if (!existing || new Date(checkIn.checkedAt).getTime() > new Date(existing.checkedAt).getTime()) {
+        map.set(key, checkIn);
+      }
+    });
+    return map;
+  }, [detailsCheckIns]);
 
   const exportCsv = () => {
     const header = [
       "Date",
       "Driver",
-      "Vehicles",
+      "Customer",
       "Routes",
-      "Driving (min)",
-      "Other Work (min)",
-      "Break (min)",
-      "Availability (min)",
-      "Total (min)",
+      "Vehicles",
+      "Check-ins",
+      "Driving",
+      "Other Work",
+      "Break",
+      "Availability",
+      "Total",
       "Entries",
     ];
-    const lines = rows.map((row) => [
-      row.date,
-      driverLabel(row.driver),
-      row.vehicles.map((vehicle) => vehicle.regNumber).join("; "),
-      row.routes.map((route) => route.name).join("; "),
-      row.totalsMinutes.DRIVING,
-      row.totalsMinutes.OTHER_WORK,
-      row.totalsMinutes.BREAK,
-      row.totalsMinutes.AVAILABILITY,
-      row.totalsMinutes.DRIVING + row.totalsMinutes.OTHER_WORK + row.totalsMinutes.BREAK + row.totalsMinutes.AVAILABILITY,
-      row.entriesCount,
-    ]);
+    const timeFmt = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Oslo",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const lines = filteredRows.flatMap((row) => {
+      const breakdown = row.customerBreakdown ?? [];
+      const checkIns = row.checkIns ?? [];
+      return breakdown.map((item) => {
+        const vehicleIds = new Set(item.vehicles.map((vehicle) => vehicle.vehicleId));
+        const checkInCell = checkIns.length
+          ? checkIns
+            .filter((ci) => vehicleIds.has(ci.vehicleId))
+            .map((ci) => `${ci.regNumber || `Vehicle#${ci.vehicleId}`} ${timeFmt.format(new Date(ci.checkedAt))} • ${ci.allOk ? "OK" : "Issues"}`)
+            .join("; ") || "—"
+          : "—";
+        return [
+          row.date,
+          bestIdentifier(row.driver),
+          item.customerName,
+          item.routes.join("; "),
+          item.vehicles.map((vehicle) => vehicle.regNumber).join("; "),
+          checkInCell,
+          formatMinutesAsHM(item.minutes.DRIVING),
+          formatMinutesAsHM(item.minutes.OTHER_WORK),
+          formatMinutesAsHM(item.minutes.BREAK),
+          formatMinutesAsHM(item.minutes.AVAILABILITY),
+          formatMinutesAsHM(item.totalMin),
+          item.entryCount,
+        ];
+      });
+    });
     const csv = [header, ...lines]
       .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -199,10 +403,37 @@ const TimesheetsAdminPage = () => {
           .timesheets-topbar {
             display: flex;
             gap: 16px;
-            align-items: flex-end;
+            align-items: flex-start;
             justify-content: space-between;
             flex-wrap: wrap;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+          }
+          .ts-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+          }
+          .ts-quick-buttons {
+            display: flex;
+            gap: 10px;
+          }
+          .timesheets-filters-right {
+            margin-left: auto;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+          .quick-btn {
+            background: #f1f5f9;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+          }
+          .quick-btn.quick-btn-active {
+            background: #2563eb;
+            color: #fff;
+            border: 1px solid #2563eb;
           }
           .timesheets-filters {
             display: flex;
@@ -262,6 +493,14 @@ const TimesheetsAdminPage = () => {
             border-collapse: separate;
             border-spacing: 0;
           }
+          .timesheets-modal .timesheets-modal-table.compact thead th {
+            padding: 8px 10px;
+            font-size: 11px;
+          }
+          .timesheets-modal .timesheets-modal-table.compact tbody td {
+            padding: 8px 10px;
+            font-size: 13px;
+          }
           .timesheets-modal .timesheets-modal-table thead th {
             background: #f9fafb;
             font-size: 12px;
@@ -309,14 +548,26 @@ const TimesheetsAdminPage = () => {
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f5f9;
           }
           .timesheets-table tbody tr:nth-child(even) {
-            background: #fcfcfd;
+            background: #eef2ff;
           }
           .timesheets-table td {
             vertical-align: middle;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid #f1f5f9;
+            text-align: left;
+          }
+          .timesheets-table thead th:last-child,
+          .timesheets-table tbody td:last-child {
+            text-align: center;
+          }
+          .timesheets-table thead th:not(:last-child),
+          .timesheets-table tbody td:not(:last-child) {
+            border-right: 1px solid #f1f5f9;
           }
           .timesheets-driver {
             display: flex;
@@ -357,30 +608,96 @@ const TimesheetsAdminPage = () => {
       </style>
       <div className="timesheets-container">
         <div className="timesheets-topcard">
-          <div className="timesheets-topbar">
+          <div className="timesheets-topbar ts-header-top">
             <div>
               <h1 style={{ marginBottom: "4px" }}>Timesheets</h1>
-                    <p className="timesheets-modal-subtitle">
+              <p className="timesheets-modal-subtitle">
                 {from} to {to}
               </p>
             </div>
-            <div className="timesheets-filters">
-              <div className="timesheets-field">
-                <label>From</label>
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-              </div>
-              <div className="timesheets-field">
-                <label>To</label>
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-              </div>
+            <div className="ts-quick-buttons">
+              <button
+                className={`button quick-btn ${activeQuickRange === "WEEK" ? "quick-btn-active" : ""}`}
+                type="button"
+                onClick={() => {
+                  if (activeQuickRange === "WEEK") {
+                    setActiveQuickRange(null);
+                    applyDefaultRangeAndLoad();
+                    return;
+                  }
+                  const today = osloToday();
+                  const start = osloWeekStart(today);
+                  setActiveQuickRange("WEEK");
+                  setFrom(start);
+                  setTo(today);
+                  loadWithRange(start, today);
+                }}
+              >
+                This week
+              </button>
+              <button
+                className={`button quick-btn ${activeQuickRange === "MONTH" ? "quick-btn-active" : ""}`}
+                type="button"
+                onClick={() => {
+                  if (activeQuickRange === "MONTH") {
+                    setActiveQuickRange(null);
+                    applyDefaultRangeAndLoad();
+                    return;
+                  }
+                  const today = osloToday();
+                  const start = osloMonthStart(today);
+                  setActiveQuickRange("MONTH");
+                  setFrom(start);
+                  setTo(today);
+                  loadWithRange(start, today);
+                }}
+              >
+                This month
+              </button>
+            </div>
+          </div>
+          <div className="timesheets-filters">
+            <div className="timesheets-field">
+              <label>From</label>
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setActiveQuickRange(null);
+                  setFrom(e.target.value);
+                }}
+              />
+            </div>
+            <div className="timesheets-field">
+              <label>To</label>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setActiveQuickRange(null);
+                  setTo(e.target.value);
+                }}
+              />
+            </div>
+            <div className="timesheets-filters-right">
               <div className="timesheets-field search">
-                <label>Search driver</label>
-                <input
-                  type="text"
-                  placeholder="Name, email, phone, ID"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <label>Driver</label>
+                <select
+                  value={selectedDriverId}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSelectedDriverId(next);
+                    setActiveQuickRange(null);
+                    load();
+                  }}
+                >
+                  <option value="ALL">All drivers</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={String(driver.id)}>
+                      {driver.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
                 <button className="button" type="button" onClick={load} disabled={loading}>
@@ -439,15 +756,7 @@ const TimesheetsAdminPage = () => {
                         <td>{row.date}</td>
                         <td>
                           <div className="timesheets-driver">
-                            <strong>{bestIdentifier(row.driver)}</strong>
-                            <span className="muted">
-                              {[
-                                row.driver.phone || row.driver.email || null,
-                                `id:${row.driver.id}`,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
+                            {bestIdentifier(row.driver)}
                           </div>
                         </td>
                         <td>{vehiclesLabel}</td>
@@ -458,7 +767,7 @@ const TimesheetsAdminPage = () => {
                           <div className="timesheets-breakdown">
                             {breakdown.map((item) => (
                               <span key={item.label}>
-                                <strong>{item.label}:</strong> {formatDurationHours(item.minutes)}
+                                {item.label}: {formatDurationHours(item.minutes)}
                               </span>
                             ))}
                           </div>
@@ -502,8 +811,7 @@ const TimesheetsAdminPage = () => {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                       <div>
                         <strong>{row.date}</strong>
-                        <div className="muted">{driverLabel(row.driver)}</div>
-                        {row.driver.phone ? <div className="muted">{row.driver.phone}</div> : null}
+                        <div className="muted">{bestIdentifier(row.driver)}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</div>
@@ -605,52 +913,161 @@ const TimesheetsAdminPage = () => {
 
             {detailsError ? <div className="error" style={{ marginTop: "12px" }}>{detailsError}</div> : null}
 
-            <div className="timesheets-modal-table" style={{ marginTop: "12px" }}>
-              <table className="table">
+            <div className="timesheets-modal-table compact" style={{ marginTop: "12px" }}>
+              <table className="table" style={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    <th>Activity</th>
-                    <th>Customer</th>
-                    <th>Route</th>
-                    <th>Vehicle</th>
-                    <th>Duration</th>
-                    <th>Actions</th>
+                    <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Activity</th>
+                    <th style={{ width: "180px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Customer</th>
+                    <th style={{ width: "160px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Route</th>
+                    <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Vehicle</th>
+                    <th style={{ width: "210px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Check-in</th>
+                    <th style={{ width: "90px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>Duration</th>
+                    <th style={{ width: "110px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detailsRuns.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: "center" }}>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
                         {detailsLoading ? "Loading..." : "No runs"}
                       </td>
                     </tr>
                   ) : (
-                    detailsRuns.map((run, idx) => (
+                    detailsRuns.map((run, idx) => {
+                      const vehicleLabel = run.vehicle?.regNumber || "-";
+                      const vehicleId = run.vehicleId ?? null;
+                      const checkIn = vehicleId ? latestCheckInByVehicleId.get(vehicleId) : null;
+                      const checkInLabel = vehicleId
+                        ? checkIn
+                          ? `${fmtCheckIn.format(new Date(checkIn.checkedAt))} \u2022 ${checkIn.allOk ? "OK" : "Issues"}`
+                          : "No check-in"
+                        : "-";
+                      return (
                       <tr key={`${run.activityType}-${idx}`}>
-                        <td>{run.activityType}</td>
-                        <td>{run.customer?.name || "-"}</td>
-                        <td>{run.route?.name || "-"}</td>
-                        <td>{run.vehicle?.regNumber || "-"}</td>
-                        <td>{formatDurationMinutes(run.durationMin)}</td>
-                        <td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.activityType}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.customer?.name || "-"}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.route?.name || "-"}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{vehicleLabel}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{checkInLabel}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>{formatDurationMinutes(run.durationMin)}</td>
+                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
                           <button
-                            className="button"
                             type="button"
-                            onClick={() => {
-                              // Placeholder for upcoming edit flow.
-                              // eslint-disable-next-line no-console
-                              console.log("edit entry", idx);
+                            onClick={() => openEditModal(run)}
+                            aria-label="Edit entry"
+                            title="Edit"
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              padding: 0,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "10px",
+                              border: "1px solid #e2e8f0",
+                              background: "#f8fafc",
+                              color: "#334155",
                             }}
                           >
-                            Edit
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
                           </button>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+            {editOpen ? (
+              <div
+                role="dialog"
+                aria-modal="true"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 60,
+                  pointerEvents: "none",
+                }}
+              >
+                <div
+                  onClick={(event) => event.stopPropagation()}
+                  style={{
+                    pointerEvents: "auto",
+                    background: "#fff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    width: "360px",
+                    boxShadow: "0 20px 40px rgba(15, 23, 42, 0.2)",
+                  }}
+                >
+                  <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Edit entry</div>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <label style={{ display: "grid", gap: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Activity</span>
+                      <select
+                        value={editActivityType}
+                        onChange={(event) => setEditActivityType(event.target.value)}
+                      >
+                        <option value="DRIVING">DRIVING</option>
+                        <option value="OTHER_WORK">OTHER_WORK</option>
+                        <option value="BREAK">BREAK</option>
+                        <option value="AVAILABILITY">AVAILABILITY</option>
+                      </select>
+                    </label>
+                    <label style={{ display: "grid", gap: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Duration</span>
+                      <input
+                        type="text"
+                        value={editDuration}
+                        onChange={(event) => setEditDuration(event.target.value)}
+                        placeholder="HH:MM"
+                      />
+                    </label>
+                    <label style={{ display: "grid", gap: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Note</span>
+                      <input
+                        type="text"
+                        value={editNote}
+                        onChange={(event) => setEditNote(event.target.value)}
+                        placeholder="Add note (optional)"
+                      />
+                    </label>
+                  </div>
+                  {editError ? (
+                    <div className="error" style={{ marginTop: "10px" }}>
+                      {editError}
+                    </div>
+                  ) : null}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" }}>
+                    <button type="button" className="button" onClick={closeEditModal} disabled={editSaving}>
+                      Cancel
+                    </button>
+                    <button type="button" className="button" onClick={saveEdit} disabled={editSaving}>
+                      {editSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -40,7 +40,6 @@ enum DefectStatus {
   OPEN
   IN_PROGRESS
   RESOLVED
-  CLOSED
 }
 
 enum ChecklistAnswerValue {
@@ -60,6 +59,11 @@ enum DefectEventType {
   ASSIGNED
   UNASSIGNED
   COMMENTED
+  DETAILS_UPDATED
+  ATTACHMENT_ADDED
+  ATTACHMENT_DELETED
+  ARCHIVED
+  ATTACHMENT_PURGED
 }
 
 enum Plan {
@@ -119,6 +123,7 @@ model Company {
   workEntries        WorkEntry[]
   vehicleCheckIns    VehicleCheckIn[]
   documents          Document[]
+  passwordResetTokens PasswordResetToken[]
   subscription       Subscription?
 
   @@map("companies")
@@ -215,12 +220,33 @@ model User {
   workEntries        WorkEntry[]
   vehicleCheckIns    VehicleCheckIn[]
   uploadedDocuments  Document[]          @relation("DocumentsUploadedByUser")
+  defectAttachments  DefectAttachment[]  @relation("DefectAttachmentsUploadedByUser")
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([companyId, email])
   @@unique([companyId, phone])
   @@unique([companyId, username])
   @@index([companyId])
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    Int      @map("user_id")
+  companyId Int      @map("company_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId])
+  @@index([companyId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 /**
@@ -293,7 +319,7 @@ model ChecklistInstance {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
-  @@unique([companyId, vehicleId, date])
+  @@unique([companyId, vehicleId, userId, date])
   @@index([companyId, date])
   @@index([companyId, vehicleId, date])
   @@map("checklist_instances")
@@ -442,6 +468,7 @@ model Defect {
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz
   resolvedAt           DateTime?    @map("resolved_at") @db.Timestamptz
+  archivedAt           DateTime?    @map("archived_at") @db.Timestamptz
 
   company           Company            @relation(fields: [companyId], references: [id])
   vehicle           Vehicle            @relation(fields: [vehicleId], references: [id])
@@ -450,6 +477,7 @@ model Defect {
   checklistInstance ChecklistInstance? @relation(fields: [checklistInstanceId], references: [id])
   comments          DefectComment[]
   events            DefectEvent[]
+  attachments       DefectAttachment[]
 
   @@unique([companyId, checklistInstanceId, checklistQuestionKey])
   @@index([companyId, status])
@@ -471,6 +499,27 @@ model DefectComment {
 
   @@index([companyId, defectId])
   @@map("defect_comments")
+}
+
+model DefectAttachment {
+  id               String   @id @default(cuid())
+  companyId        Int      @map("company_id")
+  defectId         String   @map("defect_id")
+  uploadedByUserId Int      @map("uploaded_by_user_id")
+  title            String?
+  mimeType         String   @map("mime_type")
+  size             Int
+  storagePath      String?  @map("storage_path")
+  purgedAt         DateTime? @map("purged_at") @db.Timestamptz
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  defect     Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  uploadedBy User   @relation("DefectAttachmentsUploadedByUser", fields: [uploadedByUserId], references: [id])
+
+  @@index([companyId, defectId])
+  @@index([companyId, createdAt])
+  @@index([companyId, purgedAt])
+  @@map("defect_attachments")
 }
 
 model DefectEvent {

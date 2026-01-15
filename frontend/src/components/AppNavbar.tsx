@@ -36,6 +36,11 @@ const AppNavbar = ({
           background: "#111827",
           color: "#fff",
           gap: "12px",
+          position: "sticky",
+          top: 0,
+          zIndex: 60,
+          width: "100%",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

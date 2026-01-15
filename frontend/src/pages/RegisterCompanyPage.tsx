@@ -1,8 +1,9 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/http";
 import { registerCompany } from "../api/auth";
 import { useAuth } from "../auth/AuthContext";
+import PublicHeader from "../components/PublicHeader";
 
 const slugRegex = /^[a-z0-9-]{3,40}$/;
 
@@ -14,11 +15,13 @@ const RegisterCompanyPage = () => {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
 
     const slug = companySlug.trim().toLowerCase();
     if (!slugRegex.test(slug)) {
@@ -38,7 +41,7 @@ const RegisterCompanyPage = () => {
         adminEmail: adminEmail.trim(),
         adminPassword,
       });
-      window.alert("Company created, please log in.");
+      setSuccess("Company created. Next: sign in to your workspace.");
       navigate(`/c/${slug}/login`, { replace: true });
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Registration failed";
@@ -49,8 +52,12 @@ const RegisterCompanyPage = () => {
   };
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 520 }}>
+    <>
+      <PublicHeader />
+      <div className="page page-top">
+        <div className="container">
+          <div className="auth-wrap">
+            <div className="card auth-card">
         <h1>Register company</h1>
         <p className="muted">Create your transport workspace and first admin.</p>
         {user && company ? (
@@ -62,6 +69,7 @@ const RegisterCompanyPage = () => {
             </button>
           </div>
         ) : null}
+        {success ? <div className="success">{success}</div> : null}
         {error ? <div className="error">{error}</div> : null}
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div className="field">
@@ -109,10 +117,22 @@ const RegisterCompanyPage = () => {
           <button className="button" type="submit" disabled={loading}>
             {loading ? "Registering..." : "Create company"}
           </button>
+          <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>
+            By registering, you agree to the <Link to="/terms">Terms of Service</Link> and acknowledge the{" "}
+            <Link to="/privacy">Privacy</Link> policy.
+          </p>
+          <p className="muted" style={{ fontSize: "0.9rem" }}>
+            <Link to="/login">Sign in</Link> · <Link to="/help">Help & Getting Started</Link>
+          </p>
         </form>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
 export default RegisterCompanyPage;
+
+

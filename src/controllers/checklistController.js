@@ -52,6 +52,7 @@ const getStatus = asyncHandler(async (req, res) => {
 
   const status = await checklistService.getStatus({
     companyId: req.companyId,
+    user: req.user,
     vehicleId: parsed.data.vehicleId,
     date: parsed.data.date,
   });
@@ -65,7 +66,7 @@ const submitChecklist = asyncHandler(async (req, res) => {
     throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
   }
 
-  const checklist = await checklistService.submitChecklist({
+  const result = await checklistService.submitChecklist({
     companyId: req.companyId,
     user: req.user,
     vehicleId: parsed.data.vehicleId,
@@ -73,7 +74,7 @@ const submitChecklist = asyncHandler(async (req, res) => {
     answers: parsed.data.answers,
   });
 
-  res.status(201).json({ checklist });
+  res.status(201).json({ checklist: result.checklist, createdDefectIds: result.createdDefectIds });
 });
 
 const listChecklists = asyncHandler(async (req, res) => {

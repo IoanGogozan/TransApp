@@ -11,6 +11,14 @@ const today = () => {
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
+const daysAgo = (days) => {
+  const now = new Date();
+  now.setDate(now.getDate() - days);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 const login = async ({ companySlug, identifier }) => {
   const res = await request(app).post(`/api/v1/c/${companySlug}/auth/login`).send({ identifier, password });
@@ -110,6 +118,30 @@ describe("Work entries", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("VEHICLE_CHECKIN_REQUIRED");
+  });
+
+  it("allows driving entry with vehicle for past date without check-in", async () => {
+    const company = await createCompany({ name: "Runs Past Date" });
+    const route = await createRoute({ companyId: company.id, name: "Route Past" });
+    const customer = await createCustomer({ companyId: company.id, name: "Customer Past" });
+    const vehicle = await createVehicle({ companyId: company.id, regNumber: "PAST111", name: "Past Van" });
+    const driver = await createUser({ companyId: company.id, role: "DRIVER", email: "driver.past@example.com", passwordPlain: password });
+    const token = await login({ companySlug: company.slug, identifier: driver.email });
+
+    const res = await request(app)
+      .post("/api/v1/me/entries")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        date: daysAgo(2),
+        activityType: "DRIVING",
+        durationMin: 60,
+        customerOptionId: customer.id,
+        routeOptionId: route.id,
+        vehicleId: vehicle.id,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.activityType).toBe("DRIVING");
   });
 
   it("enforces tenant scoping for route and vehicle", async () => {

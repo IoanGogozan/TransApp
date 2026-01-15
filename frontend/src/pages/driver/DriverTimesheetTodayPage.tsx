@@ -8,12 +8,12 @@ import {
   createMyEntry,
   updateMyEntry,
   deleteMyEntry,
-  getMyRecentVehicleCheckIns,
+  getMyVehicleCheckInStatus,
   type RouteOption,
   type VehicleOption,
   type CustomerOption,
   type WorkEntry,
-  type RecentVehicleCheckIn,
+  type VehicleCheckInStatus,
 } from "../../api/timesheets";
 import { ApiError } from "../../api/http";
 import { tenantPath } from "../../utils/tenantPath";
@@ -43,6 +43,91 @@ const formatMinutes = (minutes: number) => {
   const h = Math.floor(total / 60);
   const m = total % 60;
   return `${h}h ${m}m`;
+};
+
+const InlineSpinner = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    width="12"
+    height="12"
+    style={{ marginRight: "6px", verticalAlign: "middle" }}
+  >
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+    <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="3">
+      <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+    </path>
+  </svg>
+);
+
+const PencilIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+    <path d="M13.6 3.2 16.8 6.4l-9.4 9.4H4.2v-3.2l9.4-9.4Zm1.4-1.4-1.2-1.2a1.5 1.5 0 0 0-2.1 0l-1.2 1.2 3.2 3.2 1.3-1.2a1.5 1.5 0 0 0 0-2.1Z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+    <path d="M7 2.5h6l.5 1H17v1.5H3V3.5h3.5l.5-1ZM5 6h10l-.7 10.3A1.5 1.5 0 0 1 12.8 18H7.2a1.5 1.5 0 0 1-1.5-1.7L5 6Z" />
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+    <path d="M10 1.5A8.5 8.5 0 1 0 18.5 10 8.5 8.5 0 0 0 10 1.5Zm0 3.75a1 1 0 1 1-1 1 1 1 0 0 1 1-1Zm1.25 9h-2.5v-1.5h.75V9h-.75V7.5h2.5v5.25h.75Z" />
+  </svg>
+);
+
+const IconButton = ({ label, title, disabled, onClick, children }: {
+  label: string;
+  title: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => (
+  <button
+    type="button"
+    aria-label={label}
+    title={title}
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      width: "36px",
+      height: "36px",
+      borderRadius: "10px",
+      border: "1px solid #e5e7eb",
+      background: "#fff",
+      color: "#374151",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.6 : 1,
+    }}
+  >
+    {children}
+  </button>
+);
+
+const parseYYYYMMDDToLocalDate = (dateStr: string) => {
+  const [yearStr, monthStr, dayStr] = dateStr.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month - 1, day);
+};
+
+const formatLocalDateToYYYYMMDD = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const daysBetween = (fromDate: Date, toDate: Date) => {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((toDate.getTime() - fromDate.getTime()) / msPerDay);
 };
 
 const DriverTimesheetTodayPage = () => {
@@ -77,14 +162,14 @@ const DriverTimesheetTodayPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [weekTotalMinutes, setWeekTotalMinutes] = useState(0);
   const [weekWarning, setWeekWarning] = useState<string | null>(null);
-  const [recentCheckIns, setRecentCheckIns] = useState<RecentVehicleCheckIn[]>([]);
-  const [recentCheckInsError, setRecentCheckInsError] = useState<string | null>(null);
+  const [checkInStatus, setCheckInStatus] = useState<VehicleCheckInStatus | null>(null);
+  const [checkInStatusError, setCheckInStatusError] = useState<string | null>(null);
   const [checkInGateError, setCheckInGateError] = useState<string | null>(null);
-  const [entrySaving, setEntrySaving] = useState(false);
-  const [entryError, setEntryError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [entryEditingId, setEntryEditingId] = useState<string | null>(null);
   const [editActivityType, setEditActivityType] = useState<WorkEntry["activityType"]>("DRIVING");
   const [editCustomerId, setEditCustomerId] = useState("");
@@ -103,14 +188,41 @@ const DriverTimesheetTodayPage = () => {
   const hasCustomer = !!customerOptionId;
   const hasRoute = !!routeOptionId;
   const hasVehicle = !!vehicleId;
-  const isTodaySelected = selectedDate === todayStr;
+  const isTodaySelected = selectedDate === formatYYYYMMDD(new Date());
+  const selectedLocal = parseYYYYMMDDToLocalDate(selectedDate);
+  const todayLocalMidnight = parseYYYYMMDDToLocalDate(formatLocalDateToYYYYMMDD(new Date()));
+  const diffDays = selectedLocal && todayLocalMidnight ? daysBetween(selectedLocal, todayLocalMidnight) : 0;
+  const isTooOldToEdit = diffDays > 7;
+  const isFutureDate = diffDays < 0;
+  const isEditableDate = !isFutureDate && !isTooOldToEdit;
   const selectedVehicleId = vehicleId ? Number(vehicleId) : null;
-  const hasValidCheckIn = selectedVehicleId === null
-    ? true
-    : recentCheckIns.some((checkIn) => checkIn.vehicleId === selectedVehicleId);
-  const requiresCheckIn = selectedVehicleId !== null && !hasValidCheckIn;
-  const checkInHelperText = "Vehicle check-in required (valid for 24h).";
+  const hasValidCheckIn = activityType === "DRIVING"
+    && selectedVehicleId !== null
+    && checkInStatus?.required === true
+    && checkInStatus.isValid === true;
+  const showCheckInWarning = activityType === "DRIVING"
+    && selectedVehicleId !== null
+    && checkInStatus?.required === true
+    && checkInStatus.isValid === false;
+  const requiresCheckIn = showCheckInWarning;
+  const checkInHelperText = "Vehicle check-in required (valid for 24h) before driving today.";
+  const checkInStatusText = selectedVehicleId === null
+    ? "Select a vehicle to check in."
+    : hasValidCheckIn
+      ? "Checked in (valid for 24h)."
+      : "No valid check-in for this vehicle.";
+  const checkInStatusClassName = selectedVehicleId === null
+    ? "muted"
+    : hasValidCheckIn
+      ? "success"
+      : "error";
   const durationMin = durationHours * 60 + durationMinutes;
+  const activityLabelMap: Record<WorkEntry["activityType"], string> = {
+    DRIVING: "Driving",
+    OTHER_WORK: "Other work",
+    BREAK: "Break",
+    AVAILABILITY: "Availability",
+  };
 
   const buildTimesheetParams = () => {
     const params = new URLSearchParams(searchParams);
@@ -127,7 +239,7 @@ const DriverTimesheetTodayPage = () => {
   const load = async (dateStr: string) => {
     setLoading(true);
     setError(null);
-    setMessage(null);
+    setSuccessMessage(null);
     try {
       const [routesData, vehiclesData, entriesData] = await Promise.all([
         getMyRoutes(),
@@ -154,7 +266,7 @@ const DriverTimesheetTodayPage = () => {
   };
 
   const openEditEntryModal = (entry: WorkEntry) => {
-    setEntryError(null);
+    setErrorMessage(null);
     setEntryEditingId(entry.id);
     setEditActivityType(entry.activityType);
     setEditCustomerId(entry.customerOption?.id ?? "");
@@ -167,8 +279,8 @@ const DriverTimesheetTodayPage = () => {
   };
 
   const closeEditModal = () => {
-    if (entrySaving) return;
-    setEntryError(null);
+    if (isSaving) return;
+    setErrorMessage(null);
     setEntryEditingId(null);
   };
 
@@ -182,33 +294,27 @@ const DriverTimesheetTodayPage = () => {
   };
 
   const handleQuickCreateEntry = async () => {
-    setEntryError(null);
+    if (isSaving) return;
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    if (!isEditableDate) {
+      setErrorMessage("Editing is limited to the last 7 days.");
+      setIsSaving(false);
+      return;
+    }
     if (durationMin === 0) {
-      setEntryError("Duration must be greater than 00:00.");
+      setErrorMessage("Duration must be greater than 00:00.");
+      setIsSaving(false);
       return;
     }
 
     if ((activityType === "DRIVING" || activityType === "OTHER_WORK") && !customerOptionId) {
-      setEntryError("Customer is required for driving or other work.");
+      setErrorMessage("Customer is required for driving or other work.");
+      setIsSaving(false);
       return;
     }
 
-    if (vehicleId) {
-      const vehicleIdNumber = Number(vehicleId);
-      const hasTodayCheckIn = recentCheckIns.some((checkIn) => {
-        if (checkIn.vehicleId !== vehicleIdNumber) return false;
-        const checkInDate = formatYYYYMMDD(new Date(checkIn.checkedInAt));
-        return checkInDate === selectedDate;
-      });
-      if (!hasTodayCheckIn) {
-        const returnTo = `${location.pathname}${location.search}`;
-        const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
-        navigate(tenantPath(companySlug, path));
-        return;
-      }
-    }
-
-    setEntrySaving(true);
     try {
       const payload = {
         date: selectedDate,
@@ -219,48 +325,62 @@ const DriverTimesheetTodayPage = () => {
         vehicleId: vehicleId ? Number(vehicleId) : null,
       };
       await createMyEntry(payload);
+      const savedDate = selectedDate;
+      if (savedDate !== todayStr) {
+        const path = `/driver/timesheet?date=${todayStr}&saved=1&savedDate=${savedDate}`;
+        navigate(tenantPath(companySlug, path));
+        return;
+      }
       await load(selectedDate);
-      setMessage("Entry saved");
+      setSuccessMessage("Saved.");
       if (messageTimeoutRef.current) {
         window.clearTimeout(messageTimeoutRef.current);
       }
       messageTimeoutRef.current = window.setTimeout(() => {
-        setMessage(null);
+        setSuccessMessage(null);
         messageTimeoutRef.current = null;
-      }, 2000);
+      }, 4000);
     } catch (err) {
-      if (
-        err instanceof ApiError &&
-        err.status === 409 &&
-        activityType === "DRIVING" &&
-        vehicleId
-      ) {
-        const returnTo = `/driver/timesheet?${buildTimesheetParams().toString()}`;
-        const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
-        navigate(tenantPath(companySlug, path));
+      if (err instanceof ApiError && err.status === 409 && activityType === "DRIVING" && vehicleId) {
+        if (isTodaySelected) {
+          const returnTo = `/driver/timesheet?${buildTimesheetParams().toString()}`;
+          const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
+          navigate(tenantPath(companySlug, path));
+          return;
+        }
+        setErrorMessage("Check-in is only available for today. You can still add past driving entries without check-in.");
         return;
       }
-      setEntryError(err instanceof Error ? err.message : "Failed to create entry.");
+      setErrorMessage("Failed to save entry. Please try again.");
     } finally {
-      setEntrySaving(false);
+      setIsSaving(false);
     }
   };
 
   const handleSaveEditEntry = async () => {
     if (!entryEditingId) return;
-    setEntryError(null);
+    if (isSaving) return;
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    if (!isEditableDate) {
+      setErrorMessage("Editing is limited to the last 7 days.");
+      setIsSaving(false);
+      return;
+    }
     const durationMin = parseDurationToMinutes(editDuration);
     if (!durationMin || durationMin <= 0) {
-      setEntryError("Duration must be in HH:MM format and greater than 00:00.");
+      setErrorMessage("Duration must be in HH:MM format and greater than 00:00.");
+      setIsSaving(false);
       return;
     }
 
     if ((editActivityType === "DRIVING" || editActivityType === "OTHER_WORK") && !editCustomerId) {
-      setEntryError("Customer is required for driving or other work.");
+      setErrorMessage("Customer is required for driving or other work.");
+      setIsSaving(false);
       return;
     }
 
-    setEntrySaving(true);
     try {
       const payload = {
         date: selectedDate,
@@ -272,24 +392,37 @@ const DriverTimesheetTodayPage = () => {
         note: editNote.trim() || null,
       };
       await updateMyEntry(entryEditingId, payload);
-      closeEditModal();
-      await load(selectedDate);
-    } catch (err) {
-      if (
-        err instanceof ApiError &&
-        err.status === 409 &&
-        editActivityType === "DRIVING" &&
-        editVehicleId
-      ) {
-        const returnTo = `${location.pathname}${location.search}`;
-        const path = `/driver/checklist?vehicleId=${editVehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
+      if (selectedDate !== todayStr) {
+        const path = `/driver/timesheet?date=${todayStr}&saved=1&savedDate=${selectedDate}`;
         closeEditModal();
         navigate(tenantPath(companySlug, path));
         return;
       }
-      setEntryError(err instanceof Error ? err.message : "Failed to update entry.");
+      closeEditModal();
+      await load(selectedDate);
+      setSuccessMessage("Changes saved.");
+      if (messageTimeoutRef.current) {
+        window.clearTimeout(messageTimeoutRef.current);
+      }
+      messageTimeoutRef.current = window.setTimeout(() => {
+        setSuccessMessage(null);
+        messageTimeoutRef.current = null;
+      }, 4000);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && editActivityType === "DRIVING" && editVehicleId) {
+        if (isTodaySelected) {
+          const returnTo = `${location.pathname}${location.search}`;
+          const path = `/driver/checklist?vehicleId=${editVehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
+          closeEditModal();
+          navigate(tenantPath(companySlug, path));
+          return;
+        }
+        setErrorMessage("Check-in is only available for today. You can still add past driving entries without check-in.");
+        return;
+      }
+      setErrorMessage("Failed to update entry. Please try again.");
     } finally {
-      setEntrySaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -300,7 +433,7 @@ const DriverTimesheetTodayPage = () => {
       await deleteMyEntry(entry.id);
       await load(selectedDate);
     } catch (err) {
-      setEntryError(err instanceof Error ? err.message : "Failed to delete entry.");
+      setErrorMessage(err instanceof Error ? err.message : "Failed to delete entry.");
     }
   };
 
@@ -317,13 +450,19 @@ const DriverTimesheetTodayPage = () => {
     }
   };
 
-  const loadRecentCheckIns = async () => {
-    setRecentCheckInsError(null);
+  const loadCheckInStatus = async (targetVehicleId: number | null, dateStr: string, activity: WorkEntry["activityType"]) => {
+    if (activity !== "DRIVING" || targetVehicleId === null) {
+      setCheckInStatus(null);
+      setCheckInStatusError(null);
+      return;
+    }
+    setCheckInStatusError(null);
     try {
-      const checkIns = await getMyRecentVehicleCheckIns(24);
-      setRecentCheckIns(checkIns);
+      const status = await getMyVehicleCheckInStatus({ vehicleId: targetVehicleId, date: dateStr });
+      setCheckInStatus(status);
     } catch (err) {
-      setRecentCheckInsError("Unable to load recent vehicle check-ins.");
+      setCheckInStatus(null);
+      setCheckInStatusError("Unable to load vehicle check-in status.");
     }
   };
 
@@ -338,6 +477,22 @@ const DriverTimesheetTodayPage = () => {
     setSelectedDate(dateParam);
     setHasInitializedParams(true);
   }, [searchParams, setSearchParams, todayStr]);
+
+  useEffect(() => {
+    const saved = searchParams.get("saved");
+    const savedDate = searchParams.get("savedDate");
+    if (saved === "1" && savedDate) {
+      setSuccessMessage(`Entry saved for ${savedDate}.`);
+      if (messageTimeoutRef.current) {
+        window.clearTimeout(messageTimeoutRef.current);
+      }
+      messageTimeoutRef.current = window.setTimeout(() => {
+        setSuccessMessage(null);
+        messageTimeoutRef.current = null;
+      }, 4000);
+      navigate(tenantPath(companySlug, `/driver/timesheet?date=${todayStr}`), { replace: true });
+    }
+  }, [companySlug, navigate, searchParams, todayStr]);
 
   useEffect(() => {
     const parsed = parseYYYYMMDD(selectedDate) ?? new Date();
@@ -376,9 +531,13 @@ const DriverTimesheetTodayPage = () => {
 
   useEffect(() => {
     load(selectedDate);
-    loadRecentCheckIns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
+
+  useEffect(() => {
+    loadCheckInStatus(selectedVehicleId, selectedDate, activityType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedVehicleId, activityType]);
 
   useEffect(() => {
     if (!isTodaySelected) return;
@@ -390,7 +549,7 @@ const DriverTimesheetTodayPage = () => {
   useEffect(() => {
     const shouldRefresh = Boolean(location.state && (location.state as { refreshCheckIns?: boolean }).refreshCheckIns);
     if (!shouldRefresh) return;
-    loadRecentCheckIns().finally(() => {
+    loadCheckInStatus(selectedVehicleId, selectedDate, activityType).finally(() => {
       navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -545,30 +704,38 @@ const DriverTimesheetTodayPage = () => {
             {">"}
           </button>
         </div>
-        {!isTodaySelected && (
+        {isFutureDate ? (
           <div className="muted" style={{ marginBottom: "12px" }}>
-            Viewing a past date. Start/Stop and Check-in are disabled.
+            You're viewing a future date. You can view entries, but editing is not available.
           </div>
-        )}
+        ) : isTooOldToEdit ? (
+          <div className="muted" style={{ marginBottom: "12px" }}>
+            You're viewing an older date. You can view entries, but editing is limited to the last 7 days.
+          </div>
+        ) : !isTodaySelected ? (
+          <div className="muted" style={{ marginBottom: "12px" }}>
+            You're viewing a past date. You can add/edit entries, but check-in is only available for today.
+          </div>
+        ) : null}
         {loading && <p>Loading...</p>}
         {dataError && <p className="error">{dataError}</p>}
         {error && <p className="error">Error: {error}</p>}
-        {message && <p className="success">{message}</p>}
+        {successMessage && <p className="success" style={{ marginTop: "6px" }}>{successMessage}</p>}
+        {errorMessage && <p className="error" style={{ marginTop: "6px" }}>{errorMessage}</p>}
 
         {!loading && (
           <>
             <div style={{ marginTop: "16px" }}>
-              <h3 style={{ margin: 0 }}>Entries for today</h3>
+              <h3 style={{ margin: 0 }}>Entries for this date</h3>
               {entries.length === 0 ? (
-                <p style={{ marginTop: "8px" }}>No entries yet for today.</p>
+                <p style={{ marginTop: "8px" }}>No entries yet for this date.</p>
               ) : (
                 <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
                   {entries.map((entry) => {
-                    const metaParts = [
-                      entry.customerOption?.name,
-                      entry.routeOption?.name,
-                      entry.vehicle?.regNumber || entry.vehicle?.name,
-                    ].filter(Boolean) as string[];
+                    const customerName = entry.customerOption?.name || "Internal";
+                    const routeName = entry.routeOption?.name || null;
+                    const vehicleLabel = entry.vehicle?.regNumber || entry.vehicle?.name || null;
+                    const secondaryParts = [routeName, vehicleLabel].filter(Boolean) as string[];
                     return (
                       <div
                         key={entry.id}
@@ -583,28 +750,40 @@ const DriverTimesheetTodayPage = () => {
                           fontSize: "12px",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                          <strong>{entry.activityType}</strong>
-                          {metaParts.length > 0 && <span>{`• ${metaParts.join(" • ")}`}</span>}
-                          <span>{`— ${formatMinutes(entry.durationMin)}`}</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <div style={{ fontWeight: 700 }}>{customerName}</div>
+                          {secondaryParts.length > 0 && (
+                            <div className="muted" style={{ margin: 0, fontSize: "11px" }}>
+                              {secondaryParts.join(" • ")}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <button
-                            className="button"
-                            type="button"
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            {formatMinutes(entry.durationMin)}
+                            <span
+                              title={`Activity: ${activityLabelMap[entry.activityType]}${entry.note?.trim() ? `\nNote: ${entry.note.trim()}` : ""}`}
+                              style={{ color: "#6b7280", display: "inline-flex", alignItems: "center" }}
+                            >
+                              <InfoIcon />
+                            </span>
+                          </div>
+                          <IconButton
+                            label="Edit entry"
+                            title="Edit"
+                            disabled={!isEditableDate || isSaving}
                             onClick={() => openEditEntryModal(entry)}
-                            style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "8px" }}
                           >
-                            Edit
-                          </button>
-                          <button
-                            className="button secondary"
-                            type="button"
+                            <PencilIcon />
+                          </IconButton>
+                          <IconButton
+                            label="Delete entry"
+                            title="Delete"
+                            disabled={!isEditableDate || isSaving}
                             onClick={() => handleDeleteEntry(entry)}
-                            style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "8px" }}
                           >
-                            Delete
-                          </button>
+                            <TrashIcon />
+                          </IconButton>
                         </div>
                       </div>
                     );
@@ -621,7 +800,7 @@ const DriverTimesheetTodayPage = () => {
                 <select
                   value={customerOptionId}
                   onChange={(e) => setCustomerOptionId(e.target.value)}
-                  disabled={customersLoading}
+                  disabled={customersLoading || !isEditableDate || isSaving}
                 >
                   <option value="">Select customer</option>
                   {customers.map((customer) => (
@@ -635,7 +814,11 @@ const DriverTimesheetTodayPage = () => {
 
               <label className="field">
                 <span>Activity</span>
-                <select value={activityType} onChange={(e) => setActivityType(e.target.value as WorkEntry["activityType"])}>
+                <select
+                  value={activityType}
+                  onChange={(e) => setActivityType(e.target.value as WorkEntry["activityType"])}
+                  disabled={!isEditableDate || isSaving}
+                >
                   <option value="DRIVING">Driving</option>
                   <option value="OTHER_WORK">Other work</option>
                   <option value="BREAK">Break</option>
@@ -645,7 +828,7 @@ const DriverTimesheetTodayPage = () => {
 
               <label className="field">
                 <span>Route</span>
-                <select value={routeOptionId} onChange={(e) => setRouteOptionId(e.target.value)}>
+                <select value={routeOptionId} onChange={(e) => setRouteOptionId(e.target.value)} disabled={!isEditableDate || isSaving}>
                   <option value="">Select route</option>
                   {routes.map((route) => (
                     <option key={route.id} value={route.id}>
@@ -657,10 +840,18 @@ const DriverTimesheetTodayPage = () => {
               </label>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", alignItems: "end", marginTop: "12px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isTodaySelected ? "1fr 1fr" : "1fr",
+                gap: "12px",
+                alignItems: "end",
+                marginTop: "12px",
+              }}
+            >
               <label className="field">
                 <span>Vehicle</span>
-                <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+                <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} disabled={!isEditableDate || isSaving}>
                   <option value="">No vehicle</option>
                   {vehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
@@ -673,20 +864,52 @@ const DriverTimesheetTodayPage = () => {
                   <p style={{ marginTop: "6px", color: "#666" }}>No active vehicles available. Ask your admin to add vehicles.</p>
                 )}
               </label>
-              <button
-                className="button"
-                type="button"
-                onClick={() => {
-                  if (!hasVehicle || !isTodaySelected) return;
-                  const returnTo = `${location.pathname}${location.search}`;
-                  const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
-                  navigate(tenantPath(companySlug, path));
-                }}
-                disabled={!hasVehicle || !isTodaySelected}
-                style={{ height: "fit-content" }}
-              >
-                Check in
-              </button>
+              {isTodaySelected && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div
+                    className={checkInStatusClassName}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {hasValidCheckIn && (
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 20 20"
+                        width="14"
+                        height="14"
+                        fill="currentColor"
+                      >
+                        <path d="M7.667 13.2 4.4 9.933l-1.2 1.2 4.467 4.467 9.133-9.133-1.2-1.2-8.133 8.133Z" />
+                      </svg>
+                    )}
+                    {checkInStatusText}
+                  </div>
+                  <button
+                    className="button"
+                    type="button"
+                    onClick={() => {
+                      if (!hasVehicle) return;
+                      const returnTo = `${location.pathname}${location.search}`;
+                      const path = `/driver/checklist?vehicleId=${vehicleId}&returnTo=${encodeURIComponent(returnTo)}`;
+                      navigate(tenantPath(companySlug, path));
+                    }}
+                    disabled={!hasVehicle || isSaving}
+                    style={{ height: "fit-content" }}
+                  >
+                    Check in
+                  </button>
+                  {showCheckInWarning && (
+                    <p className="muted" style={{ margin: 0 }}>{checkInHelperText}</p>
+                  )}
+                  {checkInStatusError && (
+                    <p className="error" style={{ margin: 0 }}>{checkInStatusError}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: "12px" }}>
@@ -696,6 +919,7 @@ const DriverTimesheetTodayPage = () => {
                   <select
                     value={durationHours}
                     onChange={(e) => setDurationHours(Number(e.target.value))}
+                    disabled={!isEditableDate || isSaving}
                   >
                     {Array.from({ length: 25 }, (_, idx) => (
                       <option key={idx} value={idx}>
@@ -709,6 +933,7 @@ const DriverTimesheetTodayPage = () => {
                   <select
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    disabled={!isEditableDate || isSaving}
                   >
                     {[0, 15, 30, 45].map((value) => (
                       <option key={value} value={value}>
@@ -722,15 +947,21 @@ const DriverTimesheetTodayPage = () => {
                 className="button"
                 type="button"
                 onClick={handleQuickCreateEntry}
-                disabled={entrySaving || durationMin === 0}
+                disabled={isSaving || durationMin === 0 || !isEditableDate}
                 style={{ width: "100%", marginTop: "10px" }}
               >
-                Add entry
+                {isSaving ? (
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>
+                    <InlineSpinner />
+                    Saving...
+                  </span>
+                ) : (
+                  "Add entry"
+                )}
               </button>
               {durationMin === 0 && (
                 <p className="muted" style={{ marginTop: "6px" }}>Duration required.</p>
               )}
-              {entryError && <p className="error" style={{ marginTop: "8px" }}>{entryError}</p>}
             </div>
           </>
         )}
@@ -772,12 +1003,12 @@ const DriverTimesheetTodayPage = () => {
                   Log your work for {formatDisplayDate(selectedDateObj)}.
                 </p>
               </div>
-              <button className="button secondary" type="button" onClick={closeEditModal} disabled={entrySaving}>
+              <button className="button secondary" type="button" onClick={closeEditModal} disabled={isSaving}>
                 Cancel
               </button>
             </div>
 
-            {entryError && <div className="error" style={{ marginTop: "12px" }}>{entryError}</div>}
+            {errorMessage && <div className="error" style={{ marginTop: "12px" }}>{errorMessage}</div>}
 
             <div style={{ marginTop: "16px", display: "grid", gap: "12px" }}>
               <label className="field">
@@ -785,6 +1016,7 @@ const DriverTimesheetTodayPage = () => {
                 <select
                   value={editActivityType}
                   onChange={(e) => setEditActivityType(e.target.value as WorkEntry["activityType"])}
+                  disabled={isSaving}
                 >
                   <option value="DRIVING">Driving</option>
                   <option value="OTHER_WORK">Other work</option>
@@ -797,6 +1029,7 @@ const DriverTimesheetTodayPage = () => {
                 <select
                   value={editCustomerId}
                   onChange={(e) => setEditCustomerId(e.target.value)}
+                  disabled={isSaving}
                 >
                   <option value="">Select customer</option>
                   {customers.map((customer) => (
@@ -811,7 +1044,7 @@ const DriverTimesheetTodayPage = () => {
               </label>
               <label className="field">
                 <span>Route</span>
-                <select value={editRouteId} onChange={(e) => setEditRouteId(e.target.value)}>
+                <select value={editRouteId} onChange={(e) => setEditRouteId(e.target.value)} disabled={isSaving}>
                   <option value="">No route</option>
                   {routes.map((route) => (
                     <option key={route.id} value={route.id}>
@@ -822,7 +1055,7 @@ const DriverTimesheetTodayPage = () => {
               </label>
               <label className="field">
                 <span>Vehicle</span>
-                <select value={editVehicleId} onChange={(e) => setEditVehicleId(e.target.value)}>
+                <select value={editVehicleId} onChange={(e) => setEditVehicleId(e.target.value)} disabled={isSaving}>
                   <option value="">No vehicle</option>
                   {vehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
@@ -838,6 +1071,7 @@ const DriverTimesheetTodayPage = () => {
                   placeholder="01:30"
                   value={editDuration}
                   onChange={(e) => setEditDuration(e.target.value)}
+                  disabled={isSaving}
                 />
               </label>
               <label className="field">
@@ -846,16 +1080,24 @@ const DriverTimesheetTodayPage = () => {
                   rows={3}
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value)}
+                  disabled={isSaving}
                 />
               </label>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
-              <button className="button secondary" type="button" onClick={closeEditModal} disabled={entrySaving}>
+              <button className="button secondary" type="button" onClick={closeEditModal} disabled={isSaving}>
                 Cancel
               </button>
-              <button className="button" type="button" onClick={handleSaveEditEntry} disabled={entrySaving}>
-                {entrySaving ? "Saving..." : "Save"}
+              <button className="button" type="button" onClick={handleSaveEditEntry} disabled={isSaving}>
+                {isSaving ? (
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>
+                    <InlineSpinner />
+                    Saving...
+                  </span>
+                ) : (
+                  "Save"
+                )}
               </button>
             </div>
           </div>
@@ -866,6 +1108,10 @@ const DriverTimesheetTodayPage = () => {
 };
 
 export default DriverTimesheetTodayPage;
+
+
+
+
 
 
 

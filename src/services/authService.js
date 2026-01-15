@@ -3,6 +3,9 @@ const AppError = require("../utils/AppError");
 const { hashPassword, comparePassword } = require("../utils/password");
 const { signToken } = require("../utils/jwt");
 const { generateUniqueSlug } = require("../utils/slugify");
+const env = require("../config/env");
+const logger = require("../config/logger");
+const { sendEmail } = require("./emailService");
 
 const normalizeEmail = (s) => s.trim().toLowerCase();
 const normalizePhone = (s) => {
@@ -53,8 +56,8 @@ const registerOwner = async ({ companyName, email, password }) => {
       data: {
         email: normalizedEmail,
         passwordHash,
-      role: "PLATFORM_ADMIN",
-      companyId: company.id,
+        role: "PLATFORM_ADMIN",
+        companyId: company.id,
       },
       select: {
         id: true,
@@ -66,6 +69,21 @@ const registerOwner = async ({ companyName, email, password }) => {
 
     return { company, user };
   });
+
+  const loginLink = `${env.appPublicUrl}/c/${result.company.slug}/login`;
+  const subject = "Your TransApp workspace details";
+  const text = [
+    `Company: ${result.company.name}`,
+    `Company slug: ${result.company.slug}`,
+    `Admin email: ${normalizedEmail}`,
+    `Sign in: ${loginLink}`,
+  ].join("\n");
+
+  try {
+    await sendEmail({ to: normalizedEmail, subject, text });
+  } catch (e) {
+    logger.warn({ err: e?.message, companySlug: result.company.slug }, "Registration email failed (ignored)");
+  }
 
   const token = signToken({
     userId: result.user.id,

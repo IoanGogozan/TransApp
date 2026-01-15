@@ -14,3 +14,9 @@
 - `npx prisma migrate dev`
 - `npx prisma generate`
 - restart backend
+
+## Database migrations
+
+- Run `npx prisma migrate dev --name password_reset_tokens`.
+- Then run `npx prisma generate` (if needed).
+- Ensure `DATABASE_URL` is set correctly before running migrations.

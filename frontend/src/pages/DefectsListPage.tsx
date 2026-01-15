@@ -10,7 +10,7 @@ import { ApiError } from "../api/http";
 import { formatDateTime } from "../utils/time";
 import { tenantPath } from "../utils/tenantPath";
 
-const statusOptions: Array<DefectStatus | "ALL"> = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const statusOptions: Array<DefectStatus | "ALL"> = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED"];
 
 const DefectsListPage = () => {
   const navigate = useNavigate();

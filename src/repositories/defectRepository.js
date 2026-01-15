@@ -17,6 +17,44 @@ const baseSelect = {
   resolvedAt: true,
 };
 
+const detailSelect = {
+  ...baseSelect,
+  vehicle: {
+    select: {
+      id: true,
+      regNumber: true,
+      name: true,
+    },
+  },
+  reportedByUser: {
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      email: true,
+    },
+  },
+  assignedToUser: {
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      email: true,
+    },
+  },
+};
+
+const listSelect = {
+  ...baseSelect,
+  vehicle: {
+    select: {
+      id: true,
+      regNumber: true,
+      name: true,
+    },
+  },
+};
+
 const createDefect = async (data) =>
   prisma.defect.create({
     data,
@@ -29,13 +67,30 @@ const findDefectById = async ({ companyId, defectId }) =>
     select: baseSelect,
   });
 
-const listDefects = async ({ companyId, status, vehicleId, reportedByUserId, from, to, limit, offset }) =>
+const findDefectByIdWithVehicle = async ({ companyId, defectId }) =>
+  prisma.defect.findFirst({
+    where: { companyId, id: defectId },
+    select: detailSelect,
+  });
+
+const listDefects = async ({
+  companyId,
+  status,
+  vehicleId,
+  reportedByUserId,
+  from,
+  to,
+  includeArchived,
+  limit,
+  offset,
+}) =>
   prisma.defect.findMany({
     where: {
       companyId,
       ...(status ? { status } : {}),
       ...(vehicleId ? { vehicleId } : {}),
       ...(reportedByUserId ? { reportedByUserId } : {}),
+      ...(includeArchived ? {} : { archivedAt: null }),
       ...(from || to
         ? {
             createdAt: {
@@ -48,13 +103,22 @@ const listDefects = async ({ companyId, status, vehicleId, reportedByUserId, fro
     orderBy: { createdAt: "desc" },
     take: limit,
     skip: offset,
-    select: baseSelect,
+    select: listSelect,
   });
 
 const updateStatus = async ({ companyId, defectId, status, resolvedAt }) =>
   prisma.defect.updateMany({
     where: { id: defectId, companyId },
     data: { status, resolvedAt },
+  });
+
+const updateDetails = async ({ companyId, defectId, title, description }) =>
+  prisma.defect.updateMany({
+    where: { id: defectId, companyId, archivedAt: null },
+    data: {
+      ...(title !== undefined ? { title } : {}),
+      ...(description !== undefined ? { description } : {}),
+    },
   });
 
 const setAssignee = async ({ companyId, defectId, assignedToUserId }) =>
@@ -66,7 +130,9 @@ const setAssignee = async ({ companyId, defectId, assignedToUserId }) =>
 module.exports = {
   createDefect,
   findDefectById,
+  findDefectByIdWithVehicle,
   listDefects,
   updateStatus,
+  updateDetails,
   setAssignee,
 };

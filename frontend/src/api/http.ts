@@ -34,7 +34,10 @@ export async function http<T>(path: string, options: HttpOptions = {}): Promise<
   };
 
   let payload: BodyInit | undefined;
-  if (body !== undefined) {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  if (isFormData) {
+    payload = body;
+  } else if (body !== undefined) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }

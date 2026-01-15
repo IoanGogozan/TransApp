@@ -13,6 +13,8 @@ import VehiclePage from "./pages/VehiclePage";
 import ChecklistPage from "./pages/ChecklistPage";
 import DriverTimesheetTodayPage from "./pages/driver/DriverTimesheetTodayPage";
 import DriverProfilePage from "./pages/driver/DriverProfilePage";
+import DriverDefectsPage from "./pages/driver/DriverDefectsPage";
+import DriverDefectDetailsPage from "./pages/driver/DriverDefectDetailsPage";
 import DefectsListPage from "./pages/DefectsListPage";
 import DefectDetailsPage from "./pages/DefectDetailsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -26,6 +28,14 @@ import AdminDocumentsPage from "./pages/admin/DocumentsPage";
 import DriverDocumentsPage from "./pages/driver/DocumentsPage";
 import BillingPage from "./pages/admin/BillingPage";
 import VippsReturnPage from "./pages/admin/VippsReturnPage";
+import PublicHelpPage from "./pages/PublicHelpPage";
+import PublicPrivacyPage from "./pages/PublicPrivacyPage";
+import PublicSecurityPage from "./pages/PublicSecurityPage";
+import PublicTermsPage from "./pages/PublicTermsPage";
+import ScrollToHash from "./components/ScrollToHash";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import BackToTopButton from "./components/BackToTopButton";
 
 const AdminAliasRoute = () => {
   const location = useLocation();
@@ -41,8 +51,17 @@ const AdminAliasRoute = () => {
 
 function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToHash />
+      <BackToTopButton />
+      <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/help" element={<PublicHelpPage />} />
+      <Route path="/privacy" element={<PublicPrivacyPage />} />
+      <Route path="/security" element={<PublicSecurityPage />} />
+      <Route path="/terms" element={<PublicTermsPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/register" element={<RegisterCompanyPage />} />
       <Route path="/login" element={<LoginLandingPage />} />
       <Route path="/c/:companySlug/login" element={<LoginPage />} />
@@ -85,6 +104,22 @@ function App() {
           element={
             <DriverRoute>
               <DriverDocumentsPage />
+            </DriverRoute>
+          }
+        />
+        <Route
+          path="driver/defects"
+          element={
+            <DriverRoute>
+              <DriverDefectsPage />
+            </DriverRoute>
+          }
+        />
+        <Route
+          path="driver/defects/:id"
+          element={
+            <DriverRoute>
+              <DriverDefectDetailsPage />
             </DriverRoute>
           }
         />
@@ -178,14 +213,7 @@ function App() {
             </AdminRoute>
           }
         />
-        <Route
-          path="app/help"
-          element={
-            <AdminRoute>
-              <AdminHelpPage />
-            </AdminRoute>
-          }
-        />
+        <Route path="app/help" element={<AdminHelpPage />} />
         <Route
           path="app/admin/defects/:defectId"
           element={
@@ -215,7 +243,8 @@ function App() {
       <Route path="/driver/*" element={<Navigate to="/" replace />} />
       <Route path="/admin/*" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

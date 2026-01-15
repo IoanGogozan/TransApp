@@ -2,7 +2,7 @@ const { z } = require("zod");
 const prisma = require("../config/prismaClient");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
-const { parseDateQueryParam } = require("../utils/dateUtils");
+const { parseDateQueryParam, getTodayYYYYMMDDInOslo } = require("../utils/dateUtils");
 const userService = require("../services/userService");
 
 const getMe = asyncHandler(async (req, res) => {
@@ -230,23 +230,25 @@ const createMyEntry = asyncHandler(async (req, res) => {
   }
 
   if (activityType === "DRIVING" && vehicleId) {
-    const startOfDay = new Date(dateValue);
-    const endOfDay = new Date(dateValue);
-    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
-    const checkIn = await prisma.vehicleCheckIn.findFirst({
-      where: {
-        companyId: req.companyId,
-        userId: req.user.id,
-        vehicleId,
-        checkedAt: { gte: startOfDay, lt: endOfDay },
-      },
-      select: { id: true },
-    });
-    if (!checkIn) {
-      return res.status(409).json({
-        code: "VEHICLE_CHECKIN_REQUIRED",
-        message: "Vehicle check-in required before driving.",
+    const todayDateStr = getTodayYYYYMMDDInOslo();
+    const entryDateStr = parsed.data.date;
+    if (entryDateStr === todayDateStr) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const checkIn = await prisma.vehicleCheckIn.findFirst({
+        where: {
+          companyId: req.companyId,
+          userId: req.user.id,
+          vehicleId,
+          createdAt: { gte: since },
+        },
+        select: { id: true },
       });
+      if (!checkIn) {
+        return res.status(409).json({
+          code: "VEHICLE_CHECKIN_REQUIRED",
+          message: "Vehicle check-in required (valid for 24h) before driving today.",
+        });
+      }
     }
   }
 
@@ -343,23 +345,25 @@ const updateMyEntry = asyncHandler(async (req, res) => {
   }
 
   if (nextActivityType === "DRIVING" && nextVehicleId) {
-    const startOfDay = new Date(nextDate);
-    const endOfDay = new Date(nextDate);
-    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
-    const checkIn = await prisma.vehicleCheckIn.findFirst({
-      where: {
-        companyId: req.companyId,
-        userId: req.user.id,
-        vehicleId: nextVehicleId,
-        checkedAt: { gte: startOfDay, lt: endOfDay },
-      },
-      select: { id: true },
-    });
-    if (!checkIn) {
-      return res.status(409).json({
-        code: "VEHICLE_CHECKIN_REQUIRED",
-        message: "Vehicle check-in required before driving.",
+    const todayDateStr = getTodayYYYYMMDDInOslo();
+    const entryDateStr = nextDate.toISOString().slice(0, 10);
+    if (entryDateStr === todayDateStr) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const checkIn = await prisma.vehicleCheckIn.findFirst({
+        where: {
+          companyId: req.companyId,
+          userId: req.user.id,
+          vehicleId: nextVehicleId,
+          createdAt: { gte: since },
+        },
+        select: { id: true },
       });
+      if (!checkIn) {
+        return res.status(409).json({
+          code: "VEHICLE_CHECKIN_REQUIRED",
+          message: "Vehicle check-in required (valid for 24h) before driving today.",
+        });
+      }
     }
   }
 
@@ -472,6 +476,73 @@ const listMyRecentVehicleCheckIns = asyncHandler(async (req, res) => {
   res.json({ checkIns: latestByVehicle });
 });
 
+const vehicleCheckInStatusSchema = z.object({
+  vehicleId: z.coerce.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Date must be YYYY-MM-DD" }),
+});
+
+const getMyVehicleCheckInStatus = asyncHandler(async (req, res) => {
+  const parsed = vehicleCheckInStatusSchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
+  }
+
+  const dateStr = parsed.data.date;
+  parseDateQueryParam(dateStr, "date");
+
+  const todayOslo = getTodayYYYYMMDDInOslo();
+  const required = dateStr === todayOslo;
+  const hoursValid = 24;
+
+  if (!required) {
+    res.json({
+      vehicleId: parsed.data.vehicleId,
+      required: false,
+      isValid: true,
+      hoursValid,
+      checkedInAt: null,
+      validUntil: null,
+    });
+    return;
+  }
+
+  const since = new Date(Date.now() - hoursValid * 60 * 60 * 1000);
+  const checkIn = await prisma.vehicleCheckIn.findFirst({
+    where: {
+      companyId: req.companyId,
+      userId: req.user.id,
+      vehicleId: parsed.data.vehicleId,
+      createdAt: { gte: since },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+
+  if (!checkIn) {
+    res.json({
+      vehicleId: parsed.data.vehicleId,
+      required: true,
+      isValid: false,
+      hoursValid,
+      checkedInAt: null,
+      validUntil: null,
+    });
+    return;
+  }
+
+  const checkedInAt = checkIn.createdAt.toISOString();
+  const validUntil = new Date(checkIn.createdAt.getTime() + hoursValid * 60 * 60 * 1000).toISOString();
+
+  res.json({
+    vehicleId: parsed.data.vehicleId,
+    required: true,
+    isValid: true,
+    hoursValid,
+    checkedInAt,
+    validUntil,
+  });
+});
+
 module.exports = {
   getMe,
   updateMyPassword,
@@ -484,4 +555,5 @@ module.exports = {
   deleteMyEntry,
   createVehicleCheckIn,
   listMyRecentVehicleCheckIns,
+  getMyVehicleCheckInStatus,
 };

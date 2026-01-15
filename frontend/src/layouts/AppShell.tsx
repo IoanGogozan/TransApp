@@ -42,7 +42,7 @@ const AppShell = ({ children }: AppShellProps) => {
         currentPath={location.pathname}
         resolvePath={resolvePath}
       />
-      <div style={{ padding: "16px", paddingTop: "20px" }}>{children}</div>
+      <div style={{ padding: "16px" }}>{children}</div>
     </div>
   );
 };

@@ -10,11 +10,12 @@ const createSchema = z.object({
 });
 
 const listSchema = z.object({
-  status: z.enum(["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
+  status: z.enum(["OPEN", "IN_PROGRESS", "RESOLVED"]).optional(),
   vehicleId: z.coerce.number().int().positive().optional(),
   reportedByUserId: z.coerce.number().int().positive().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  includeArchived: z.coerce.boolean().default(false),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -24,8 +25,17 @@ const idSchema = z.object({
 });
 
 const statusSchema = z.object({
-  status: z.enum(["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"]),
+  status: z.enum(["OPEN", "IN_PROGRESS", "RESOLVED"]),
 });
+
+const updateSchema = z
+  .object({
+    title: z.string().trim().min(3).max(120).optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+  })
+  .refine((data) => data.title !== undefined || data.description !== undefined, {
+    message: "At least one of title or description is required",
+  });
 
 const createDefect = asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
@@ -94,9 +104,30 @@ const updateStatus = asyncHandler(async (req, res) => {
   res.json({ defect });
 });
 
+const updateDefectDetails = asyncHandler(async (req, res) => {
+  const params = idSchema.safeParse(req.params);
+  if (!params.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", params.error.format());
+  }
+  const body = updateSchema.safeParse(req.body);
+  if (!body.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", body.error.format());
+  }
+
+  const defect = await defectService.updateDefectDetails({
+    companyId: req.companyId,
+    user: req.user,
+    defectId: params.data.id,
+    patch: body.data,
+  });
+
+  res.json({ defect });
+});
+
 module.exports = {
   createDefect,
   listDefects,
   getDefect,
   updateStatus,
+  updateDefectDetails,
 };

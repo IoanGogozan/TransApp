@@ -55,6 +55,26 @@ export type AdminTimesheetRow = {
   vehicles: VehicleOption[];
   customers: CustomerOption[];
   entriesCount: number;
+  checkIns: Array<{
+    vehicleId: number;
+    regNumber: string;
+    checkedAt: string;
+    allOk: boolean;
+  }>;
+  customerBreakdown: Array<{
+    customerId: string | null;
+    customerName: string;
+    routes: string[];
+    vehicles: Array<{ vehicleId: number; regNumber: string }>;
+    minutes: {
+      DRIVING: number;
+      OTHER_WORK: number;
+      BREAK: number;
+      AVAILABILITY: number;
+    };
+    totalMin: number;
+    entryCount: number;
+  }>;
 };
 
 export const getAdminTimesheets = (params: { from: string; to: string; driverId?: number; routeId?: string }) => {
@@ -86,8 +106,10 @@ export type WorkRunsResponse = {
 };
 
 export type WorkEntryDetail = {
+  id: string;
   activityType: "DRIVING" | "OTHER_WORK" | "BREAK" | "AVAILABILITY";
   durationMin: number;
+  vehicleId?: number | null;
   customer: { name: string } | null;
   route: { name: string } | null;
   vehicle: { regNumber: string; name: string | null } | null;
@@ -98,11 +120,29 @@ export type AdminWorkRunDetailsResponse = {
   date: string;
   driverId: number;
   entries: WorkEntryDetail[];
+  checkIns: Array<{
+    vehicleId: number;
+    vehicle: { regNumber: string; name: string | null } | null;
+    checkedAt: string;
+    allOk: boolean;
+    note: string | null;
+  }>;
 };
 
 export type RecentVehicleCheckIn = {
+  userId?: number;
   vehicleId: number;
-  checkedInAt: string;
+  checkedInAt?: string;
+  createdAt?: string;
+};
+
+export type VehicleCheckInStatus = {
+  vehicleId: number;
+  required: boolean;
+  isValid: boolean;
+  hoursValid: number;
+  checkedInAt: string | null;
+  validUntil: string | null;
 };
 
 export const getMyRuns = (date?: string) => {
@@ -156,6 +196,15 @@ export const getAdminWorkRunDetails = (params: { date: string; driverId: number 
   return http<AdminWorkRunDetailsResponse>(`/api/v1/timesheets/work-runs/details?${qs.toString()}`);
 };
 
+export const updateAdminWorkEntry = (
+  id: string,
+  payload: { activityType?: WorkEntry["activityType"]; durationMin?: number; note?: string | null },
+) =>
+  http<{ entry: { id: string; activityType: string; durationMin: number; note: string | null } }>(
+    `/api/v1/timesheets/work-entries/${id}`,
+    { method: "PATCH", body: payload },
+  );
+
 export const startMyRun = (payload: {
   activityType: WorkRun["activityType"];
   customerOptionId: string;
@@ -191,3 +240,8 @@ export const getMyRecentVehicleCheckIns = (hours = 24): Promise<RecentVehicleChe
   return http<{ checkIns: RecentVehicleCheckIn[] }>(`/api/v1/me/vehicle-checkins/recent?${qs.toString()}`)
     .then((res) => res.checkIns);
 };
+
+export const getMyVehicleCheckInStatus = (params: { vehicleId: number; date: string }) =>
+  http<VehicleCheckInStatus>(
+    `/api/v1/me/vehicle-checkins/status?vehicleId=${params.vehicleId}&date=${encodeURIComponent(params.date)}`,
+  );

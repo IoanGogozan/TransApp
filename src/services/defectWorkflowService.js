@@ -12,6 +12,14 @@ const ensureDefect = async (companyId, defectId) => {
   return defect;
 };
 
+const ensureDefectAccess = async ({ companyId, defectId, user }) => {
+  const defect = await ensureDefect(companyId, defectId);
+  if (user?.role === "DRIVER" && Number(defect.reportedByUserId) !== Number(user.id)) {
+    throw new AppError(403, "Forbidden", "FORBIDDEN");
+  }
+  return defect;
+};
+
 const ensureUserInCompany = async (companyId, userId) => {
   const user = await prisma.user.findFirst({
     where: { id: Number(userId), companyId: Number(companyId) },
@@ -52,7 +60,7 @@ const assignDefect = async ({ companyId, user, defectId, assignedToUserId }) => 
 };
 
 const addComment = async ({ companyId, user, defectId, message }) => {
-  await ensureDefect(companyId, defectId);
+  await ensureDefectAccess({ companyId, defectId, user });
 
   const comment = await defectCommentRepository.createComment({
     companyId: Number(companyId),
@@ -72,21 +80,25 @@ const addComment = async ({ companyId, user, defectId, message }) => {
   return comment;
 };
 
-const listComments = async ({ companyId, defectId, limit, offset }) =>
-  defectCommentRepository.listComments({
+const listComments = async ({ companyId, defectId, limit, offset, user }) => {
+  await ensureDefectAccess({ companyId, defectId, user });
+  return defectCommentRepository.listComments({
     companyId: Number(companyId),
     defectId,
     limit,
     offset,
   });
+};
 
-const listHistory = async ({ companyId, defectId, limit, offset }) =>
-  defectEventRepository.listEvents({
+const listHistory = async ({ companyId, defectId, limit, offset, user }) => {
+  await ensureDefectAccess({ companyId, defectId, user });
+  return defectEventRepository.listEvents({
     companyId: Number(companyId),
     defectId,
     limit,
     offset,
   });
+};
 
 const recordCreatedEvent = async ({ companyId, defectId, actorUserId }) =>
   defectEventRepository.createEvent({
@@ -106,11 +118,22 @@ const recordStatusChanged = async ({ companyId, defectId, actorUserId, from, to 
     data: { from, to },
   });
 
+const recordDetailsUpdated = async ({ companyId, defectId, actorUserId, changed }) =>
+  defectEventRepository.createEvent({
+    companyId,
+    defectId,
+    actorUserId,
+    type: "DETAILS_UPDATED",
+    data: { changed },
+  });
+
 module.exports = {
+  ensureDefectAccess,
   assignDefect,
   addComment,
   listComments,
   listHistory,
   recordCreatedEvent,
   recordStatusChanged,
+  recordDetailsUpdated,
 };

@@ -1,0 +1,243 @@
+﻿# Project map
+
+Include toate fisierele din repo, cu exceptia: node_modules, dist, .git, .vite.
+
+## root
+- `.env` - Variabile de mediu locale (nu se comit).
+- `.env.example` - Exemplu variabile de mediu.
+- `.env.test` - Variabile de mediu pentru teste.
+- `.gitignore` - Reguli git ignore.
+## docs
+- `docs/data-model.md` - Descriere model de date.
+## frontend
+- `frontend/.env` - Variabile de mediu pentru frontend.
+- `frontend/index.html` - Template HTML pentru Vite.
+- `frontend/package.json` - Dependinte si scripturi (frontend).
+- `frontend/package-lock.json` - Lockfile dependinte (frontend).
+- `frontend/src/api/auth.ts` - Client API: auth
+- `frontend/src/api/billing.ts` - Client API: billing
+- `frontend/src/api/checklists.ts` - Client API: checklists
+- `frontend/src/api/customers.ts` - Client API: customers
+- `frontend/src/api/defects.ts` - Client API: defects
+- `frontend/src/api/documents.ts` - Client API: documents
+- `frontend/src/api/http.ts` - Client API: http
+- `frontend/src/api/reports.ts` - Client API: reports
+- `frontend/src/api/routes.ts` - Client API: routes
+- `frontend/src/api/shifts.ts` - Client API: shifts
+- `frontend/src/api/timesheets.ts` - Client API: timesheets
+- `frontend/src/api/types.ts` - Client API: types
+- `frontend/src/api/users.ts` - Client API: users
+- `frontend/src/api/vehicles.ts` - Client API: vehicles
+- `frontend/src/App.tsx` - Root component React.
+- `frontend/src/auth/AuthContext.tsx` - Auth frontend: AuthContext
+- `frontend/src/auth/companySlug.ts` - Auth frontend: companySlug
+- `frontend/src/auth/token.ts` - Auth frontend: token
+- `frontend/src/components/AdminRoute.tsx` - Component UI: AdminRoute
+- `frontend/src/components/AppDrawerMenu.tsx` - Component UI: AppDrawerMenu
+- `frontend/src/components/appMenuConfig.ts` - Component UI: appMenuConfig
+- `frontend/src/components/AppNavbar.tsx` - Component UI: AppNavbar
+- `frontend/src/components/DriverRoute.tsx` - Component UI: DriverRoute
+- `frontend/src/layout/AppLayout.tsx` - Layout UI: AppLayout
+- `frontend/src/layouts/AppShell.tsx` - Layout UI: AppShell
+- `frontend/src/main.tsx` - Entry point React.
+- `frontend/src/pages/admin/AdminHelpPage.tsx` - Pagina admin: AdminHelpPage
+- `frontend/src/pages/admin/BillingPage.tsx` - Pagina admin: BillingPage
+- `frontend/src/pages/admin/CustomersPage.css` - Pagina admin: CustomersPage
+- `frontend/src/pages/admin/CustomersPage.tsx` - Pagina admin: CustomersPage
+- `frontend/src/pages/admin/DocumentsPage.tsx` - Pagina admin: DocumentsPage
+- `frontend/src/pages/admin/RoutesPage.tsx` - Pagina admin: RoutesPage
+- `frontend/src/pages/admin/TimesheetsAdminPage.tsx` - Pagina admin: TimesheetsAdminPage
+- `frontend/src/pages/admin/VippsReturnPage.tsx` - Pagina admin: VippsReturnPage
+- `frontend/src/pages/AdminReportsPage.tsx` - Pagina: AdminReportsPage
+- `frontend/src/pages/AdminUsersPage.tsx` - Pagina: AdminUsersPage
+- `frontend/src/pages/ChangePasswordPage.tsx` - Pagina: ChangePasswordPage
+- `frontend/src/pages/ChecklistPage.tsx` - Pagina: ChecklistPage
+- `frontend/src/pages/DefectDetailsPage.tsx` - Pagina: DefectDetailsPage
+- `frontend/src/pages/DefectsListPage.tsx` - Pagina: DefectsListPage
+- `frontend/src/pages/driver/DocumentsPage.tsx` - Pagina driver: DocumentsPage
+- `frontend/src/pages/driver/DriverProfilePage.tsx` - Pagina driver: DriverProfilePage
+- `frontend/src/pages/driver/DriverTimesheetTodayPage.tsx` - Pagina driver: DriverTimesheetTodayPage
+- `frontend/src/pages/HomePage.tsx` - Pagina: HomePage
+- `frontend/src/pages/LandingPage.tsx` - Pagina: LandingPage
+- `frontend/src/pages/LoginLandingPage.tsx` - Pagina: LoginLandingPage
+- `frontend/src/pages/LoginPage.tsx` - Pagina: LoginPage
+- `frontend/src/pages/RegisterCompanyPage.tsx` - Pagina: RegisterCompanyPage
+- `frontend/src/pages/VehiclePage.tsx` - Pagina: VehiclePage
+- `frontend/src/pages/VehiclesPage.tsx` - Pagina: VehiclesPage
+- `frontend/src/routes/ProtectedRoute.tsx` - Rute frontend: ProtectedRoute
+- `frontend/src/styles.css` - Stiluri globale.
+- `frontend/src/types/checklist.ts` - Tipuri TS: checklist
+- `frontend/src/types/defect.ts` - Tipuri TS: defect
+- `frontend/src/types/shift.ts` - Tipuri TS: shift
+- `frontend/src/types/user.ts` - Tipuri TS: user
+- `frontend/src/types/vehicle.ts` - Tipuri TS: vehicle
+- `frontend/src/utils/date.ts` - Utilitar frontend: date
+- `frontend/src/utils/oslo.ts` - Utilitar frontend: oslo
+- `frontend/src/utils/tenantPath.ts` - Utilitar frontend: tenantPath
+- `frontend/src/utils/time.ts` - Utilitar frontend: time
+- `frontend/src/vite-env.d.ts` - Tipuri Vite pentru TS.
+- `frontend/tsconfig.json` - Configurare TypeScript (frontend).
+- `frontend/tsconfig.node.json` - Configurare TypeScript pentru toolchain.
+- `frontend/vite.config.ts` - Configurare Vite.
+## root
+- `nodemon.json` - Configurare Nodemon.
+- `package.json` - Dependinte si scripturi (root).
+- `package-lock.json` - Lockfile dependinte (root).
+- `prisma.config.ts` - Configurare Prisma.
+## prisma
+- `prisma/migrations/20251226200938_init/migration.sql` - Migrare Prisma: 20251226200938 init
+- `prisma/migrations/20251228204400_add_phone_username_to_user/migration.sql` - Migrare Prisma: 20251228204400 add phone username to user
+- `prisma/migrations/20251228211600_add_must_change_password/migration.sql` - Migrare Prisma: 20251228211600 add must change password
+- `prisma/migrations/202512291000_add_company_plan/migration.sql` - Migrare Prisma: 202512291000 add company plan
+- `prisma/migrations/202512291110_multi_tenant_uniques/migration.sql` - Migrare Prisma: 202512291110 multi tenant uniques
+- `prisma/migrations/202512291600_timesheets_routes/migration.sql` - Migrare Prisma: 202512291600 timesheets routes
+- `prisma/migrations/202512301420_add_timesheet_vehicle/migration.sql` - Migrare Prisma: 202512301420 add timesheet vehicle
+- `prisma/migrations/202512311530_add_work_runs_and_vehicle_checkins/migration.sql` - Migrare Prisma: 202512311530 add work runs and vehicle checkins
+- `prisma/migrations/20251231154000_add_customer_options/migration.sql` - Migrare Prisma: 20251231154000 add customer options
+- `prisma/migrations/20251231173119_add_workrun_customer_option/migration.sql` - Migrare Prisma: 20251231173119 add workrun customer option
+- `prisma/migrations/20260101121917_add_documents/migration.sql` - Migrare Prisma: 20260101121917 add documents
+- `prisma/migrations/20260101132135_add_customer_details/migration.sql` - Migrare Prisma: 20260101132135 add customer details
+- `prisma/migrations/20260102160000_add_work_entries/migration.sql` - Migrare Prisma: 20260102160000 add work entries
+- `prisma/migrations/20260104120919_add_subscriptions/migration.sql` - Migrare Prisma: 20260104120919 add subscriptions
+- `prisma/migrations/20260104123324_add_stripe_ids_to_subscriptions/migration.sql` - Migrare Prisma: 20260104123324 add stripe ids to subscriptions
+- `prisma/migrations/20260104124016_add_webhook_events/migration.sql` - Migrare Prisma: 20260104124016 add webhook events
+- `prisma/migrations/20260104130933_add_vipps_fields_and_charges/migration.sql` - Migrare Prisma: 20260104130933 add vipps fields and charges
+- `prisma/migrations/20260104135444_add_past_due_at/migration.sql` - Migrare Prisma: 20260104135444 add past due at
+- `prisma/migrations/20260110110842_checklist_instance_user_unique/migration.sql` - Migrare Prisma: 20260110110842 checklist instance user unique
+- `prisma/migrations/migration_lock.toml` - Migrare Prisma: migration lock
+- `prisma/migrations_old/20251211193201_init_schema/migration.sql` - Migrare Prisma veche: 20251211193201 init schema
+- `prisma/migrations_old/20251226_auth_base/migration.sql` - Migrare Prisma veche: 20251226 auth base
+- `prisma/migrations_old/20251226_timestamptz/migration.sql` - Migrare Prisma veche: 20251226 timestamptz
+- `prisma/migrations_old/20251227_shift_module/migration.sql` - Migrare Prisma veche: 20251227 shift module
+- `prisma/migrations_old/20251228_checklists/migration.sql` - Migrare Prisma veche: 20251228 checklists
+- `prisma/migrations_old/20251229_defects/migration.sql` - Migrare Prisma veche: 20251229 defects
+- `prisma/migrations_old/20251231_defect_workflow/migration.sql` - Migrare Prisma veche: 20251231 defect workflow
+- `prisma/migrations_old/migration_lock.toml` - Migrare Prisma veche: migration lock
+- `prisma/schema.prisma` - Schema Prisma (DB).
+- `prisma/seed.js` - Seed pentru baza de date.
+## root
+- `README.md` - Documentatie de start/proiect.
+## scripts
+- `scripts/slugify.js` - Script util: slugify
+## src
+- `src/app.js` - Configurare Express app.
+- `src/config/checklistQuestions.js` - Config: checklistQuestions
+- `src/config/env.js` - Config: env
+- `src/config/logger.js` - Config: logger
+- `src/config/planLimits.js` - Config: planLimits
+- `src/config/prismaClient.js` - Config: prismaClient
+- `src/controllers/authController.js` - Controller API: auth
+- `src/controllers/checklistController.js` - Controller API: checklist
+- `src/controllers/companyController.js` - Controller API: company
+- `src/controllers/customerController.js` - Controller API: customer
+- `src/controllers/defectController.js` - Controller API: defect
+- `src/controllers/defectWorkflowController.js` - Controller API: defectWorkflow
+- `src/controllers/documentController.js` - Controller API: document
+- `src/controllers/meController.js` - Controller API: me
+- `src/controllers/publicController.js` - Controller API: public
+- `src/controllers/reportController.js` - Controller API: report
+- `src/controllers/routeController.js` - Controller API: route
+- `src/controllers/shiftController.js` - Controller API: shift
+- `src/controllers/timesheetAdminController.js` - Controller API: timesheetAdmin
+- `src/controllers/userController.js` - Controller API: user
+- `src/controllers/vehicleController.js` - Controller API: vehicle
+- `src/index.js` - Entry point server.
+- `src/jobs/subscriptionHousekeeping.js` - Job/cron: subscriptionHousekeeping
+- `src/jobs/vippsChargeScheduler.js` - Job/cron: vippsChargeScheduler
+- `src/lib/vippsClient.js` - Client/integrare: vippsClient
+- `src/locales/en.json` - Traduceri: en
+- `src/locales/no.json` - Traduceri: no
+- `src/middleware/loginRateLimit.js` - Middleware (rate limit): loginRateLimit
+- `src/middleware/rateLimiterGeneral.js` - Middleware (rate limit): rateLimiterGeneral
+- `src/middleware/registerRateLimit.js` - Middleware (rate limit): registerRateLimit
+- `src/middlewares/auth.js` - Middleware: auth
+- `src/middlewares/companyContext.js` - Middleware: companyContext
+- `src/middlewares/errorHandler.js` - Middleware: errorHandler
+- `src/middlewares/requestId.js` - Middleware: requestId
+- `src/middlewares/requestLogger.js` - Middleware: requestLogger
+- `src/middlewares/requireActiveSubscription.js` - Middleware: requireActiveSubscription
+- `src/middlewares/requireRole.js` - Middleware: requireRole
+- `src/middlewares/subscriptionContext.js` - Middleware: subscriptionContext
+- `src/repositories/checklistRepository.js` - Acces DB: checklist
+- `src/repositories/companyRepository.js` - Acces DB: company
+- `src/repositories/defectCommentRepository.js` - Acces DB: defectComment
+- `src/repositories/defectEventRepository.js` - Acces DB: defectEvent
+- `src/repositories/defectRepository.js` - Acces DB: defect
+- `src/repositories/reportRepository.js` - Acces DB: report
+- `src/repositories/shiftRepository.js` - Acces DB: shift
+- `src/repositories/userRepository.js` - Acces DB: user
+- `src/repositories/vehicleRepository.js` - Acces DB: vehicle
+- `src/routes/apiV1.js` - Router principal pentru /api/v1.
+- `src/routes/authRoutes.js` - Rute API: auth
+- `src/routes/billingRoutes.js` - Rute API: billing
+- `src/routes/checklistRoutes.js` - Rute API: checklist
+- `src/routes/companyRoutes.js` - Rute API: company
+- `src/routes/customerRoutes.js` - Rute API: customer
+- `src/routes/defectRoutes.js` - Rute API: defect
+- `src/routes/documentAdminRoutes.js` - Rute API: documentAdmin
+- `src/routes/healthRoutes.js` - Rute API: health
+- `src/routes/meRoutes.js` - Rute API: me
+- `src/routes/publicRoutes.js` - Rute API: public
+- `src/routes/reportRoutes.js` - Rute API: report
+- `src/routes/routeRoutes.js` - Rute API: route
+- `src/routes/shiftRoutes.js` - Rute API: shift
+- `src/routes/timesheetAdminRoutes.js` - Rute API: timesheetAdmin
+- `src/routes/userRoutes.js` - Rute API: user
+- `src/routes/vehicleRoutes.js` - Rute API: vehicle
+- `src/routes/webhookRoutes.js` - Rute API: webhook
+- `src/services/authService.js` - Business logic: auth
+- `src/services/checklistService.js` - Business logic: checklist
+- `src/services/companyService.js` - Business logic: company
+- `src/services/defectService.js` - Business logic: defect
+- `src/services/defectWorkflowService.js` - Business logic: defectWorkflow
+- `src/services/reportService.js` - Business logic: report
+- `src/services/shiftService.js` - Business logic: shift
+- `src/services/userService.js` - Business logic: user
+- `src/services/vehicleService.js` - Business logic: vehicle
+- `src/utils/AppError.js` - Utilitar: AppError
+- `src/utils/asyncHandler.js` - Utilitar: asyncHandler
+- `src/utils/dateUtils.js` - Utilitar: dateUtils
+- `src/utils/i18n.js` - Utilitar: i18n
+- `src/utils/jwt.js` - Utilitar: jwt
+- `src/utils/password.js` - Utilitar: password
+- `src/utils/passwordUtils.js` - Utilitar: passwordUtils
+- `src/utils/slugify.js` - Utilitar: slugify
+- `src/utils/stripeClient.js` - Utilitar: stripeClient
+- `src/utils/time.js` - Utilitar: time
+- `src/utils/validationUtils.js` - Utilitar: validationUtils
+- `src/views/adminDashboard.ejs` - View server-side (EJS): adminDashboard
+- `src/views/driverDashboard.ejs` - View server-side (EJS): driverDashboard
+- `src/views/error.ejs` - View server-side (EJS): error
+- `src/views/layout.ejs` - View server-side (EJS): layout
+- `src/views/login.ejs` - View server-side (EJS): login
+## test
+- `test/auth-login.test.js` - Teste: auth-login
+- `test/auth-me.test.js` - Teste: auth-me
+- `test/auth-rate-limit.test.js` - Teste: auth-rate-limit
+- `test/billing-stripe.test.js` - Teste: billing-stripe
+- `test/checklist-shift-gate.test.js` - Teste: checklist-shift-gate
+- `test/customers.test.js` - Teste: customers
+- `test/health.test.js` - Teste: health
+- `test/helpers/auth.js` - Helper teste: auth
+- `test/helpers/testData.js` - Helper teste: testData
+- `test/me-dropdowns.test.js` - Teste: me-dropdowns
+- `test/plan-limits.test.js` - Teste: plan-limits
+- `test/public-register.test.js` - Teste: public-register
+- `test/routes.test.js` - Teste: routes
+- `test/setup.js` - Setup pentru teste.
+- `test/shifts.test.js` - Teste: shifts
+- `test/stripe-webhooks.test.js` - Teste: stripe-webhooks
+- `test/tenant-isolation.test.js` - Teste: tenant-isolation
+- `test/timesheet.test.js` - Teste: timesheet
+- `test/timesheets-admin.test.js` - Teste: timesheets-admin
+- `test/timesheets-admin-workruns.test.js` - Teste: timesheets-admin-workruns
+- `test/user-active.test.js` - Teste: user-active
+- `test/user-phone.test.js` - Teste: user-phone
+- `test/user-reset-password.test.js` - Teste: user-reset-password
+- `test/users-create.test.js` - Teste: users-create
+- `test/vehicle-checkins.test.js` - Teste: vehicle-checkins
+- `test/vehicles-permission.test.js` - Teste: vehicles-permission
+- `test/webhooks-vipps.test.js` - Teste: webhooks-vipps
+- `test/work-runs.test.js` - Teste: work-runs
+## root
+- `vitest.config.js` - Configurare Vitest.

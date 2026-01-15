@@ -1,33 +1,220 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import PublicHeader from "../components/PublicHeader";
 
 const LandingPage = () => {
   const { user, company } = useAuth();
   const identifier = user ? user.email || user.phone || user.username || `User ${user.id}` : null;
   const dashboardPath = user ? "/app" : null;
+  const currentYear = new Date().getFullYear();
+  const faqs = [
+    {
+      q: "What happens after the trial ends?",
+      a: "To continue using the service, you subscribe to a plan. If you do not subscribe, access will be limited after the trial.",
+    },
+    {
+      q: "Can I change plans later?",
+      a: "Yes. You can upgrade or downgrade your plan as your team size changes.",
+    },
+    {
+      q: "Do drivers create their own accounts?",
+      a: "No. Drivers are created by admins within your company workspace.",
+    },
+    {
+      q: "What is included in each plan?",
+      a: "All plans include driver time entries, daily vehicle check-ins, admin review tools, and CSV exports. The difference is the number of drivers/admins supported.",
+    },
+  ];
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 520 }}>
-        <h1>TransApp</h1>
-        <p className="muted">Transport operations, driver checklists, and vehicle tracking in one place.</p>
+    <div className="page page-top">
+      <PublicHeader />
+      <div className="container">
+        <div className="stack">
+          <div className="card" style={{ width: "100%" }}>
+            <div className="landing-hero">
+              <div className="landing-hero-left">
+                <h1 style={{ fontSize: 40, marginBottom: 8 }}>TransApp</h1>
+                <p className="muted" style={{ fontSize: 16, lineHeight: 1.5 }}>
+                  Time tracking, vehicle check-ins, and audit-ready exports for transport companies.
+                </p>
+                <div className="hero-actions">
+                  <Link className="button hero-button" to="/register">
+                    Start free trial
+                  </Link>
+                  <Link className="button secondary hero-button" to="/login">
+                    Sign in
+                  </Link>
+                </div>
+                <p className="muted" style={{ fontSize: 14, marginTop: 10 }}>
+                  14-day free trial &bull; No credit card &bull; Fast setup &bull; Low monthly price (eks. mva.)
+                </p>
 
-        {user && company ? (
-          <div className="info" style={{ margin: "12px 0" }}>
-            You're logged in as <strong>{identifier}</strong> in <strong>{company.name}</strong>.{" "}
-            <Link to={dashboardPath || "/app"} className="button secondary" style={{ width: "auto", marginLeft: "8px" }}>
-              Go to Dashboard
-            </Link>
+                {user && company ? (
+                  <div className="info" style={{ margin: "12px 0" }}>
+                    You're logged in as <strong>{identifier}</strong> in <strong>{company.name}</strong>.{" "}
+                    <Link to={dashboardPath || "/app"} className="button secondary" style={{ width: "auto", marginLeft: "8px" }}>
+                      Go to Dashboard
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+              <div className="landing-hero-right">
+                <div className="landing-hero-visual">
+                  <div className="muted" style={{ fontSize: 14 }}>
+                    Screenshot preview (coming soon)
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : null}
 
-        <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
-          <Link className="button" to="/login" style={{ width: "auto" }}>
-            Log in
-          </Link>
-          <Link className="button secondary" to="/register" style={{ width: "auto" }}>
-            Register company
-          </Link>
+          <div className="card">
+          <h2 style={{ marginBottom: 8 }}>Why TransApp</h2>
+          <div className="grid grid-2" style={{ marginTop: "12px" }}>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Driver time entries</h3>
+              <p className="muted">Structured activities: DRIVING, OTHER WORK, BREAK, AVAILABILITY.</p>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Daily vehicle check-in</h3>
+              <p className="muted">Quick pre-drive check-in, valid ~24 hours.</p>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Admin review &amp; corrections</h3>
+              <p className="muted">Audit-friendly records with corrections in one place.</p>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>CSV exports</h3>
+              <p className="muted">Payroll, billing, and audit-ready exports.</p>
+            </div>
+          </div>
+          </div>
+
+          <div className="card" id="pricing">
+          <h2 style={{ marginBottom: 8 }}>Pricing</h2>
+          <p className="muted">Billed monthly. Prices are eks. mva.</p>
+          <div className="grid grid-2" style={{ marginTop: "12px" }}>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Basic</h3>
+              <ul>
+                <li>Up to 5 drivers</li>
+                <li>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>299 NOK / month</span>
+                </li>
+              </ul>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Standard</h3>
+              <ul>
+                <li>Up to 10 drivers</li>
+                <li>Includes up to 2 admins</li>
+                <li>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>499 NOK / month</span>
+                </li>
+              </ul>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Pro</h3>
+              <ul>
+                <li>Up to 20 drivers</li>
+                <li>Includes up to 3 admins</li>
+                <li>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>699 NOK / month</span>
+                </li>
+              </ul>
+            </div>
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3>Custom</h3>
+              <ul>
+                <li>20+ drivers</li>
+                <li>Contact us (coming soon)</li>
+              </ul>
+            </div>
+          </div>
+          </div>
+
+          <div className="card">
+          <h2 style={{ marginBottom: 8 }}>FAQ</h2>
+          {faqs.map((faq) => (
+            <div key={faq.q} style={{ marginTop: "12px" }}>
+              <strong>{faq.q}</strong>
+              <div className="muted" style={{ marginTop: "4px" }}>
+                {faq.a}
+              </div>
+            </div>
+          ))}
+          </div>
+
+          <div className="card" style={{ padding: "12px" }}>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <Link to="/help">Help</Link>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/security">Security</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/login">Sign in</Link>
+            <Link to="/register">Register</Link>
+          </div>
+          <p className="muted" style={{ marginTop: "8px", marginBottom: 0 }}>
+            (c) {currentYear} TransApp.
+          </p>
+          </div>
         </div>
       </div>
     </div>
@@ -35,3 +222,6 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
+
+

@@ -1,7 +1,7 @@
 const express = require("express");
 const requireRole = require("../middlewares/requireRole");
 const requireActiveSubscription = require("../middlewares/requireActiveSubscription");
-const { listWorkRunTimesheets, listWorkRunDetails } = require("../controllers/timesheetAdminController");
+const { listWorkRunTimesheets, listWorkRunDetails, updateWorkEntryAdmin } = require("../controllers/timesheetAdminController");
 
 // Endpoints summary (used by frontend admin timesheets):
 // GET /api/v1/timesheets
@@ -18,5 +18,6 @@ router.use(requireActiveSubscription);
 router.get("/", listWorkRunTimesheets);
 router.get("/work-runs", listWorkRunTimesheets);
 router.get("/work-runs/details", listWorkRunDetails);
+router.patch("/work-entries/:id", updateWorkEntryAdmin);
 
 module.exports = router;

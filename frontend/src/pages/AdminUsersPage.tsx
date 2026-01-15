@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { createCompanyUser, listCompanyUsers, resetUserPassword, updateUserActive, updateUserPhone } from "../api/users";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
@@ -269,6 +270,11 @@ const AdminUsersPage = () => {
     <div className="page">
       <div className="card">
         <h1>Users</h1>
+        <div style={{ marginBottom: "12px" }}>
+          <Link className="button secondary" to="/change-password" style={{ width: "auto" }}>
+            Change my password
+          </Link>
+        </div>
 
         {refreshing ? <span className="muted">Refreshing...</span> : null}
         {refreshError ? <div className="error" style={{ marginBottom: "8px" }}>{refreshError}</div> : null}

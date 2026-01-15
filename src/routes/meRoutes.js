@@ -11,6 +11,7 @@ const {
   deleteMyEntry,
   createVehicleCheckIn,
   listMyRecentVehicleCheckIns,
+  getMyVehicleCheckInStatus,
 } = require("../controllers/meController");
 const { listDocuments, downloadDocument } = require("../controllers/documentController");
 const requireRole = require("../middlewares/requireRole");
@@ -30,5 +31,6 @@ router.patch("/entries/:id", requireRole("DRIVER", "ADMIN", "PLATFORM_ADMIN"), u
 router.delete("/entries/:id", requireRole("DRIVER", "ADMIN", "PLATFORM_ADMIN"), deleteMyEntry);
 router.post("/vehicle-checkins", requireRole("DRIVER", "ADMIN", "PLATFORM_ADMIN"), createVehicleCheckIn);
 router.get("/vehicle-checkins/recent", requireRole("DRIVER", "ADMIN", "PLATFORM_ADMIN"), listMyRecentVehicleCheckIns);
+router.get("/vehicle-checkins/status", requireRole("DRIVER", "ADMIN", "PLATFORM_ADMIN"), getMyVehicleCheckInStatus);
 
 module.exports = router;

@@ -71,3 +71,20 @@ export const registerCompany = (input: {
   });
 
 export const getMe = () => http<MeResponse>("/api/v1/me");
+
+export const requestPasswordReset = (companySlug: string, email: string) =>
+  http<{ ok: true; message: string }>("/api/v1/auth/forgot-password", {
+    method: "POST",
+    body: { companySlug, email },
+  });
+
+export const validatePasswordResetToken = (companySlug: string, token: string) =>
+  http<{ valid: true }>(
+    `/api/v1/auth/reset-password/validate?companySlug=${encodeURIComponent(companySlug)}&token=${encodeURIComponent(token)}`
+  );
+
+export const resetPasswordWithToken = (companySlug: string, token: string, password: string) =>
+  http<{ ok: true }>("/api/v1/auth/reset-password", {
+    method: "POST",
+    body: { companySlug, token, password },
+  });

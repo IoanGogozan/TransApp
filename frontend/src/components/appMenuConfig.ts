@@ -16,5 +16,7 @@ export const adminMenuItems: AppMenuItem[] = [
 
 export const driverMenuItems: AppMenuItem[] = [
   { label: "Timesheet", path: "/driver/timesheet" },
+  { label: "Defects", path: "/driver/defects" },
   { label: "Documents", path: "/driver/documents" },
+  { label: "Help", path: "/app/help" },
 ];

@@ -14,6 +14,17 @@ const timesheetSchema = z.object({
   groupBy: z.enum(["day", "day_user"]).optional().default("day"),
 });
 
+const workEntriesSchema = z.object({
+  from: dateString,
+  to: dateString,
+  driverId: z.coerce.number().int().positive().optional(),
+  groupBy: z
+    .enum(["day", "day_driver", "day_driver_activity", "day_customer_route", "entry"])
+    .optional()
+    .default("day_driver"),
+  includeDetails: z.enum(["0", "1"]).optional().default("0"),
+});
+
 const validateRange = (from, to) => {
   const fromDate = new Date(`${from}T00:00:00.000Z`);
   const toDate = new Date(`${to}T00:00:00.000Z`);
@@ -59,7 +70,42 @@ const timesheetCsv = asyncHandler(async (req, res) => {
   res.send(csv);
 });
 
+const workEntries = asyncHandler(async (req, res) => {
+  const parsed = workEntriesSchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
+  }
+  validateRange(parsed.data.from, parsed.data.to);
+
+  const result = await reportService.workEntries({
+    companyId: req.companyId,
+    user: req.user,
+    filters: parsed.data,
+  });
+
+  res.json(result);
+});
+
+const workEntriesCsv = asyncHandler(async (req, res) => {
+  const parsed = workEntriesSchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
+  }
+  validateRange(parsed.data.from, parsed.data.to);
+
+  const csv = await reportService.workEntriesCsv({
+    companyId: req.companyId,
+    user: req.user,
+    filters: parsed.data,
+  });
+
+  res.setHeader("Content-Type", "text/csv");
+  res.send(csv);
+});
+
 module.exports = {
   timesheet,
   timesheetCsv,
+  workEntries,
+  workEntriesCsv,
 };

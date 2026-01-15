@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "DefectEventType" ADD VALUE 'DETAILS_UPDATED';
