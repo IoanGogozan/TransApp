@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import PublicHeader from "../components/PublicHeader";
+import Card from "../components/ui/Card";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const PublicSecurityPage = () => {
   return (
-    <div className="page page-top">
-      <PublicHeader />
-      <div className="card" style={{ maxWidth: 720, width: "100%" }}>
-<h1>Security</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-3xl">
+        <PublicHeader />
+        <SectionHeader title="Security" />
         <p className="muted">A short overview of security practices used in TransApp.</p>
 
         <h2>Access control</h2>
@@ -49,7 +51,7 @@ const PublicSecurityPage = () => {
         </p>
 
         <p className="muted">Last updated: 2026-01-11</p>
-      </div>
+      </Card>
     </div>
   );
 };

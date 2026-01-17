@@ -4,6 +4,11 @@ import { ApiError } from "../api/http";
 import { registerCompany } from "../api/auth";
 import { useAuth } from "../auth/AuthContext";
 import PublicHeader from "../components/PublicHeader";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const slugRegex = /^[a-z0-9-]{3,40}$/;
 
@@ -52,39 +57,39 @@ const RegisterCompanyPage = () => {
   };
 
   return (
-    <>
-      <PublicHeader />
-      <div className="page page-top">
-        <div className="container">
-          <div className="auth-wrap">
-            <div className="card auth-card">
-        <h1>Register company</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-md">
+        <PublicHeader />
+        <SectionHeader title="Register company" />
         <p className="muted">Create your transport workspace and first admin.</p>
         {user && company ? (
           <div className="info" style={{ marginBottom: "12px" }}>
             You're logged in as <strong>{user.email || user.phone || user.username || `User ${user.id}`}</strong> in{" "}
             <strong>{company.name}</strong>.{" "}
-            <button className="button secondary" style={{ width: "auto", marginTop: "8px" }} onClick={() => navigate("/app")}>
+            <Button
+              variant="secondary"
+              size="sm"
+              style={{ width: "auto", marginTop: "8px" }}
+              onClick={() => navigate("/app")}
+            >
               Go to Dashboard
-            </button>
+            </Button>
           </div>
         ) : null}
         {success ? <div className="success">{success}</div> : null}
         {error ? <div className="error">{error}</div> : null}
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div className="field">
-            <label htmlFor="companyName">Company name</label>
-            <input
+          <FormField label="Company name" htmlFor="companyName">
+            <Input
               id="companyName"
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="companySlug">Slug (lowercase letters, numbers, hyphen)</label>
-            <input
+          </FormField>
+          <FormField label="Slug (lowercase letters, numbers, hyphen)" htmlFor="companySlug">
+            <Input
               id="companySlug"
               type="text"
               value={companySlug}
@@ -92,20 +97,18 @@ const RegisterCompanyPage = () => {
               required
               pattern={slugRegex.source}
             />
-          </div>
-          <div className="field">
-            <label htmlFor="adminEmail">Admin email</label>
-            <input
+          </FormField>
+          <FormField label="Admin email" htmlFor="adminEmail">
+            <Input
               id="adminEmail"
               type="email"
               value={adminEmail}
               onChange={(e) => setAdminEmail(e.target.value)}
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="adminPassword">Admin password (min 8)</label>
-            <input
+          </FormField>
+          <FormField label="Admin password (min 8)" htmlFor="adminPassword">
+            <Input
               id="adminPassword"
               type="password"
               value={adminPassword}
@@ -113,26 +116,21 @@ const RegisterCompanyPage = () => {
               required
               minLength={8}
             />
-          </div>
-          <button className="button" type="submit" disabled={loading}>
+          </FormField>
+          <Button variant="primary" type="submit" disabled={loading}>
             {loading ? "Registering..." : "Create company"}
-          </button>
+          </Button>
           <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>
             By registering, you agree to the <Link to="/terms">Terms of Service</Link> and acknowledge the{" "}
             <Link to="/privacy">Privacy</Link> policy.
           </p>
           <p className="muted" style={{ fontSize: "0.9rem" }}>
-            <Link to="/login">Sign in</Link> · <Link to="/help">Help & Getting Started</Link>
+            <Link to="/login">Sign in</Link> Жњ <Link to="/help">Help & Getting Started</Link>
           </p>
         </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+      </Card>
+    </div>
   );
 };
 
 export default RegisterCompanyPage;
-
-

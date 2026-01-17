@@ -8,9 +8,18 @@ const requireRole = require("../middlewares/requireRole");
 
 const router = express.Router();
 
+const sendError = (res, status, code, message = code, details) =>
+  res.status(status).json({
+    error: {
+      code,
+      message,
+      ...(details ? { details } : {}),
+    },
+  });
+
 const ensureDev = (req, res) => {
   if (process.env.NODE_ENV !== "development") {
-    res.status(404).json({ error: "NOT_FOUND" });
+    sendError(res, 404, "NOT_FOUND");
     return false;
   }
   return true;
@@ -76,10 +85,11 @@ const stripeErrorToResponse = (err) => {
   }
 
   return {
-    error: "PAYMENT_ERROR",
-    code,
-    declineCode,
-    message,
+    error: {
+      code: "PAYMENT_ERROR",
+      message,
+      ...(code || declineCode ? { details: { stripeCode: code, declineCode } } : {}),
+    },
   };
 };
 
@@ -94,7 +104,7 @@ router.get(
   "/status",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const {
@@ -146,7 +156,7 @@ router.get(
   "/vipps/charges",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (!req.subscription.vippsAgreementId) {
@@ -180,40 +190,41 @@ router.post(
   "/vipps/agreements",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (
       req.subscription.stripeSubscriptionId &&
       ["TRIALING", "ACTIVE", "PAST_DUE"].includes(req.subscription.status)
     ) {
-      return res.status(409).json({
-        error: "BILLING_PROVIDER_CONFLICT",
+      return sendError(res, 409, "BILLING_PROVIDER_CONFLICT", "BILLING_PROVIDER_CONFLICT", {
         provider: "STRIPE",
       });
     }
 
     if (req.subscription.vippsAgreementId) {
-      return res.status(409).json({ error: "VIPPS_AGREEMENT_EXISTS" });
+      return sendError(res, 409, "VIPPS_AGREEMENT_EXISTS");
     }
 
     const { plan, phoneNumber } = req.body || {};
     const planValue = typeof plan === "string" ? plan.toUpperCase() : null;
     const validPlans = new Set(["BASIC", "MEDIUM", "PRO"]);
     if (!planValue || !validPlans.has(planValue)) {
-      return res.status(400).json({ error: "INVALID_PLAN" });
+      return sendError(res, 400, "INVALID_PLAN");
     }
 
     const vippsPlanConfig = getVippsPlanConfig(planValue);
     if (!vippsPlanConfig) {
-      return res.status(400).json({ error: "INVALID_PLAN" });
+      return sendError(res, 400, "INVALID_PLAN");
     }
     if (vippsPlanConfig instanceof Error) {
-      return res.status(500).json({
-        error: vippsPlanConfig.code || "VIPPS_PRICE_NOT_CONFIGURED",
-        message: vippsPlanConfig.message,
-        missing: vippsPlanConfig.missing,
-      });
+      return sendError(
+        res,
+        500,
+        vippsPlanConfig.code || "VIPPS_PRICE_NOT_CONFIGURED",
+        vippsPlanConfig.message,
+        { missing: vippsPlanConfig.missing },
+      );
     }
 
     const requiredEnv = [
@@ -225,9 +236,7 @@ router.post(
     ];
     const missing = requiredEnv.filter((key) => !process.env[key]);
     if (missing.length > 0) {
-      return res
-        .status(500)
-        .json({ error: "VIPPS_NOT_CONFIGURED", missing });
+      return sendError(res, 500, "VIPPS_NOT_CONFIGURED", "VIPPS_NOT_CONFIGURED", { missing });
     }
 
     const companySlug = req.params.companySlug;
@@ -255,20 +264,22 @@ router.post(
         idempotencyKey: crypto.randomUUID(),
       });
     } catch (err) {
-      return res.status(502).json({
-        error: "VIPPS_API_ERROR",
-        message: err?.message || "Vipps request failed.",
-      });
+      return sendError(
+        res,
+        502,
+        "VIPPS_API_ERROR",
+        err?.message || "Vipps request failed.",
+      );
     }
 
     const { agreementId, vippsConfirmationUrl } = vippsResponse || {};
     if (!agreementId || !vippsConfirmationUrl) {
-      return res.status(502).json({ error: "VIPPS_AGREEMENT_FAILED" });
+      return sendError(res, 502, "VIPPS_AGREEMENT_FAILED");
     }
 
     const companyId = req.user?.companyId ?? req.company?.id ?? req.companyId;
     if (!companyId) {
-      return res.status(400).json({ error: "COMPANY_NOT_FOUND" });
+      return sendError(res, 400, "COMPANY_NOT_FOUND");
     }
 
     await prisma.subscription.update({
@@ -288,18 +299,18 @@ router.post(
   "/vipps/change-plan",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (!req.subscription.vippsAgreementId) {
-      return res.status(400).json({ error: "VIPPS_AGREEMENT_MISSING" });
+      return sendError(res, 400, "VIPPS_AGREEMENT_MISSING");
     }
 
     const { plan } = req.body || {};
     const planValue = typeof plan === "string" ? plan.toUpperCase() : null;
     const validPlans = new Set(["BASIC", "MEDIUM", "PRO"]);
     if (!planValue || !validPlans.has(planValue)) {
-      return res.status(400).json({ error: "INVALID_PLAN" });
+      return sendError(res, 400, "INVALID_PLAN");
     }
 
     await prisma.subscription.update({
@@ -315,24 +326,26 @@ router.post(
   "/vipps/test-create-charge",
   asyncHandler(async (req, res) => {
     if (process.env.NODE_ENV === "production") {
-      return res.status(403).json({ error: "NOT_ALLOWED_IN_PRODUCTION" });
+      return sendError(res, 403, "NOT_ALLOWED_IN_PRODUCTION");
     }
 
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (!req.subscription.vippsAgreementId) {
-      return res.status(400).json({ error: "VIPPS_AGREEMENT_MISSING" });
+      return sendError(res, 400, "VIPPS_AGREEMENT_MISSING");
     }
 
     const vippsPlanConfig = getVippsPlanConfig(req.subscription.plan);
     if (vippsPlanConfig instanceof Error) {
-      return res.status(500).json({
-        error: vippsPlanConfig.code || "VIPPS_PRICE_NOT_CONFIGURED",
-        message: vippsPlanConfig.message,
-        missing: vippsPlanConfig.missing,
-      });
+      return sendError(
+        res,
+        500,
+        vippsPlanConfig.code || "VIPPS_PRICE_NOT_CONFIGURED",
+        vippsPlanConfig.message,
+        { missing: vippsPlanConfig.missing },
+      );
     }
 
     const dueDate = new Date();
@@ -357,10 +370,12 @@ router.post(
         }
       );
     } catch (err) {
-      return res.status(502).json({
-        error: "VIPPS_API_ERROR",
-        message: err?.message || "Vipps request failed.",
-      });
+      return sendError(
+        res,
+        502,
+        "VIPPS_API_ERROR",
+        err?.message || "Vipps request failed.",
+      );
     }
 
     await prisma.vippsCharge.create({
@@ -384,12 +399,12 @@ router.post(
   "/vipps/cancel",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const { vippsAgreementId } = req.subscription;
     if (!vippsAgreementId) {
-      return res.status(400).json({ error: "VIPPS_AGREEMENT_MISSING" });
+      return sendError(res, 400, "VIPPS_AGREEMENT_MISSING");
     }
 
     await stopVippsAgreement(vippsAgreementId);
@@ -411,12 +426,12 @@ router.post(
   "/vipps/sync",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const agreementId = req.subscription.vippsAgreementId;
     if (!agreementId) {
-      return res.status(400).json({ error: "VIPPS_AGREEMENT_MISSING" });
+      return sendError(res, 400, "VIPPS_AGREEMENT_MISSING");
     }
 
     let vippsAgreement;
@@ -425,10 +440,12 @@ router.post(
         method: "GET",
       });
     } catch (err) {
-      return res.status(502).json({
-        error: "VIPPS_API_ERROR",
-        message: err?.message || "Vipps request failed.",
-      });
+      return sendError(
+        res,
+        502,
+        "VIPPS_API_ERROR",
+        err?.message || "Vipps request failed.",
+      );
     }
 
     const agreementStatus =
@@ -450,7 +467,7 @@ router.post(
   "/reactivate",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const { status, trialEnd } = req.subscription;
@@ -469,7 +486,7 @@ router.post(
         return res.json({ subscription: updated });
       }
 
-      return res.status(409).json({ error: "PAYMENT_REQUIRED" });
+      return sendError(res, 409, "PAYMENT_REQUIRED");
     }
 
     return res.json({ subscription: req.subscription });
@@ -480,19 +497,19 @@ router.post(
   "/stripe/setup-intent",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const companyId = req.user?.companyId ?? req.company?.id ?? req.companyId;
     if (!companyId) {
-      return res.status(400).json({ error: "COMPANY_NOT_FOUND" });
+      return sendError(res, 400, "COMPANY_NOT_FOUND");
     }
 
     let stripe;
     try {
       stripe = getStripe();
     } catch (err) {
-      return res.status(500).json({ error: "STRIPE_NOT_CONFIGURED" });
+      return sendError(res, 500, "STRIPE_NOT_CONFIGURED");
     }
 
     try {
@@ -528,23 +545,23 @@ router.post(
   "/stripe/portal",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (!process.env.PUBLIC_APP_URL) {
-      return res.status(500).json({ error: "PUBLIC_APP_URL_REQUIRED" });
+      return sendError(res, 500, "PUBLIC_APP_URL_REQUIRED");
     }
 
     const companyId = req.user?.companyId ?? req.company?.id ?? req.companyId;
     if (!companyId) {
-      return res.status(400).json({ error: "COMPANY_NOT_FOUND" });
+      return sendError(res, 400, "COMPANY_NOT_FOUND");
     }
 
     let stripe;
     try {
       stripe = getStripe();
     } catch (err) {
-      return res.status(500).json({ error: "STRIPE_NOT_CONFIGURED" });
+      return sendError(res, 500, "STRIPE_NOT_CONFIGURED");
     }
 
     let customerId = req.subscription.stripeCustomerId;
@@ -572,7 +589,7 @@ router.post(
   "/stripe/subscribe",
   asyncHandler(async (req, res) => {
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     if (
@@ -580,8 +597,7 @@ router.post(
       req.subscription.vippsAgreementStatus !== "STOPPED" &&
       ["TRIALING", "ACTIVE", "PAST_DUE"].includes(req.subscription.status)
     ) {
-      return res.status(409).json({
-        error: "BILLING_PROVIDER_CONFLICT",
+      return sendError(res, 409, "BILLING_PROVIDER_CONFLICT", "BILLING_PROVIDER_CONFLICT", {
         provider: "VIPPS",
       });
     }
@@ -590,7 +606,7 @@ router.post(
     const planValue = typeof plan === "string" ? plan.toUpperCase() : null;
     const validPlans = new Set(["BASIC", "MEDIUM", "PRO"]);
     if (!planValue || !validPlans.has(planValue)) {
-      return res.status(400).json({ error: "INVALID_PLAN" });
+      return sendError(res, 400, "INVALID_PLAN");
     }
 
     const priceIdMap = {
@@ -600,19 +616,19 @@ router.post(
     };
     const priceId = priceIdMap[planValue];
     if (!priceId) {
-      return res.status(500).json({ error: "STRIPE_PRICE_NOT_CONFIGURED" });
+      return sendError(res, 500, "STRIPE_PRICE_NOT_CONFIGURED");
     }
 
     const companyId = req.user?.companyId ?? req.company?.id ?? req.companyId;
     if (!companyId) {
-      return res.status(400).json({ error: "COMPANY_NOT_FOUND" });
+      return sendError(res, 400, "COMPANY_NOT_FOUND");
     }
 
     let stripe;
     try {
       stripe = getStripe();
     } catch (err) {
-      return res.status(500).json({ error: "STRIPE_NOT_CONFIGURED" });
+      return sendError(res, 500, "STRIPE_NOT_CONFIGURED");
     }
 
     if (req.subscription.stripeSubscriptionId) {
@@ -622,7 +638,7 @@ router.post(
         );
         const itemId = stripeSub?.items?.data?.[0]?.id;
         if (!itemId) {
-          return res.status(500).json({ error: "STRIPE_SUBSCRIPTION_INVALID" });
+          return sendError(res, 500, "STRIPE_SUBSCRIPTION_INVALID");
         }
 
         const updatedSub = await stripe.subscriptions.update(
@@ -652,7 +668,7 @@ router.post(
     }
 
     if (!paymentMethodId || typeof paymentMethodId !== "string") {
-      return res.status(400).json({ error: "INVALID_PAYMENT_METHOD" });
+      return sendError(res, 400, "INVALID_PAYMENT_METHOD");
     }
 
     try {
@@ -712,7 +728,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!ensureDev(req, res)) return;
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const now = new Date();
@@ -742,7 +758,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!ensureDev(req, res)) return;
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const now = new Date();
@@ -770,7 +786,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!ensureDev(req, res)) return;
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const updated = await prisma.subscription.update({
@@ -791,7 +807,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!ensureDev(req, res)) return;
     if (!req.subscription) {
-      return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
+      return sendError(res, 404, "SUBSCRIPTION_NOT_FOUND");
     }
 
     const updated = await prisma.subscription.update({

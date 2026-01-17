@@ -24,6 +24,7 @@ router.post("/", defectController.createDefect);
 router.get("/", defectController.listDefects);
 router.get("/:id", defectController.getDefect);
 router.patch("/:id", defectController.updateDefectDetails);
+router.patch("/:id/admin-note", requireRole("PLATFORM_ADMIN", "ADMIN"), defectController.updateAdminNote);
 router.patch("/:id/status", requireRole("PLATFORM_ADMIN", "ADMIN"), defectController.updateStatus);
 router.patch("/:id/assign", requireRole("PLATFORM_ADMIN", "ADMIN"), defectWorkflowController.assign);
 router.post("/:id/comments", defectWorkflowController.addComment);

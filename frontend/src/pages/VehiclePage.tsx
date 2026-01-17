@@ -1,9 +1,16 @@
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getVehicleById, updateVehicle } from "../api/vehicles";
 import { Vehicle } from "../types/vehicle";
 import { ApiError } from "../api/http";
 import { tenantPath } from "../utils/tenantPath";
+import Button from "../components/ui/Button";
+import ButtonLink from "../components/ui/ButtonLink";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import ListState from "../components/ui/ListState";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const VehiclePage = () => {
   const { vehicleId, companySlug } = useParams<{ vehicleId: string; companySlug?: string }>();
@@ -81,69 +88,50 @@ const VehiclePage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="page">
-        <div className="card">
-          <p>Loading vehicle...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError || !vehicle) {
-    return (
-      <div className="page">
-        <div className="card">
-          <div className="error">{loadError || "Vehicle not found"}</div>
-          <Link className="button" to={tenantPath(slug, vehiclesPath)} style={{ display: "inline-block", width: "auto" }}>
-            Back to vehicles
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page">
-      <div className="card">
-        <h1 style={{ marginBottom: "6px" }}>Vehicle</h1>
-        <p className="muted">{vehicle.type || "Vehicle"}</p>
-        {message && <p className="success">{message}</p>}
-        {saveError && <p className="error">{saveError}</p>}
-        <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
-          <label className="field">
-            <span>Reg number</span>
-            <input
-              value={regNumber}
-              onChange={(e) => setRegNumber(e.target.value)}
-              required
-            />
-          </label>
-          <label className="field">
-            <span>Name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>Active</span>
-            <select value={active ? "active" : "inactive"} onChange={(e) => setActive(e.target.value === "active")}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-        </div>
-        <div className="row" style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <button className="button" type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
-          </button>
-          <Link className="button secondary" to={tenantPath(slug, vehiclesPath)} style={{ width: "auto" }}>
-            Back to vehicles
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <ListState
+        loading={loading}
+        hasItems={!!vehicle}
+        errorMessage={loadError}
+        emptyTitle="Vehicle not found"
+      >
+        <Card>
+          <SectionHeader title="Vehicle" />
+          <p className="muted">{vehicle?.type || "Vehicle"}</p>
+          {message && <p className="success">{message}</p>}
+          {saveError && <p className="error">{saveError}</p>}
+          <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+            <FormField label="Reg number">
+              <Input
+                value={regNumber}
+                onChange={(e) => setRegNumber(e.target.value)}
+                required
+              />
+            </FormField>
+            <FormField label="Name">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Active">
+              <select value={active ? "active" : "inactive"} onChange={(e) => setActive(e.target.value === "active")}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </FormField>
+          </div>
+          <div className="row" style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <Button type="button" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+            <ButtonLink variant="secondary" to={tenantPath(slug, vehiclesPath)}>
+              Back to vehicles
+            </ButtonLink>
+          </div>
+        </Card>
+      </ListState>
     </div>
   );
 };

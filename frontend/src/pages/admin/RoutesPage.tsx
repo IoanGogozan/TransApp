@@ -1,6 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
+import TableWrap from "../../components/TableWrap";
 import { RouteOptionAdmin, createRoute, listRoutes, updateRoute } from "../../api/routes";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const RoutesPage = () => {
   const [routes, setRoutes] = useState<RouteOptionAdmin[]>([]);
@@ -129,33 +136,31 @@ const RoutesPage = () => {
   };
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Routes</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader title="Routes" subtitle="Manage route options for work entries." />
 
-        {error && <div className="error">{error}</div>}
+        {error && sortedRoutes.length > 0 ? <div className="error">{error}</div> : null}
 
         <form onSubmit={handleCreate} style={{ marginBottom: "16px" }}>
-          <div className="field">
-            <label htmlFor="route-name">Name</label>
-            <input
+          <FormField label="Name" htmlFor="route-name">
+            <Input
               id="route-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               disabled={saving || loading}
             />
-          </div>
-          <div className="field">
-            <label htmlFor="route-sort">Sort order</label>
-            <input
+          </FormField>
+          <FormField label="Sort order" htmlFor="route-sort">
+            <Input
               id="route-sort"
               type="number"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
               disabled={saving || loading}
             />
-          </div>
+          </FormField>
           <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
             <input
               id="route-active"
@@ -167,43 +172,37 @@ const RoutesPage = () => {
             />
             <label htmlFor="route-active">Active</label>
           </div>
-          <button className="button" type="submit" disabled={saving || loading}>
+          <Button type="submit" disabled={saving || loading}>
             {saving ? "Creating..." : "Create route"}
-          </button>
+          </Button>
         </form>
 
-        <div style={{ overflowX: "auto" }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Sort order</th>
-                <th>Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        <ListState
+          loading={loading}
+          hasItems={sortedRoutes.length > 0}
+          emptyTitle="No routes"
+          emptyMessage="No routes yet."
+          errorMessage={sortedRoutes.length === 0 ? error : null}
+        >
+          <TableWrap>
+            <table className="min-w-[700px] w-full">
+              <thead>
                 <tr>
-                  <td colSpan={4} style={{ textAlign: "center" }}>
-                    Loading...
-                  </td>
+                  <th>Name</th>
+                  <th>Sort order</th>
+                  <th>Active</th>
+                  <th>Actions</th>
                 </tr>
-              ) : sortedRoutes.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: "center" }}>
-                    No routes yet.
-                  </td>
-                </tr>
-              ) : (
-                sortedRoutes.map((route) => {
+              </thead>
+              <tbody>
+                {sortedRoutes.map((route) => {
                   const isEditing = editingId === route.id;
                   const isUpdating = updatingId === route.id;
                   return (
                     <tr key={route.id}>
                       <td>
                         {isEditing ? (
-                          <input
+                          <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
                             disabled={isUpdating}
@@ -214,7 +213,7 @@ const RoutesPage = () => {
                       </td>
                       <td>
                         {isEditing ? (
-                          <input
+                          <Input
                             type="number"
                             value={editSortOrder}
                             onChange={(e) => setEditSortOrder(e.target.value)}
@@ -244,32 +243,31 @@ const RoutesPage = () => {
                       <td>
                         {isEditing ? (
                           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                            <button
-                              className="button"
-                              type="button"
+                            <Button
+                              size="sm"
                               onClick={() => saveEdit(route.id)}
                               disabled={isUpdating}
                             >
                               {isUpdating ? "Saving..." : "Save"}
-                            </button>
-                            <button className="button secondary" type="button" onClick={cancelEdit} disabled={isUpdating}>
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={cancelEdit} disabled={isUpdating}>
                               Cancel
-                            </button>
+                            </Button>
                           </div>
                         ) : (
-                          <button className="button" type="button" onClick={() => startEdit(route)} disabled={isUpdating}>
+                          <Button size="sm" onClick={() => startEdit(route)} disabled={isUpdating}>
                             Edit
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                })}
+              </tbody>
+            </table>
+          </TableWrap>
+        </ListState>
+      </Card>
     </div>
   );
 };

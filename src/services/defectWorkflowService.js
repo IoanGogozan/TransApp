@@ -127,6 +127,15 @@ const recordDetailsUpdated = async ({ companyId, defectId, actorUserId, changed 
     data: { changed },
   });
 
+const recordAdminNoteUpdated = async ({ companyId, defectId, actorUserId }) =>
+  defectEventRepository.createEvent({
+    companyId,
+    defectId,
+    actorUserId,
+    type: "DETAILS_UPDATED",
+    data: { adminNoteChanged: true },
+  });
+
 module.exports = {
   ensureDefectAccess,
   assignDefect,
@@ -136,4 +145,5 @@ module.exports = {
   recordCreatedEvent,
   recordStatusChanged,
   recordDetailsUpdated,
+  recordAdminNoteUpdated,
 };

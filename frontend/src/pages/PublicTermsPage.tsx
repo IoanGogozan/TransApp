@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import PublicHeader from "../components/PublicHeader";
+import Card from "../components/ui/Card";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const PublicTermsPage = () => {
   return (
-    <div className="page page-top">
-      <PublicHeader />
-      <div className="card" style={{ maxWidth: 720, width: "100%" }}>
-<h1>Terms of Service</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-3xl">
+        <PublicHeader />
+        <SectionHeader title="Terms of Service" />
         <p className="muted">
           These terms govern the use of TransApp. By registering a company or using the service, you agree to these terms.
         </p>
@@ -70,7 +72,7 @@ const PublicTermsPage = () => {
         </p>
 
         <p className="muted">Last updated: 2026-01-11</p>
-      </div>
+      </Card>
     </div>
   );
 };

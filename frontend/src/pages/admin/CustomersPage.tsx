@@ -1,5 +1,13 @@
 ﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
+import ModalShell from "../../components/ui/ModalShell";
+import TableWrap from "../../components/TableWrap";
 import { CustomerAdmin, createCustomer, listCustomers, updateCustomer } from "../../api/customers";
 import "./CustomersPage.css";
 
@@ -166,25 +174,15 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="page customers-page">
+    <div className="customers-page">
       <style>
         {`
-          .customers-page .button {
-            width: auto;
-            display: inline-flex;
-            align-items: center;
+          .customers-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
             justify-content: center;
-            padding: 10px 14px;
-            font-size: 14px;
-            font-weight: 700;
-          }
-          .customers-page .customers-actions .button {
-            padding: 8px 12px;
-            font-size: 14px;
-            min-width: 120px;
-          }
-          .customers-page .customers-header-actions .button {
-            min-width: 180px;
+            padding: 20px;
           }
           .customers-page .customers-toolbar {
             background: #fff;
@@ -199,62 +197,58 @@ const CustomersPage = () => {
         `}
       </style>
       <div className="customers-container">
-        <div className="customers-toolbar">
+        <Card className="customers-toolbar">
           <div className="customers-toolbar-row">
             <div className="customers-header">
-              <h1>Customers</h1>
-              <p className="muted">Manage customer details and activation status.</p>
+              <SectionHeader
+                title="Customers"
+                subtitle="Manage customer details and activation status."
+              />
             </div>
             <div className="customers-toolbar-actions customers-header-actions">
               <div className="customers-search">
-                <label htmlFor="customers-search-input">Search</label>
-                <input
-                  id="customers-search-input"
-                  type="text"
-                  placeholder="Name, org nr, email, phone"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <FormField label="Search" htmlFor="customers-search-input">
+                  <Input
+                    id="customers-search-input"
+                    type="text"
+                    placeholder="Name, org nr, email, phone"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </FormField>
               </div>
-              <button className="button" type="button" onClick={openCreate} disabled={loading}>
+              <Button variant="primary" size="sm" onClick={openCreate} disabled={loading}>
                 Add customer
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {error && <div className="error">{error}</div>}
         {successMessage && <div className="success">{successMessage}</div>}
 
-        <div className="customers-table-desktop">
-          <div className="customers-card-container customers-table-wrap">
-            <table className="customers-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Org nr</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Address</th>
-                  <th>Active</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
+        <ListState
+          loading={loading}
+          hasItems={filteredCustomers.length > 0}
+          emptyTitle="No customers"
+          emptyMessage="No customers yet."
+          errorMessage={error}
+        >
+          <div className="customers-table-desktop">
+            <TableWrap className="customers-card-container customers-table-wrap">
+              <table className="customers-table min-w-[900px] w-full">
+                <thead>
                   <tr>
-                    <td colSpan={8} className="customers-cell-center">
-                      Loading...
-                    </td>
+                    <th>Name</th>
+                    <th>Org nr</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Active</th>
+                    <th>Actions</th>
                   </tr>
-                ) : filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="customers-cell-center">
-                      No customers yet.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCustomers.map((customer) => {
+                </thead>
+                <tbody>
+                  {filteredCustomers.map((customer) => {
                     const isUpdating = updatingId === customer.id;
                     const isActive = Boolean(customer.active);
                     return (
@@ -271,40 +265,34 @@ const CustomersPage = () => {
                         </td>
                         <td>
                           <div className="customers-actions">
-                            <button
-                              className="button secondary"
-                              type="button"
+                            <Button
+                              variant="secondary"
+                              size="sm"
                               onClick={() => openEdit(customer)}
                               disabled={isUpdating}
                             >
                               Edit
-                            </button>
-                            <button
-                              className="button secondary"
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
                               onClick={() => handleToggleActive(customer)}
                               disabled={isUpdating}
                             >
                               {isActive ? "Deactivate" : "Activate"}
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </TableWrap>
           </div>
-        </div>
 
-        <div className="customers-cards-mobile">
-          {loading ? (
-            <div className="customers-card customers-card-center">Loading...</div>
-          ) : filteredCustomers.length === 0 ? (
-            <div className="customers-card customers-card-center">No customers yet.</div>
-          ) : (
-            filteredCustomers.map((customer) => {
+          <div className="customers-cards-mobile">
+            {filteredCustomers.map((customer) => {
               const isUpdating = updatingId === customer.id;
               const isActive = Boolean(customer.active);
               return (
@@ -335,29 +323,29 @@ const CustomersPage = () => {
                       {isActive ? "Active" : "Inactive"}
                     </span>
                     <div className="customers-actions">
-                      <button
-                        className="button secondary"
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => openEdit(customer)}
                         disabled={isUpdating}
                       >
                         Edit
-                      </button>
-                      <button
-                        className="button secondary"
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleToggleActive(customer)}
                         disabled={isUpdating}
                       >
                         {isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        </ListState>
       </div>
 
       {modalOpen ? (
@@ -369,84 +357,73 @@ const CustomersPage = () => {
             className="customers-modal"
           >
             <form onSubmit={handleSubmit}>
-              <div className="customers-modal-header">
-                <div>
-                  <h2>{editingCustomer ? "Edit customer" : "Add customer"}</h2>
-                  <p className="muted">
-                    {editingCustomer ? "Update customer details." : "Fill in the customer details."}
-                  </p>
+              <ModalShell
+                title={editingCustomer ? "Edit customer" : "Add customer"}
+                onClose={closeModal}
+                footer={(
+                  <>
+                    <Button variant="secondary" size="sm" type="button" onClick={closeModal} disabled={saving}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" type="submit" disabled={saving}>
+                      {saving ? "Saving..." : editingCustomer ? "Save" : "Create"}
+                    </Button>
+                  </>
+                )}
+              >
+                {modalError && <div className="error customers-modal-error">{modalError}</div>}
+
+                <div className="customers-modal-fields">
+                  <FormField label="Name *">
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      required
+                      disabled={saving}
+                    />
+                  </FormField>
+                  <FormField label="Org nr">
+                    <Input
+                      value={form.orgNumber}
+                      onChange={(e) => setForm((prev) => ({ ...prev, orgNumber: e.target.value }))}
+                      placeholder="9 digits"
+                      disabled={saving}
+                    />
+                  </FormField>
+                  <FormField label="Email">
+                    <Input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      disabled={saving}
+                    />
+                  </FormField>
+                  <FormField label="Phone">
+                    <Input
+                      value={form.phone}
+                      onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      disabled={saving}
+                    />
+                  </FormField>
+                  <FormField label="Address">
+                    <textarea
+                      rows={3}
+                      value={form.address}
+                      onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+                      disabled={saving}
+                    />
+                  </FormField>
+                  <label className="field customers-field-inline">
+                    <input
+                      type="checkbox"
+                      checked={form.active}
+                      onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+                      disabled={saving}
+                    />
+                    <span>Active</span>
+                  </label>
                 </div>
-                <button className="button secondary" type="button" onClick={closeModal} disabled={saving}>
-                  Cancel
-                </button>
-              </div>
-
-              {modalError && <div className="error customers-modal-error">{modalError}</div>}
-
-              <div className="customers-modal-fields">
-                <label className="field">
-                  <span>Name *</span>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                    required
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>Org nr</span>
-                  <input
-                    value={form.orgNumber}
-                    onChange={(e) => setForm((prev) => ({ ...prev, orgNumber: e.target.value }))}
-                    placeholder="9 digits"
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>Email</span>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>Phone</span>
-                  <input
-                    value={form.phone}
-                    onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>Address</span>
-                  <textarea
-                    rows={3}
-                    value={form.address}
-                    onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field customers-field-inline">
-                  <input
-                    type="checkbox"
-                    checked={form.active}
-                    onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-                    disabled={saving}
-                  />
-                  <span>Active</span>
-                </label>
-              </div>
-
-              <div className="customers-modal-actions">
-                <button className="button secondary" type="button" onClick={closeModal} disabled={saving}>
-                  Cancel
-                </button>
-                <button className="button" type="submit" disabled={saving}>
-                  {saving ? "Saving..." : editingCustomer ? "Save" : "Create"}
-                </button>
-              </div>
+              </ModalShell>
             </form>
           </div>
         </div>

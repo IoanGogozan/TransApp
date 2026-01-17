@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { listDefects } from "../../api/defects";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { createDefect, listDefects } from "../../api/defects";
+import { getMyVehicles, VehicleOption } from "../../api/timesheets";
 import { ApiError } from "../../api/http";
 import { Defect } from "../../types/defect";
 import { getDefectDriverListTitle } from "../../utils/defects";
 import { formatDateTime } from "../../utils/time";
 import { tenantPath } from "../../utils/tenantPath";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
+import ModalShell from "../../components/ui/ModalShell";
 
 const DriverDefectsPage = () => {
   const { companySlug } = useParams();
   const slug = companySlug;
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vehicleIdParam = searchParams.get("vehicleId");
   const vehicleId = useMemo(() => {
@@ -24,6 +33,16 @@ const DriverDefectsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"ALL" | Defect["status"]>("ALL");
   const [showResolved, setShowResolved] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
+  const [reportVehicleId, setReportVehicleId] = useState<string>("");
+  const [reportTitle, setReportTitle] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportSubmitAttempted, setReportSubmitAttempted] = useState(false);
+  const [reportSubmitError, setReportSubmitError] = useState<string | null>(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const filteredItems = useMemo(() => {
     return items.filter((defect) => {
@@ -57,44 +76,75 @@ const DriverDefectsPage = () => {
   }, [vehicleIdParam]);
 
   useEffect(() => {
+    if (!reportModalOpen) return;
+    setReportSubmitAttempted(false);
+    setVehiclesError(null);
+    setVehiclesLoading(true);
+    getMyVehicles()
+      .then((res) => {
+        setVehicles(res.vehicles || []);
+        if (vehicleId) {
+          setReportVehicleId(String(vehicleId));
+        } else if (res.vehicles && res.vehicles.length > 0) {
+          setReportVehicleId(String(res.vehicles[0].id));
+        }
+      })
+      .catch((err) => {
+        const msg = err instanceof ApiError ? err.message : "Failed to load vehicles";
+        setVehiclesError(msg);
+      })
+      .finally(() => {
+        setVehiclesLoading(false);
+      });
+  }, [reportModalOpen, vehicleId]);
+
+  const isTitleValid = reportTitle.trim().length >= 3 && reportTitle.trim().length <= 120;
+  const isVehicleSelected = reportVehicleId !== "";
+  const canCreateDefect = isTitleValid && isVehicleSelected;
+
+  const handleCreateDefect = async () => {
+    setReportSubmitAttempted(true);
+    setReportSubmitError(null);
+    if (!canCreateDefect) return;
+    setReportSubmitting(true);
+    try {
+      const created = await createDefect({
+        vehicleId: Number(reportVehicleId),
+        source: "MANUAL",
+        title: reportTitle.trim(),
+        description: reportDescription.trim() ? reportDescription.trim() : null,
+      });
+      await load();
+      setReportModalOpen(false);
+      navigate(tenantPath(slug, `/driver/defects/${created.id}`));
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Failed to create defect";
+      setReportSubmitError(msg);
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
     if (focusId && highlightedRef.current) {
       highlightedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [focusId, items.length]);
 
-  if (loading) {
-    return (
-      <div className="page">
-        <div className="card">
-          <p>Loading defects...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="page">
-        <div className="card">
-          <div className="error">{error}</div>
-          <button className="button" onClick={load}>
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Defects</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader
+          title="Defects"
+          right={(
+            <Button variant="primary" size="sm" onClick={() => setReportModalOpen(true)}>
+              Report defect
+            </Button>
+          )}
+        />
         {vehicleId ? <p className="muted">Filtered by vehicle {vehicleId}</p> : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <span className="muted" style={{ fontSize: "12px" }}>
-              Status
-            </span>
+          <FormField label="Status">
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as "ALL" | Defect["status"])}
@@ -105,19 +155,22 @@ const DriverDefectsPage = () => {
               <option value="IN_PROGRESS">IN_PROGRESS</option>
               <option value="RESOLVED">RESOLVED</option>
             </select>
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "20px" }}>
+          </FormField>
+          <FormField label="Show resolved">
             <input
               type="checkbox"
               checked={showResolved}
               onChange={(event) => setShowResolved(event.target.checked)}
             />
-            <span className="muted">Show resolved</span>
-          </label>
+          </FormField>
         </div>
-        {filteredItems.length === 0 ? (
-          <p className="muted">No defects.</p>
-        ) : (
+        <ListState
+          loading={loading}
+          hasItems={filteredItems.length > 0}
+          emptyTitle="No defects"
+          emptyMessage="No defects yet."
+          errorMessage={error}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {filteredItems.map((d) => {
               const title = getDefectDriverListTitle(d) || "(No title)";
@@ -163,17 +216,116 @@ const DriverDefectsPage = () => {
                   </span>
                 </div>
                 <div className="muted" style={{ fontSize: "12px", marginTop: "4px" }}>
-                  {vehicleLabel} • {formatDateTime(d.createdAt)}
-                  {d.source === "MANUAL" ? " • Manual" : ""}
+                  {vehicleLabel} - {formatDateTime(d.createdAt)}
                 </div>
               </Link>
             );
             })}
           </div>
-        )}
-      </div>
+        </ListState>
+        {error ? (
+          <div style={{ marginTop: "12px" }}>
+            <Button variant="primary" onClick={load}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
+      </Card>
+      {reportModalOpen ? (
+        <div
+          role="presentation"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 50,
+          }}
+          onClick={() => setReportModalOpen(false)}
+        >
+          <Card
+            className="max-w-[520px] w-full max-h-[80vh] overflow-y-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ModalShell
+              title="Report defect"
+              onClose={() => setReportModalOpen(false)}
+              footer={(
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => setReportModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!canCreateDefect || reportSubmitting}
+                    onClick={handleCreateDefect}
+                  >
+                    {reportSubmitting ? "Creating..." : "Create defect"}
+                  </Button>
+                </>
+              )}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <FormField label="Vehicle" htmlFor="reportVehicle">
+                  <select
+                    id="reportVehicle"
+                    value={reportVehicleId}
+                    onChange={(event) => setReportVehicleId(event.target.value)}
+                    disabled={vehiclesLoading}
+                    style={{ padding: "11px 12px", borderRadius: "10px", border: "1px solid #d1d5db" }}
+                  >
+                    <option value="">{vehiclesLoading ? "Loading vehicles..." : "Select vehicle"}</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.regNumber}
+                        {vehicle.name ? ` - ${vehicle.name}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {vehiclesError ? <div className="error">{vehiclesError}</div> : null}
+                  {reportSubmitAttempted && !isVehicleSelected ? (
+                    <div className="error">Select a vehicle.</div>
+                  ) : null}
+                </FormField>
+                <FormField
+                  label="Title"
+                  htmlFor="reportTitle"
+                  hint={`${reportTitle.length}/120`}
+                >
+                  <Input
+                    id="reportTitle"
+                    value={reportTitle}
+                    onChange={(event) => setReportTitle(event.target.value)}
+                    placeholder="Tyres worn right side"
+                    maxLength={120}
+                  />
+                  {reportSubmitAttempted && !isTitleValid ? (
+                    <div className="error">Title must be between 3 and 120 characters.</div>
+                  ) : null}
+                </FormField>
+                <FormField label="Description (optional)" htmlFor="reportDescription">
+                  <textarea
+                    id="reportDescription"
+                    value={reportDescription}
+                    onChange={(event) => setReportDescription(event.target.value)}
+                    rows={4}
+                    maxLength={2000}
+                    style={{ padding: "11px 12px", borderRadius: "10px", border: "1px solid #d1d5db" }}
+                  />
+                </FormField>
+                {reportSubmitError ? <div className="error">{reportSubmitError}</div> : null}
+              </div>
+            </ModalShell>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 };
 
 export default DriverDefectsPage;
+

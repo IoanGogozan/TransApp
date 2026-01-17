@@ -215,6 +215,7 @@ model User {
   checklistInstances ChecklistInstance[]
   defectsReported    Defect[]            @relation("DefectsReportedByUser")
   defectsAssigned    Defect[]            @relation("DefectsAssignedToUser")
+  defectsAdminNoteUpdated Defect[]       @relation("DefectsAdminNoteUpdatedByUser")
   defectComments     DefectComment[]     @relation("DefectCommentsUser")
   defectEvents       DefectEvent[]       @relation("DefectEventsActor")
   workEntries        WorkEntry[]
@@ -465,6 +466,9 @@ model Defect {
   status               DefectStatus @default(OPEN)
   title                String
   description          String?
+  adminNote            String?      @map("admin_note")
+  adminNoteUpdatedAt   DateTime?    @map("admin_note_updated_at") @db.Timestamptz
+  adminNoteUpdatedByUserId Int?     @map("admin_note_updated_by_user_id")
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz
   resolvedAt           DateTime?    @map("resolved_at") @db.Timestamptz
@@ -474,6 +478,7 @@ model Defect {
   vehicle           Vehicle            @relation(fields: [vehicleId], references: [id])
   reportedByUser    User               @relation("DefectsReportedByUser", fields: [reportedByUserId], references: [id])
   assignedToUser    User?              @relation("DefectsAssignedToUser", fields: [assignedToUserId], references: [id])
+  adminNoteUpdatedBy User?             @relation("DefectsAdminNoteUpdatedByUser", fields: [adminNoteUpdatedByUserId], references: [id])
   checklistInstance ChecklistInstance? @relation(fields: [checklistInstanceId], references: [id])
   comments          DefectComment[]
   events            DefectEvent[]

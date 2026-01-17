@@ -322,6 +322,12 @@ const DriverDefectDetailsPage = () => {
 
   const previewUrl =
     previewAttachmentId != null ? attachmentPreviewUrls[String(previewAttachmentId)] : undefined;
+  const rawManualTitle = defect.title ?? "Defect";
+  const manualTitleNeedsTruncate = defect.source === "MANUAL" && rawManualTitle.length > 60;
+  const manualTitle = manualTitleNeedsTruncate ? `${rawManualTitle.slice(0, 60)}…` : rawManualTitle;
+  const headerTitle =
+    defect.source === "CHECKLIST" ? getDefectCategoryLabel(defect) : manualTitle;
+  const headerTitleTooltip = manualTitleNeedsTruncate ? rawManualTitle : undefined;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -342,8 +348,8 @@ const DriverDefectDetailsPage = () => {
             </button>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold leading-snug text-slate-900">
-              {getDefectCategoryLabel(defect)}
+            <h1 className="text-xl font-semibold leading-snug text-slate-900" title={headerTitleTooltip}>
+              {headerTitle}
             </h1>
             <span className="inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold bg-amber-500/20 text-amber-900 ring-1 ring-inset ring-amber-600/25">
               {defect.status}
@@ -496,8 +502,22 @@ const DriverDefectDetailsPage = () => {
                       </div>
                     </div>
                     <div className="p-3">
-                      <div className="truncate text-sm font-medium text-slate-900">{a.title || "(image)"}</div>
-                      <div className="mt-1 text-xs text-slate-500">{formatDateTime(a.createdAt)}</div>
+                      {(() => {
+                        const title = (a.title ?? "").trim();
+                        return title ? (
+                          <div
+                            className="text-xs text-slate-500"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {title}
+                          </div>
+                        ) : null;
+                      })()}
                       <div className="mt-3 flex gap-2">
                         {!a.purgedAt ? (
                           <button

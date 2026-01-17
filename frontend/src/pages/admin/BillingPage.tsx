@@ -7,6 +7,7 @@ import {
   createStripePortalSession,
   createStripeSetupIntent,
   createVippsAgreement,
+  createVippsTestCharge,
   devActivate,
   devCancel,
   devPastDue,
@@ -21,6 +22,13 @@ import {
 import type { VippsCharge } from "../../api/billing";
 import { useParams } from "react-router-dom";
 import { getCompanySlug } from "../../auth/companySlug";
+import TableWrap from "../../components/TableWrap";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
@@ -81,8 +89,7 @@ const StripeCardSetupForm = ({ plan, companySlug, onSuccess }: StripeCardSetupFo
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="field">
-        <label>Card details</label>
+      <FormField label="Card details">
         <div
           style={{
             padding: "12px",
@@ -93,11 +100,11 @@ const StripeCardSetupForm = ({ plan, companySlug, onSuccess }: StripeCardSetupFo
         >
           <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
         </div>
-      </div>
+      </FormField>
       {error ? <div className="error">{error}</div> : null}
-      <button className="button" type="submit" disabled={!stripe || submitting}>
+      <Button type="submit" disabled={!stripe || submitting}>
         {submitting ? "Processing..." : "Add/Update Card"}
-      </button>
+      </Button>
     </form>
   );
 };
@@ -351,10 +358,12 @@ const BillingPage = () => {
   })();
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: "640px" }}>
-        <h1>Billing</h1>
-        <p className="muted">Manage your subscription and payment methods.</p>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card style={{ maxWidth: "640px" }}>
+        <SectionHeader
+          title="Billing"
+          subtitle="Manage your subscription and payment methods."
+        />
 
         {loading ? <p>Loading status...</p> : null}
         {error ? <div className="error">{error}</div> : null}
@@ -409,8 +418,7 @@ const BillingPage = () => {
           </div>
         ) : null}
 
-        <div className="field">
-          <label>Plan</label>
+        <FormField label="Plan">
           <select
             value={plan}
             onChange={(event) => setPlan(event.target.value)}
@@ -420,7 +428,7 @@ const BillingPage = () => {
             <option value="MEDIUM">Medium</option>
             <option value="PRO">Pro</option>
           </select>
-        </div>
+        </FormField>
 
         <div style={{ marginBottom: "20px" }}>
           <h3 style={{ marginBottom: "8px" }}>Card</h3>
@@ -432,15 +440,16 @@ const BillingPage = () => {
                 <StripeCardSetupForm plan={plan} companySlug={slug} onSuccess={loadStatus} />
               </Elements>
               {stripePortalError ? <div className="error">{stripePortalError}</div> : null}
-              <button
-                className="button secondary"
+              <Button
+                variant="secondary"
+                size="sm"
                 type="button"
                 onClick={handleStripePortal}
                 disabled={stripePortalBusy}
                 style={{ marginTop: "10px" }}
               >
                 {stripePortalBusy ? "Opening..." : "Manage in Stripe"}
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -460,60 +469,63 @@ const BillingPage = () => {
               </div>
               {vippsError ? <div className="error">{vippsError}</div> : null}
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>
-                <button
-                  className="button secondary"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="button"
                   onClick={handleVippsSync}
                   disabled={vippsActionBusy}
                 >
                   Sync Vipps status
-                </button>
-                <button
-                  className="button secondary"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="button"
                   onClick={handleVippsChangePlan}
                   disabled={vippsActionBusy}
                 >
                   Change Vipps plan
-                </button>
-                <button
-                  className="button secondary"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="button"
                   onClick={handleVippsCancel}
                   disabled={vippsActionBusy}
                 >
                   Cancel Vipps
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <>
-              <div className="field">
-                <label>Phone number (optional)</label>
-                <input
+              <FormField label="Phone number (optional)">
+                <Input
                   value={vippsPhone}
                   onChange={(event) => setVippsPhone(event.target.value)}
                   placeholder="+47 999 99 999"
                 />
-              </div>
+              </FormField>
               {vippsError ? <div className="error">{vippsError}</div> : null}
-              <button className="button" type="button" onClick={handleVipps} disabled={vippsBusy}>
+              <Button type="button" onClick={handleVipps} disabled={vippsBusy}>
                 {vippsBusy ? "Redirecting..." : "Pay with Vipps"}
-              </button>
+              </Button>
             </>
           )}
 
           {vippsExists ? (
             <div style={{ marginTop: "16px" }}>
               <h4 style={{ marginBottom: "8px" }}>Recent charges</h4>
-              {vippsChargesLoading ? <p className="muted">Loading charges...</p> : null}
-              {vippsChargesError ? <div className="error">{vippsChargesError}</div> : null}
-              {!vippsChargesLoading && vippsCharges.length === 0 ? (
-                <p className="muted">No Vipps charges yet.</p>
-              ) : null}
-              {!vippsChargesLoading && vippsCharges.length > 0 ? (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <ListState
+                loading={vippsChargesLoading}
+                hasItems={vippsCharges.length > 0}
+                emptyTitle="No charges"
+                emptyMessage="No Vipps charges yet."
+                errorMessage={vippsChargesError}
+              >
+                <TableWrap>
+                  <table className="min-w-[700px] w-full" style={{ borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
                         <th style={{ textAlign: "left", padding: "6px 8px" }}>Due date</th>
@@ -537,8 +549,8 @@ const BillingPage = () => {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              ) : null}
+                </TableWrap>
+              </ListState>
             </div>
           ) : null}
         </div>
@@ -548,15 +560,16 @@ const BillingPage = () => {
           <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "16px", marginTop: "16px" }}>
             <h3 style={{ marginBottom: "8px" }}>Developer tools</h3>
             {vippsTestMessage ? <div className="muted">{vippsTestMessage}</div> : null}
-            <button
-              className="button secondary"
+            <Button
+              variant="secondary"
+              size="sm"
               type="button"
               onClick={handleVippsTestCharge}
               disabled={vippsTestBusy}
               style={{ marginTop: "8px" }}
             >
               {vippsTestBusy ? "Creating..." : "Create Vipps test charge (due in 2 days)"}
-            </button>
+            </Button>
           </div>
         ) : null}
         {import.meta.env.DEV ? (
@@ -564,42 +577,46 @@ const BillingPage = () => {
             <h3 style={{ marginBottom: "8px" }}>DEV Tools</h3>
             {devError ? <div className="error">{devError}</div> : null}
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button
-                className="button secondary"
+              <Button
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={devBusy}
                 onClick={() => handleDevAction("reset-trial")}
               >
                 Reset trial
-              </button>
-              <button
-                className="button secondary"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={devBusy}
                 onClick={() => handleDevAction("activate")}
               >
                 Activate
-              </button>
-              <button
-                className="button secondary"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={devBusy}
                 onClick={() => handleDevAction("past-due")}
               >
                 Past due
-              </button>
-              <button
-                className="button secondary"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={devBusy}
                 onClick={() => handleDevAction("cancel")}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
-      </div>
+      </Card>
     </div>
   );
 };

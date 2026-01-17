@@ -1,7 +1,12 @@
 const AppError = require("../utils/AppError");
 const prisma = require("../config/prismaClient");
 const defectRepository = require("../repositories/defectRepository");
-const { recordCreatedEvent, recordDetailsUpdated, recordStatusChanged } = require("./defectWorkflowService");
+const {
+  recordAdminNoteUpdated,
+  recordCreatedEvent,
+  recordDetailsUpdated,
+  recordStatusChanged,
+} = require("./defectWorkflowService");
 
 const ensureVehicle = async (companyId, vehicleId) => {
   const vehicle = await prisma.vehicle.findFirst({
@@ -124,7 +129,7 @@ const updateDefectDetails = async ({ companyId, user, defectId, patch }) => {
     throw new AppError(404, "Defect not found", "DEFECT_NOT_FOUND");
   }
 
-  const updated = await defectRepository.findDefectById({ companyId: company, defectId });
+  const updated = await defectRepository.findDefectByIdWithVehicle({ companyId: company, defectId });
 
   await recordDetailsUpdated({
     companyId: company,
@@ -136,10 +141,54 @@ const updateDefectDetails = async ({ companyId, user, defectId, patch }) => {
   return updated;
 };
 
+const updateAdminNote = async ({ companyId, user, defectId, adminNote }) => {
+  const company = Number(companyId);
+  const defect = await defectRepository.findDefectById({ companyId: company, defectId });
+  if (!defect) {
+    throw new AppError(404, "Defect not found", "DEFECT_NOT_FOUND");
+  }
+  if (defect.status === "RESOLVED") {
+    throw new AppError(409, "Defect is resolved", "DEFECT_RESOLVED");
+  }
+  if (
+    defect.adminNoteUpdatedByUserId != null &&
+    Number(defect.adminNoteUpdatedByUserId) !== Number(user.id) &&
+    user?.role !== "PLATFORM_ADMIN"
+  ) {
+    throw new AppError(403, "Admin note can only be edited by its author.", "FORBIDDEN");
+  }
+
+  const trimmed = typeof adminNote === "string" ? adminNote.trim() : null;
+  const nextNote = trimmed ? trimmed : null;
+
+  const updateResult = await defectRepository.updateAdminNote({
+    companyId: company,
+    defectId,
+    adminNote: nextNote,
+    adminNoteUpdatedAt: nextNote ? new Date() : null,
+    adminNoteUpdatedByUserId: Number(user.id),
+  });
+
+  if (updateResult.count === 0) {
+    throw new AppError(404, "Defect not found", "DEFECT_NOT_FOUND");
+  }
+
+  const updated = await defectRepository.findDefectById({ companyId: company, defectId });
+
+  await recordAdminNoteUpdated({
+    companyId: company,
+    defectId,
+    actorUserId: Number(user.id),
+  });
+
+  return updated;
+};
+
 module.exports = {
   createManualDefect,
   listDefects,
   getDefect,
   setStatus,
   updateDefectDetails,
+  updateAdminNote,
 };

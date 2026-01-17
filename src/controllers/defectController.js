@@ -37,6 +37,10 @@ const updateSchema = z
     message: "At least one of title or description is required",
   });
 
+const adminNoteSchema = z.object({
+  adminNote: z.string().trim().max(2000).nullable(),
+});
+
 const createDefect = asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -124,10 +128,31 @@ const updateDefectDetails = asyncHandler(async (req, res) => {
   res.json({ defect });
 });
 
+const updateAdminNote = asyncHandler(async (req, res) => {
+  const params = idSchema.safeParse(req.params);
+  if (!params.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", params.error.format());
+  }
+  const body = adminNoteSchema.safeParse(req.body);
+  if (!body.success) {
+    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", body.error.format());
+  }
+
+  const defect = await defectService.updateAdminNote({
+    companyId: req.companyId,
+    user: req.user,
+    defectId: params.data.id,
+    adminNote: body.data.adminNote,
+  });
+
+  res.json({ defect });
+});
+
 module.exports = {
   createDefect,
   listDefects,
   getDefect,
   updateStatus,
   updateDefectDetails,
+  updateAdminNote,
 };

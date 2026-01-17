@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import PublicHeader from "../components/PublicHeader";
+import Card from "../components/ui/Card";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const PublicPrivacyPage = () => {
   return (
-    <div className="page page-top">
-      <PublicHeader />
-      <div className="card" style={{ maxWidth: 720, width: "100%" }}>
-<h1>Privacy</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-3xl">
+        <PublicHeader />
+        <SectionHeader title="Privacy" />
         <p className="muted">A short plain-language overview of how TransApp processes data.</p>
 
         <h2>What data we process</h2>
@@ -46,7 +48,7 @@ const PublicPrivacyPage = () => {
         </p>
 
         <p className="muted">Last updated: 2026-01-11</p>
-      </div>
+      </Card>
     </div>
   );
 };

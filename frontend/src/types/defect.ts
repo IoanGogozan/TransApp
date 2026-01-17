@@ -30,9 +30,13 @@ export type Defect = {
   status: DefectStatus;
   title: string;
   description?: string | null;
+  adminNote?: string | null;
+  adminNoteUpdatedAt?: string | null;
+  adminNoteUpdatedByUserId?: number | null;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string | null;
+  attachments?: DefectAttachment[];
 };
 
 export type DefectAttachment = {
@@ -61,5 +65,11 @@ export type DefectEvent = {
   type: string;
   createdAt: string;
   actorUserId?: number | null;
+  actor?: {
+    id: number;
+    phone?: string | null;
+    username?: string | null;
+    email?: string | null;
+  };
   data?: unknown;
 };

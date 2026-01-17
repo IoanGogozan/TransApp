@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { ApiError } from "../../api/http";
 import { getBillingStatus, BillingStatusResponse, syncVippsAgreement } from "../../api/billing";
 import { tenantPath } from "../../utils/tenantPath";
 import { getCompanySlug } from "../../auth/companySlug";
+import ButtonLink from "../../components/ui/ButtonLink";
+import Card from "../../components/ui/Card";
+import InlineAlert from "../../components/ui/InlineAlert";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const POLL_INTERVAL_MS = 2000;
 const TIMEOUT_MS = 60000;
@@ -74,28 +78,28 @@ const VippsReturnPage = () => {
   }, []);
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Vipps approval</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader title="Vipps approval" />
         <p className="muted">
           {syncing
             ? "Syncing Vipps agreement status..."
             : "We are checking your Vipps agreement status."}
         </p>
-        {error ? <div className="error">{error}</div> : null}
+        {error ? <InlineAlert variant="error" message={error} /> : null}
         {done ? (
           <div>
             <p>Vipps agreement activated successfully.</p>
-            <Link className="button" to={returnPath}>
+            <ButtonLink variant="secondary" to={returnPath}>
               Back to billing
-            </Link>
+            </ButtonLink>
           </div>
         ) : timedOut ? (
           <div>
             <p>Approval pending, check later.</p>
-            <Link className="button" to={returnPath}>
+            <ButtonLink variant="secondary" to={returnPath}>
               Back to billing
-            </Link>
+            </ButtonLink>
           </div>
         ) : (
           <div>
@@ -105,7 +109,7 @@ const VippsReturnPage = () => {
             </p>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

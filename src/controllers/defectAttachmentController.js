@@ -83,8 +83,7 @@ const downloadDefectAttachment = asyncHandler(async (req, res) => {
   await ensureDefectAccess({ companyId: req.companyId, defectId: attachment.defectId, user: req.user });
 
   if (attachment.purgedAt || !attachment.storagePath) {
-    res.status(410).json({ error: "Attachment has been purged" });
-    return;
+    throw new AppError(410, "Attachment has been purged", "ATTACHMENT_PURGED");
   }
 
   const absolutePath = path.join(process.cwd(), attachment.storagePath);
@@ -138,8 +137,7 @@ const uploadDefectAttachment = asyncHandler(async (req, res) => {
   }
   await ensureDefectAccess({ companyId: req.companyId, defectId: defect.id, user: req.user });
   if (defect.status !== "OPEN" && defect.status !== "IN_PROGRESS") {
-    res.status(409).json({ error: "Defect is not editable", code: "DEFECT_NOT_EDITABLE" });
-    return;
+    throw new AppError(409, "Defect is not editable", "DEFECT_NOT_EDITABLE");
   }
 
   const attachmentCount = await defectAttachmentRepository.countActiveAttachments({
@@ -147,12 +145,7 @@ const uploadDefectAttachment = asyncHandler(async (req, res) => {
     defectId: params.data.id,
   });
   if (attachmentCount >= 5) {
-    res.status(409).json({
-      error: "Attachment limit reached",
-      code: "ATTACHMENT_LIMIT_REACHED",
-      max: 5,
-    });
-    return;
+    throw new AppError(409, "Attachment limit reached", "ATTACHMENT_LIMIT_REACHED", { max: 5 });
   }
 
   const created = await defectAttachmentRepository.createAttachment({
@@ -230,8 +223,7 @@ const deleteDefectAttachment = asyncHandler(async (req, res) => {
     user: req.user,
   });
   if (defect.status !== "OPEN" && defect.status !== "IN_PROGRESS") {
-    res.status(409).json({ error: "Defect is not editable", code: "DEFECT_NOT_EDITABLE" });
-    return;
+    throw new AppError(409, "Defect is not editable", "DEFECT_NOT_EDITABLE");
   }
 
   const role = req.user?.role;

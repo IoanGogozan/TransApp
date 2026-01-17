@@ -9,6 +9,13 @@ import {
   getAdminWorkRunDetails,
   updateAdminWorkEntry,
 } from "../../api/timesheets";
+import TableWrap from "../../components/TableWrap";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const toDateInput = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -363,12 +370,15 @@ const TimesheetsAdminPage = () => {
   };
 
   return (
-    <div className="page timesheets-page">
+    <div className="timesheets-page">
       <style>
         {`
           .timesheets-page {
+            min-height: 100vh;
+            display: flex;
             align-items: flex-start;
             justify-content: flex-start;
+            padding: 20px;
           }
           .timesheets-container {
             margin: 0 auto;
@@ -382,23 +392,6 @@ const TimesheetsAdminPage = () => {
             padding: 24px;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
             margin-bottom: 20px;
-          }
-          .timesheets-page .button {
-            width: auto;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 14px;
-            font-size: 14px;
-            font-weight: 700;
-          }
-          .timesheets-page .timesheets-filters .button {
-            padding: 10px 16px;
-            min-width: 110px;
-          }
-          .timesheets-page .timesheets-table .button {
-            padding: 8px 12px;
-            min-width: 110px;
           }
           .timesheets-topbar {
             display: flex;
@@ -485,7 +478,6 @@ const TimesheetsAdminPage = () => {
           .timesheets-modal .timesheets-modal-table {
             border: 1px solid #e5e7eb;
             border-radius: 12px;
-            overflow: auto;
             background: #fff;
           }
           .timesheets-modal .timesheets-modal-table table {
@@ -512,17 +504,6 @@ const TimesheetsAdminPage = () => {
             padding: 14px;
             border-top: 1px solid #f1f5f9;
           }
-          .timesheets-modal .button {
-            width: auto;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 12px;
-            font-size: 14px;
-            font-weight: 700;
-            min-width: 96px;
-            border-radius: 12px;
-          }
           @media (max-width: 640px) {
             .timesheets-modal {
               width: calc(100vw - 24px);
@@ -533,7 +514,6 @@ const TimesheetsAdminPage = () => {
             }
           }
           .timesheets-table-wrap {
-            overflow: auto;
             max-height: 70vh;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
@@ -607,136 +587,137 @@ const TimesheetsAdminPage = () => {
         `}
       </style>
       <div className="timesheets-container">
-        <div className="timesheets-topcard">
-          <div className="timesheets-topbar ts-header-top">
-            <div>
-              <h1 style={{ marginBottom: "4px" }}>Timesheets</h1>
-              <p className="timesheets-modal-subtitle">
-                {from} to {to}
-              </p>
-            </div>
-            <div className="ts-quick-buttons">
-              <button
-                className={`button quick-btn ${activeQuickRange === "WEEK" ? "quick-btn-active" : ""}`}
-                type="button"
-                onClick={() => {
-                  if (activeQuickRange === "WEEK") {
-                    setActiveQuickRange(null);
-                    applyDefaultRangeAndLoad();
-                    return;
-                  }
-                  const today = osloToday();
-                  const start = osloWeekStart(today);
-                  setActiveQuickRange("WEEK");
-                  setFrom(start);
-                  setTo(today);
-                  loadWithRange(start, today);
-                }}
-              >
-                This week
-              </button>
-              <button
-                className={`button quick-btn ${activeQuickRange === "MONTH" ? "quick-btn-active" : ""}`}
-                type="button"
-                onClick={() => {
-                  if (activeQuickRange === "MONTH") {
-                    setActiveQuickRange(null);
-                    applyDefaultRangeAndLoad();
-                    return;
-                  }
-                  const today = osloToday();
-                  const start = osloMonthStart(today);
-                  setActiveQuickRange("MONTH");
-                  setFrom(start);
-                  setTo(today);
-                  loadWithRange(start, today);
-                }}
-              >
-                This month
-              </button>
-            </div>
-          </div>
+        <Card className="timesheets-topcard">
+          <SectionHeader
+            title="Timesheets"
+            subtitle={`${from} to ${to}`}
+            right={
+              <div className="ts-quick-buttons">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`quick-btn ${activeQuickRange === "WEEK" ? "quick-btn-active" : ""}`}
+                  onClick={() => {
+                    if (activeQuickRange === "WEEK") {
+                      setActiveQuickRange(null);
+                      applyDefaultRangeAndLoad();
+                      return;
+                    }
+                    const today = osloToday();
+                    const start = osloWeekStart(today);
+                    setActiveQuickRange("WEEK");
+                    setFrom(start);
+                    setTo(today);
+                    loadWithRange(start, today);
+                  }}
+                >
+                  This week
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`quick-btn ${activeQuickRange === "MONTH" ? "quick-btn-active" : ""}`}
+                  onClick={() => {
+                    if (activeQuickRange === "MONTH") {
+                      setActiveQuickRange(null);
+                      applyDefaultRangeAndLoad();
+                      return;
+                    }
+                    const today = osloToday();
+                    const start = osloMonthStart(today);
+                    setActiveQuickRange("MONTH");
+                    setFrom(start);
+                    setTo(today);
+                    loadWithRange(start, today);
+                  }}
+                >
+                  This month
+                </Button>
+              </div>
+            }
+          />
           <div className="timesheets-filters">
             <div className="timesheets-field">
-              <label>From</label>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => {
-                  setActiveQuickRange(null);
-                  setFrom(e.target.value);
-                }}
-              />
+              <FormField label="From">
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setActiveQuickRange(null);
+                    setFrom(e.target.value);
+                  }}
+                />
+              </FormField>
             </div>
             <div className="timesheets-field">
-              <label>To</label>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => {
-                  setActiveQuickRange(null);
-                  setTo(e.target.value);
-                }}
-              />
+              <FormField label="To">
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(e) => {
+                    setActiveQuickRange(null);
+                    setTo(e.target.value);
+                  }}
+                />
+              </FormField>
             </div>
             <div className="timesheets-filters-right">
               <div className="timesheets-field search">
-                <label>Driver</label>
-                <select
-                  value={selectedDriverId}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setSelectedDriverId(next);
-                    setActiveQuickRange(null);
-                    load();
-                  }}
-                >
-                  <option value="ALL">All drivers</option>
-                  {drivers.map((driver) => (
-                    <option key={driver.id} value={String(driver.id)}>
-                      {driver.label}
-                    </option>
-                  ))}
-                </select>
+                <FormField label="Driver">
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setSelectedDriverId(next);
+                      setActiveQuickRange(null);
+                      load();
+                    }}
+                  >
+                    <option value="ALL">All drivers</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={String(driver.id)}>
+                        {driver.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
-                <button className="button" type="button" onClick={load} disabled={loading}>
+                <Button variant="primary" size="sm" onClick={load} disabled={loading}>
                   {loading ? "Loading..." : "Load"}
-                </button>
-                <button className="button" type="button" onClick={exportCsv} disabled={rows.length === 0}>
+                </Button>
+                <Button variant="secondary" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
                   Export CSV
-                </button>
+                </Button>
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {error && <div className="error">{error}</div>}
-
-        <div className="timesheets-desktop">
-          <div className="timesheets-table-wrap">
-            <table className="table timesheets-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Driver</th>
-                  <th>Vehicles</th>
-                  <th>Routes</th>
-                  {showRuns ? <th>Entries</th> : null}
-                  <th>Total</th>
-                  <th>Breakdown</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.length === 0 ? (
+        <ListState
+          loading={loading}
+          hasItems={filteredRows.length > 0}
+          emptyTitle="No timesheets"
+          emptyMessage="No rows found for the current filters."
+          errorMessage={error}
+        >
+          <div className="timesheets-desktop">
+            <TableWrap className="timesheets-table-wrap">
+              <table className="table timesheets-table min-w-[900px] w-full">
+                <thead>
                   <tr>
-                    <td colSpan={showRuns ? 8 : 7} style={{ textAlign: "center" }}>
-                      {loading ? "Loading..." : "No rows"}
-                    </td>
+                    <th>Date</th>
+                    <th>Driver</th>
+                    <th>Vehicles</th>
+                    <th>Routes</th>
+                    {showRuns ? <th>Entries</th> : null}
+                    <th>Total</th>
+                    <th>Breakdown</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  filteredRows.map((row, idx) => {
+                </thead>
+                <tbody>
+                  {filteredRows.map((row, idx) => {
                     const totalMinutes =
                       row.totalsMinutes.DRIVING +
                       row.totalsMinutes.OTHER_WORK +
@@ -773,27 +754,21 @@ const TimesheetsAdminPage = () => {
                           </div>
                         </td>
                         <td>
-                          <button className="button" type="button" onClick={() => openDetails(row)}>
+                          <Button variant="secondary" size="sm" type="button" onClick={() => openDetails(row)}>
                             Details
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </TableWrap>
           </div>
-        </div>
 
-        <div className="timesheets-mobile">
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {filteredRows.length === 0 ? (
-              <div className="card" style={{ textAlign: "center" }}>
-                {loading ? "Loading..." : "No rows"}
-              </div>
-            ) : (
-              filteredRows.map((row, idx) => {
+          <div className="timesheets-mobile">
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {filteredRows.map((row, idx) => {
                 const totalMinutes =
                   row.totalsMinutes.DRIVING +
                   row.totalsMinutes.OTHER_WORK +
@@ -807,7 +782,7 @@ const TimesheetsAdminPage = () => {
                 ].filter((item) => item.minutes > 0);
 
                 return (
-                  <div key={`${row.date}-${row.driver.id}-${idx}`} className="card">
+                  <Card key={`${row.date}-${row.driver.id}-${idx}`} className="timesheets-mobile-card">
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                       <div>
                         <strong>{row.date}</strong>
@@ -861,16 +836,16 @@ const TimesheetsAdminPage = () => {
                       )}
                     </div>
                     <div style={{ marginTop: "12px" }}>
-                      <button className="button" type="button" onClick={() => openDetails(row)}>
+                      <Button variant="secondary" size="sm" type="button" onClick={() => openDetails(row)}>
                         Details
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </Card>
                 );
-              })
-            )}
+              })}
+            </div>
           </div>
-        </div>
+        </ListState>
       </div>
       {detailsOpen ? (
         <div
@@ -906,92 +881,100 @@ const TimesheetsAdminPage = () => {
                   </p>
                 ) : null}
               </div>
-              <button className="button timesheets-modal-close" type="button" onClick={closeDetails}>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                className="timesheets-modal-close"
+                onClick={closeDetails}
+              >
                 Close
-              </button>
+              </Button>
             </div>
 
             {detailsError ? <div className="error" style={{ marginTop: "12px" }}>{detailsError}</div> : null}
 
-            <div className="timesheets-modal-table compact" style={{ marginTop: "12px" }}>
-              <table className="table" style={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Activity</th>
-                    <th style={{ width: "180px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Customer</th>
-                    <th style={{ width: "160px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Route</th>
-                    <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Vehicle</th>
-                    <th style={{ width: "210px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Check-in</th>
-                    <th style={{ width: "90px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>Duration</th>
-                    <th style={{ width: "110px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detailsRuns.length === 0 ? (
+            <div style={{ marginTop: "12px" }}>
+              <TableWrap className="timesheets-modal-table compact">
+                <table className="table min-w-[900px] w-full" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
+                  <thead>
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                        {detailsLoading ? "Loading..." : "No runs"}
-                      </td>
+                      <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Activity</th>
+                      <th style={{ width: "180px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Customer</th>
+                      <th style={{ width: "160px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Route</th>
+                      <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Vehicle</th>
+                      <th style={{ width: "210px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Check-in</th>
+                      <th style={{ width: "90px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>Duration</th>
+                      <th style={{ width: "110px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Actions</th>
                     </tr>
-                  ) : (
-                    detailsRuns.map((run, idx) => {
-                      const vehicleLabel = run.vehicle?.regNumber || "-";
-                      const vehicleId = run.vehicleId ?? null;
-                      const checkIn = vehicleId ? latestCheckInByVehicleId.get(vehicleId) : null;
-                      const checkInLabel = vehicleId
-                        ? checkIn
-                          ? `${fmtCheckIn.format(new Date(checkIn.checkedAt))} \u2022 ${checkIn.allOk ? "OK" : "Issues"}`
-                          : "No check-in"
-                        : "-";
-                      return (
-                      <tr key={`${run.activityType}-${idx}`}>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.activityType}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.customer?.name || "-"}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.route?.name || "-"}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{vehicleLabel}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{checkInLabel}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>{formatDurationMinutes(run.durationMin)}</td>
-                        <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(run)}
-                            aria-label="Edit entry"
-                            title="Edit"
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              padding: 0,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: "10px",
-                              border: "1px solid #e2e8f0",
-                              background: "#f8fafc",
-                              color: "#334155",
-                            }}
-                          >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                            </svg>
-                          </button>
+                  </thead>
+                  <tbody>
+                    {detailsRuns.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: "center", padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                          {detailsLoading ? "Loading..." : "No runs"}
                         </td>
                       </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      detailsRuns.map((run, idx) => {
+                        const vehicleLabel = run.vehicle?.regNumber || "-";
+                        const vehicleId = run.vehicleId ?? null;
+                        const checkIn = vehicleId ? latestCheckInByVehicleId.get(vehicleId) : null;
+                        const checkInLabel = vehicleId
+                          ? checkIn
+                            ? `${fmtCheckIn.format(new Date(checkIn.checkedAt))} \u2022 ${checkIn.allOk ? "OK" : "Issues"}`
+                            : "No check-in"
+                          : "-";
+                        return (
+                        <tr key={`${run.activityType}-${idx}`}>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.activityType}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.customer?.name || "-"}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.route?.name || "-"}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{vehicleLabel}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{checkInLabel}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>{formatDurationMinutes(run.durationMin)}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(run)}
+                              aria-label="Edit entry"
+                              title="Edit"
+                              style={{
+                                width: "36px",
+                                height: "36px",
+                                padding: 0,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: "10px",
+                                border: "1px solid #e2e8f0",
+                                background: "#f8fafc",
+                                color: "#334155",
+                              }}
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </TableWrap>
             </div>
             {editOpen ? (
               <div
@@ -1058,12 +1041,12 @@ const TimesheetsAdminPage = () => {
                     </div>
                   ) : null}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" }}>
-                    <button type="button" className="button" onClick={closeEditModal} disabled={editSaving}>
+                    <Button variant="secondary" size="sm" type="button" onClick={closeEditModal} disabled={editSaving}>
                       Cancel
-                    </button>
-                    <button type="button" className="button" onClick={saveEdit} disabled={editSaving}>
+                    </Button>
+                    <Button type="button" size="sm" onClick={saveEdit} disabled={editSaving}>
                       {editSaving ? "Saving..." : "Save"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

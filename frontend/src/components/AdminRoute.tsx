@@ -1,6 +1,8 @@
 import { ReactElement, useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import ButtonLink from "./ui/ButtonLink";
+import Card from "./ui/Card";
 
 type Props = {
   children: ReactElement;
@@ -23,36 +25,36 @@ const AdminRoute = ({ children }: Props) => {
 
   if (loading) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <p>Loading...</p>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (error || !user) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <div className="error">{error || "Unable to load user"}</div>
-          <Link className="button" to="/" style={{ width: "auto" }}>
+          <ButtonLink variant="secondary" to="/" className="w-auto">
             Back home
-          </Link>
-        </div>
+          </ButtonLink>
+        </Card>
       </div>
     );
   }
 
   if (user.role !== "ADMIN" && user.role !== "PLATFORM_ADMIN") {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <div className="error">Not authorized</div>
-          <Link className="button" to="/" style={{ width: "auto" }}>
+          <ButtonLink variant="secondary" to="/" className="w-auto">
             Go to home
-          </Link>
-        </div>
+          </ButtonLink>
+        </Card>
       </div>
     );
   }

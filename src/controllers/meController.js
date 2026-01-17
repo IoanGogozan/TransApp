@@ -2,7 +2,7 @@ const { z } = require("zod");
 const prisma = require("../config/prismaClient");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
-const { parseDateQueryParam, getTodayYYYYMMDDInOslo } = require("../utils/dateUtils");
+const { parseDateQueryParam, getTodayYYYYMMDDInOslo, getOsloDayRangeForDate } = require("../utils/dateUtils");
 const userService = require("../services/userService");
 
 const getMe = asyncHandler(async (req, res) => {
@@ -230,19 +230,19 @@ const createMyEntry = asyncHandler(async (req, res) => {
   }
 
   if (activityType === "DRIVING" && vehicleId) {
-    const todayDateStr = getTodayYYYYMMDDInOslo();
-    const entryDateStr = parsed.data.date;
-    if (entryDateStr === todayDateStr) {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const checkIn = await prisma.vehicleCheckIn.findFirst({
-        where: {
-          companyId: req.companyId,
-          userId: req.user.id,
-          vehicleId,
-          createdAt: { gte: since },
-        },
-        select: { id: true },
-      });
+      const todayDateStr = getTodayYYYYMMDDInOslo();
+      const entryDateStr = parsed.data.date;
+      if (entryDateStr === todayDateStr) {
+        const { start, end } = getOsloDayRangeForDate(todayDateStr);
+        const checkIn = await prisma.vehicleCheckIn.findFirst({
+          where: {
+            companyId: req.companyId,
+            userId: req.user.id,
+            vehicleId,
+            checkedAt: { gte: start, lte: end },
+          },
+          select: { id: true },
+        });
       if (!checkIn) {
         return res.status(409).json({
           code: "VEHICLE_CHECKIN_REQUIRED",
@@ -345,19 +345,19 @@ const updateMyEntry = asyncHandler(async (req, res) => {
   }
 
   if (nextActivityType === "DRIVING" && nextVehicleId) {
-    const todayDateStr = getTodayYYYYMMDDInOslo();
-    const entryDateStr = nextDate.toISOString().slice(0, 10);
-    if (entryDateStr === todayDateStr) {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const checkIn = await prisma.vehicleCheckIn.findFirst({
-        where: {
-          companyId: req.companyId,
-          userId: req.user.id,
-          vehicleId: nextVehicleId,
-          createdAt: { gte: since },
-        },
-        select: { id: true },
-      });
+      const todayDateStr = getTodayYYYYMMDDInOslo();
+      const entryDateStr = nextDate.toISOString().slice(0, 10);
+      if (entryDateStr === todayDateStr) {
+        const { start, end } = getOsloDayRangeForDate(todayDateStr);
+        const checkIn = await prisma.vehicleCheckIn.findFirst({
+          where: {
+            companyId: req.companyId,
+            userId: req.user.id,
+            vehicleId: nextVehicleId,
+            checkedAt: { gte: start, lte: end },
+          },
+          select: { id: true },
+        });
       if (!checkIn) {
         return res.status(409).json({
           code: "VEHICLE_CHECKIN_REQUIRED",
@@ -492,7 +492,8 @@ const getMyVehicleCheckInStatus = asyncHandler(async (req, res) => {
 
   const todayOslo = getTodayYYYYMMDDInOslo();
   const required = dateStr === todayOslo;
-  const hoursValid = 24;
+  const { start, end } = getOsloDayRangeForDate(dateStr);
+  const hoursValid = Math.round((end.getTime() - start.getTime() + 1) / (60 * 60 * 1000));
 
   if (!required) {
     res.json({
@@ -506,16 +507,15 @@ const getMyVehicleCheckInStatus = asyncHandler(async (req, res) => {
     return;
   }
 
-  const since = new Date(Date.now() - hoursValid * 60 * 60 * 1000);
   const checkIn = await prisma.vehicleCheckIn.findFirst({
     where: {
       companyId: req.companyId,
       userId: req.user.id,
       vehicleId: parsed.data.vehicleId,
-      createdAt: { gte: since },
+      checkedAt: { gte: start, lte: end },
     },
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
+    orderBy: { checkedAt: "desc" },
+    select: { checkedAt: true },
   });
 
   if (!checkIn) {
@@ -530,8 +530,8 @@ const getMyVehicleCheckInStatus = asyncHandler(async (req, res) => {
     return;
   }
 
-  const checkedInAt = checkIn.createdAt.toISOString();
-  const validUntil = new Date(checkIn.createdAt.getTime() + hoursValid * 60 * 60 * 1000).toISOString();
+  const checkedInAt = checkIn.checkedAt.toISOString();
+  const validUntil = end.toISOString();
 
   res.json({
     vehicleId: parsed.data.vehicleId,

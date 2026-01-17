@@ -151,6 +151,19 @@ export async function listDefects(params?: {
   return normalizeListResponse<Defect>(res, isDefect, ["defects"]);
 }
 
+export async function createDefect(payload: {
+  vehicleId: number;
+  source: "MANUAL";
+  title: string;
+  description?: string | null;
+}): Promise<Defect> {
+  const res = await http<unknown>("/api/v1/defects", {
+    method: "POST",
+    body: payload,
+  });
+  return extractDefectResponse(res);
+}
+
 export async function getDefect(id: string | number): Promise<Defect> {
   const res = await http<unknown>(`/api/v1/defects/${id}`);
   return extractDefectResponse(res);
@@ -176,6 +189,17 @@ export async function updateDefectDetails(
   const res = await http<unknown>(`/api/v1/defects/${id}`, {
     method: "PATCH",
     body,
+  });
+  return extractDefectResponse(res);
+}
+
+export async function updateDefectAdminNote(
+  id: string | number,
+  adminNote: string | null,
+): Promise<Defect> {
+  const res = await http<unknown>(`/api/v1/defects/${id}/admin-note`, {
+    method: "PATCH",
+    body: { adminNote },
   });
   return extractDefectResponse(res);
 }

@@ -132,7 +132,8 @@ describe("Admin work-run timesheets listing", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(402);
-    expect(res.body).toEqual({ error: "SUBSCRIPTION_INACTIVE", status: "PAST_DUE" });
+    expect(res.body.error.code).toBe("SUBSCRIPTION_INACTIVE");
+    expect(res.body.error.details.status).toBe("PAST_DUE");
   });
 
   it("denies access when subscription is inactive", async () => {
@@ -151,6 +152,7 @@ describe("Admin work-run timesheets listing", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(402);
-    expect(res.body).toEqual({ error: "SUBSCRIPTION_INACTIVE", status: "TRIALING" });
+    expect(res.body.error.code).toBe("SUBSCRIPTION_INACTIVE");
+    expect(res.body.error.details.status).toBe("TRIALING");
   });
 });

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import AppShell from "../layouts/AppShell";
 import { getBillingStatus } from "../api/billing";
+import PageContainer from "../components/PageContainer";
+import ButtonLink from "../components/ui/ButtonLink";
 
 const AppLayout = () => {
   const { company } = useAuth();
@@ -86,17 +88,19 @@ const AppLayout = () => {
           >
             <div>Subscription inactive. Go to Billing to reactivate.</div>
             {company?.slug ? (
-              <Link
-                className="button"
+              <ButtonLink
+                variant="secondary"
                 to={`/c/${company.slug}/app/admin/billing`}
-                style={{ width: "auto" }}
+                className="w-auto"
               >
                 Open Billing
-              </Link>
+              </ButtonLink>
             ) : null}
           </div>
         ) : null}
-        <Outlet />
+        <PageContainer>
+          <Outlet />
+        </PageContainer>
       </AppShell>
       {missingSlug && company?.slug ? (
         <div
@@ -111,9 +115,9 @@ const AppLayout = () => {
           }}
         >
           <div>Tenant slug missing in URL. You may be redirected to tenant-aware route.</div>
-          <Link className="button" to={`${slugPrefix}${location.pathname}`} style={{ width: "auto" }}>
+          <ButtonLink variant="secondary" to={`${slugPrefix}${location.pathname}`} className="w-auto">
             Go to {company.slug}
-          </Link>
+          </ButtonLink>
         </div>
       ) : null}
     </div>

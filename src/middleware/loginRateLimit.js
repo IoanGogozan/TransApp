@@ -1,3 +1,4 @@
+const AppError = require("../utils/AppError");
 const windowMs = 15 * 60 * 1000;
 const ipLimit = 10;
 const identifierLimit = 5;
@@ -62,8 +63,9 @@ const loginRateLimit = (req, res, next) => {
 
   const limited = ipCount >= ipLimit || (identifierKey && idCount >= identifierLimit);
   if (limited) {
-    res.status(429).json({ error: "Too many login attempts. Try again later.", code: "AUTH_RATE_LIMITED" });
-    return;
+    return next(
+      new AppError(429, "Too many login attempts. Try again later.", "AUTH_RATE_LIMITED"),
+    );
   }
 
   res.on("finish", () => {

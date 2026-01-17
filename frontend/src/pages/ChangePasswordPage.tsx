@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, http } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
 import { getCompanySlug } from "../auth/companySlug";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const ChangePasswordPage = () => {
   const navigate = useNavigate();
@@ -41,15 +46,14 @@ const ChangePasswordPage = () => {
   };
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Change password</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-md">
+        <SectionHeader title="Change password" />
         <p className="muted">Your account requires a new password before continuing.</p>
         {error && <div className="error">{error}</div>}
         <form onSubmit={onSubmit}>
-          <div className="field">
-            <label htmlFor="newPassword">New password</label>
-            <input
+          <FormField label="New password" htmlFor="newPassword">
+            <Input
               id="newPassword"
               type="password"
               autoComplete="new-password"
@@ -58,10 +62,9 @@ const ChangePasswordPage = () => {
               required
               minLength={4}
             />
-          </div>
-          <div className="field">
-            <label htmlFor="confirmPassword">Confirm new password</label>
-            <input
+          </FormField>
+          <FormField label="Confirm new password" htmlFor="confirmPassword">
+            <Input
               id="confirmPassword"
               type="password"
               autoComplete="new-password"
@@ -70,12 +73,12 @@ const ChangePasswordPage = () => {
               required
               minLength={4}
             />
-          </div>
-          <button className="button" type="submit" disabled={loading}>
+          </FormField>
+          <Button type="submit" disabled={loading}>
             {loading ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 };

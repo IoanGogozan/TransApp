@@ -5,6 +5,15 @@ const { getStripe } = require("../utils/stripeClient");
 
 const router = express.Router();
 
+const sendError = (res, status, code, message = code, details) =>
+  res.status(status).json({
+    error: {
+      code,
+      message,
+      ...(details ? { details } : {}),
+    },
+  });
+
 const mapStripeStatus = (status) => {
   switch (status) {
     case "trialing":
@@ -82,26 +91,26 @@ const updateSubscriptionFromStripe = async (stripeSub) => {
 router.post("/stripe", async (req, res) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    return res.status(500).json({ error: "STRIPE_WEBHOOK_SECRET_REQUIRED" });
+    return sendError(res, 500, "STRIPE_WEBHOOK_SECRET_REQUIRED");
   }
 
   let stripe;
   try {
     stripe = getStripe();
   } catch (err) {
-    return res.status(500).json({ error: "STRIPE_NOT_CONFIGURED" });
+    return sendError(res, 500, "STRIPE_NOT_CONFIGURED");
   }
 
   const sig = req.headers["stripe-signature"];
   if (!sig) {
-    return res.status(400).json({ error: "MISSING_STRIPE_SIGNATURE" });
+    return sendError(res, 400, "MISSING_STRIPE_SIGNATURE");
   }
 
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    return res.status(400).json({ error: "INVALID_STRIPE_SIGNATURE" });
+    return sendError(res, 400, "INVALID_STRIPE_SIGNATURE");
   }
 
   let webhookEvent;
@@ -228,13 +237,13 @@ router.post("/vipps", async (req, res) => {
   const secret = process.env.VIPPS_WEBHOOK_SECRET;
 
   if (!secret && !(allowUnsigned && process.env.NODE_ENV === "test")) {
-    return res.status(500).json({ error: "VIPPS_WEBHOOK_SECRET_REQUIRED" });
+    return sendError(res, 500, "VIPPS_WEBHOOK_SECRET_REQUIRED");
   }
 
   if (secret) {
     const verification = verifyVippsSignature(req, secret);
     if (!verification.ok) {
-      return res.status(400).json({ error: verification.error });
+      return sendError(res, 400, verification.error);
     }
   }
 
@@ -243,7 +252,7 @@ router.post("/vipps", async (req, res) => {
     const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : String(req.body || "");
     event = JSON.parse(rawBody);
   } catch (err) {
-    return res.status(400).json({ error: "INVALID_VIPPS_PAYLOAD" });
+    return sendError(res, 400, "INVALID_VIPPS_PAYLOAD");
   }
 
   const eventId = buildVippsEventId(event);

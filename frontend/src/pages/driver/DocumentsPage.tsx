@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../../api/http";
 import { DocumentMeta, downloadDocument, getMyDocuments } from "../../api/documents";
+import TableWrap from "../../components/TableWrap";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const formatSize = (size: number) => {
   if (!Number.isFinite(size) || size <= 0) return "-";
@@ -35,19 +40,19 @@ const DocumentsPage = () => {
   }, []);
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Documents</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader title="Documents" />
 
-        {error ? <div className="error">{error}</div> : null}
-
-        {loading ? (
-          <p>Loading documents...</p>
-        ) : documents.length === 0 ? (
-          <p className="muted">No documents yet.</p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
+        <ListState
+          loading={loading}
+          hasItems={documents.length > 0}
+          errorMessage={error ?? null}
+          emptyTitle="No documents"
+          emptyMessage="No documents yet."
+        >
+          <TableWrap>
+            <table className="min-w-[700px] w-full">
               <thead>
                 <tr>
                   <th>Title</th>
@@ -63,17 +68,17 @@ const DocumentsPage = () => {
                     <td>{doc.mimeType.includes("pdf") ? "PDF" : "DOCX"}</td>
                     <td>{formatSize(doc.size)}</td>
                     <td>
-                      <button className="button" type="button" style={{ width: "auto" }} onClick={() => downloadDocument(doc)}>
+                      <Button variant="secondary" size="sm" type="button" onClick={() => downloadDocument(doc)}>
                         Download
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
+          </TableWrap>
+        </ListState>
+      </Card>
     </div>
   );
 };

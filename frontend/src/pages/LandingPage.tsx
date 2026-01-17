@@ -1,6 +1,9 @@
 ﻿import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import PublicHeader from "../components/PublicHeader";
+import ButtonLink from "../components/ui/ButtonLink";
+import Card from "../components/ui/Card";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const LandingPage = () => {
   const { user, company } = useAuth();
@@ -27,24 +30,24 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="page page-top">
-      <PublicHeader />
-      <div className="container">
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-3xl">
+        <PublicHeader />
         <div className="stack">
-          <div className="card" style={{ width: "100%" }}>
+          <Card className="w-full">
             <div className="landing-hero">
               <div className="landing-hero-left">
-                <h1 style={{ fontSize: 40, marginBottom: 8 }}>TransApp</h1>
+                <SectionHeader title="TransApp" />
                 <p className="muted" style={{ fontSize: 16, lineHeight: 1.5 }}>
                   Time tracking, vehicle check-ins, and audit-ready exports for transport companies.
                 </p>
                 <div className="hero-actions">
-                  <Link className="button hero-button" to="/register">
+                  <ButtonLink className="hero-button" to="/register">
                     Start free trial
-                  </Link>
-                  <Link className="button secondary hero-button" to="/login">
+                  </ButtonLink>
+                  <ButtonLink variant="secondary" className="hero-button" to="/login">
                     Sign in
-                  </Link>
+                  </ButtonLink>
                 </div>
                 <p className="muted" style={{ fontSize: 14, marginTop: 10 }}>
                   14-day free trial &bull; No credit card &bull; Fast setup &bull; Low monthly price (eks. mva.)
@@ -53,9 +56,14 @@ const LandingPage = () => {
                 {user && company ? (
                   <div className="info" style={{ margin: "12px 0" }}>
                     You're logged in as <strong>{identifier}</strong> in <strong>{company.name}</strong>.{" "}
-                    <Link to={dashboardPath || "/app"} className="button secondary" style={{ width: "auto", marginLeft: "8px" }}>
+                    <ButtonLink
+                      to={dashboardPath || "/app"}
+                      variant="secondary"
+                      size="sm"
+                      className="w-auto ml-2"
+                    >
                       Go to Dashboard
-                    </Link>
+                    </ButtonLink>
                   </div>
                 ) : null}
               </div>
@@ -67,9 +75,9 @@ const LandingPage = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="card">
+          <Card>
           <h2 style={{ marginBottom: 8 }}>Why TransApp</h2>
           <div className="grid grid-2" style={{ marginTop: "12px" }}>
             <div
@@ -117,9 +125,9 @@ const LandingPage = () => {
               <p className="muted">Payroll, billing, and audit-ready exports.</p>
             </div>
           </div>
-          </div>
+          </Card>
 
-          <div className="card" id="pricing">
+          <Card id="pricing">
           <h2 style={{ marginBottom: 8 }}>Pricing</h2>
           <p className="muted">Billed monthly. Prices are eks. mva.</p>
           <div className="grid grid-2" style={{ marginTop: "12px" }}>
@@ -188,9 +196,9 @@ const LandingPage = () => {
               </ul>
             </div>
           </div>
-          </div>
+          </Card>
 
-          <div className="card">
+          <Card>
           <h2 style={{ marginBottom: 8 }}>FAQ</h2>
           {faqs.map((faq) => (
             <div key={faq.q} style={{ marginTop: "12px" }}>
@@ -200,9 +208,9 @@ const LandingPage = () => {
               </div>
             </div>
           ))}
-          </div>
+          </Card>
 
-          <div className="card" style={{ padding: "12px" }}>
+          <Card className="p-3">
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <Link to="/help">Help</Link>
             <Link to="/privacy">Privacy</Link>
@@ -214,9 +222,9 @@ const LandingPage = () => {
           <p className="muted" style={{ marginTop: "8px", marginBottom: 0 }}>
             (c) {currentYear} TransApp.
           </p>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

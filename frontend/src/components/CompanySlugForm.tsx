@@ -1,6 +1,11 @@
 import { FormEvent, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCompanySlug, setCompanySlug } from "../auth/companySlug";
+import Button from "./ui/Button";
+import Card from "./ui/Card";
+import FormField from "./ui/FormField";
+import Input from "./ui/Input";
+import SectionHeader from "./ui/SectionHeader";
 
 type CompanySlugFormProps = {
   title?: string;
@@ -41,13 +46,12 @@ const CompanySlugForm = ({
 
   const content = (
     <>
-      <h1>{title}</h1>
-      <p className="muted">{subtitle}</p>
+      {embedded ? null : <SectionHeader title={title} subtitle={subtitle} />}
+      {embedded ? <p className="muted">{subtitle}</p> : null}
       {error && <div className="error">{error}</div>}
       <form onSubmit={onSubmit}>
-        <div className="field">
-          <label htmlFor="companySlug">Company slug</label>
-          <input
+        <FormField label="Company slug" htmlFor="companySlug">
+          <Input
             id="companySlug"
             type="text"
             value={slug}
@@ -60,10 +64,10 @@ const CompanySlugForm = ({
             placeholder="your-company"
             autoComplete="off"
           />
-        </div>
-        <button className="button" type="submit">
+        </FormField>
+        <Button type="submit">
           {submitLabel}
-        </button>
+        </Button>
       </form>
     </>
   );
@@ -73,9 +77,9 @@ const CompanySlugForm = ({
   }
 
   return (
-    <div className="card" style={containerStyle}>
+    <Card style={containerStyle}>
       {content}
-    </div>
+    </Card>
   );
 };
 

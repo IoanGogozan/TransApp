@@ -5,6 +5,12 @@ import { useAuth } from "../auth/AuthContext";
 import { getPublicCompany } from "../api/auth";
 import { setCompanySlug } from "../auth/companySlug";
 import PublicHeader from "../components/PublicHeader";
+import Button from "../components/ui/Button";
+import ButtonLink from "../components/ui/ButtonLink";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -76,15 +82,16 @@ const LoginPage = () => {
   const forgotSlug = companySlug || "";
 
   return (
-    <>
-      <PublicHeader />
-      <div className="page page-top">
-        <div className="container">
-          <div className="auth-wrap">
-            <div className="card auth-card">
-        <h1>{title}</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-md">
+        <PublicHeader />
+        <SectionHeader title={title} />
         <p className="muted">
-          {companyLoading ? "Loading company..." : companyError ? companyError : "Enter your phone and password to continue."}
+          {companyLoading
+            ? "Loading company..."
+            : companyError
+              ? companyError
+              : "Enter your phone and password to continue."}
         </p>
         {!companyLoading ? (
           <div style={{ marginBottom: "8px" }}>
@@ -94,15 +101,14 @@ const LoginPage = () => {
           </div>
         ) : null}
         {companyError ? (
-          <Link className="button secondary" to="/login" style={{ width: "auto", marginBottom: "12px" }}>
+          <ButtonLink variant="secondary" to="/login" className="w-auto mb-3">
             Back to company slug
-          </Link>
+          </ButtonLink>
         ) : null}
         {error && <div className="error">{error}</div>}
         <form onSubmit={onSubmit}>
-          <div className="field">
-            <label htmlFor="phone">Phone (email/username also accepted)</label>
-            <input
+          <FormField label="Phone (email/username also accepted)" htmlFor="phone">
+            <Input
               id="phone"
               type="tel"
               autoComplete="username"
@@ -111,10 +117,9 @@ const LoginPage = () => {
               required
               disabled={companyLoading || Boolean(companyError)}
             />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
+          </FormField>
+          <FormField label="Password" htmlFor="password">
+            <Input
               id="password"
               type="password"
               autoComplete="current-password"
@@ -123,10 +128,10 @@ const LoginPage = () => {
               required
               disabled={companyLoading || Boolean(companyError)}
             />
-          </div>
-          <button className="button" type="submit" disabled={loading || companyLoading || Boolean(companyError)}>
+          </FormField>
+          <Button variant="primary" type="submit" disabled={loading || companyLoading || Boolean(companyError)}>
             {loading ? "Signing in..." : "Sign in"}
-          </button>
+          </Button>
           <div style={{ marginTop: "8px" }}>
             <Link
               to={`/forgot-password?companySlug=${encodeURIComponent(forgotSlug)}`}
@@ -137,11 +142,8 @@ const LoginPage = () => {
             </Link>
           </div>
         </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+      </Card>
+    </div>
   );
 };
 

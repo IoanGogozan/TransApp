@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   getMyRoutes,
@@ -26,6 +26,11 @@ import {
   parseYYYYMMDD,
   startOfISOWeek,
 } from "../../utils/date";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const isActivityType = (value: string | null): value is WorkEntry["activityType"] =>
   value === "DRIVING" || value === "OTHER_WORK" || value === "BREAK" || value === "AVAILABILITY";
@@ -83,7 +88,7 @@ const IconButton = ({ label, title, disabled, onClick, children }: {
   title: string;
   disabled: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => (
   <button
     type="button"
@@ -205,7 +210,7 @@ const DriverTimesheetTodayPage = () => {
     && checkInStatus?.required === true
     && checkInStatus.isValid === false;
   const requiresCheckIn = showCheckInWarning;
-  const checkInHelperText = "Vehicle check-in required (valid for 24h) before driving today.";
+  const checkInHelperText = "Vehicle check-in required before driving today.";
   const checkInStatusText = selectedVehicleId === null
     ? "Select a vehicle to check in."
     : hasValidCheckIn
@@ -325,14 +330,8 @@ const DriverTimesheetTodayPage = () => {
         vehicleId: vehicleId ? Number(vehicleId) : null,
       };
       await createMyEntry(payload);
-      const savedDate = selectedDate;
-      if (savedDate !== todayStr) {
-        const path = `/driver/timesheet?date=${todayStr}&saved=1&savedDate=${savedDate}`;
-        navigate(tenantPath(companySlug, path));
-        return;
-      }
       await load(selectedDate);
-      setSuccessMessage("Saved.");
+      setSuccessMessage("Entry saved.");
       if (messageTimeoutRef.current) {
         window.clearTimeout(messageTimeoutRef.current);
       }
@@ -490,9 +489,12 @@ const DriverTimesheetTodayPage = () => {
         setSuccessMessage(null);
         messageTimeoutRef.current = null;
       }, 4000);
-      navigate(tenantPath(companySlug, `/driver/timesheet?date=${todayStr}`), { replace: true });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("saved");
+      nextParams.delete("savedDate");
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [companySlug, navigate, searchParams, todayStr]);
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const parsed = parseYYYYMMDD(selectedDate) ?? new Date();
@@ -626,28 +628,31 @@ const DriverTimesheetTodayPage = () => {
   }, [anchorDate]);
 
   return (
-    <div className="page">
-      <div className="card">
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <h1 style={{ textAlign: "center", margin: 0 }}>Timesheet</h1>
-          <div style={{ fontWeight: 700, marginTop: "4px" }}>{formatDisplayDate(selectedDateObj)}</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <span className="muted" style={{ fontSize: "14px" }}>Week {isoWeekNumber}</span>
-            <span className="muted" style={{ fontSize: "14px" }}>
-              {weekLoading ? "This week: ..." : `This week: ${minutesToHoursLabel(weekTotalMinutes)}`}
-            </span>
-          </div>
-          {weekWarning ? <div className="muted" style={{ marginBottom: "8px" }}>{weekWarning}</div> : null}
-        </div>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader
+          title="Timesheet"
+          subtitle={formatDisplayDate(selectedDateObj)}
+          right={(
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
+              <span className="muted" style={{ fontSize: "14px" }}>Week {isoWeekNumber}</span>
+              <span className="muted" style={{ fontSize: "14px" }}>
+                {weekLoading ? "This week: ..." : `This week: ${minutesToHoursLabel(weekTotalMinutes)}`}
+              </span>
+            </div>
+          )}
+        />
+        {weekWarning ? <div className="muted" style={{ marginTop: "8px" }}>{weekWarning}</div> : null}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <button
+          <Button
             type="button"
-            className="button secondary"
+            variant="secondary"
+            size="sm"
             onClick={() => setAnchorDate((prev) => addDays(prev, -7))}
-            style={{ width: "auto", padding: "6px 10px", fontSize: "12px" }}
+            className="w-auto"
           >
             {"<"}
-          </button>
+          </Button>
           <div
             ref={dayStripRef}
             style={{
@@ -664,10 +669,9 @@ const DriverTimesheetTodayPage = () => {
               const { dow, dm } = formatDisplayDayChip(d);
               const isSelected = dateStr === selectedDate;
               return (
-                <button
+                <Button
                   key={dateStr}
                   type="button"
-                  className="button"
                   style={{
                     flex: "0 0 54px",
                     width: "54px",
@@ -686,23 +690,24 @@ const DriverTimesheetTodayPage = () => {
                 >
                   <div style={{ fontWeight: 700, fontSize: "12px" }}>{dow}</div>
                   <div style={{ fontSize: "11px" }}>{dm}</div>
-                </button>
+                </Button>
               );
             })}
           </div>
-          <button
+          <Button
             type="button"
-            className="button secondary"
+            variant="secondary"
+            size="sm"
             onClick={() => setAnchorDate((prev) => {
               const next = addDays(prev, 7);
               const today = parseYYYYMMDD(todayStr) ?? new Date();
               return next > today ? today : next;
             })}
             disabled={anchorDate >= (parseYYYYMMDD(todayStr) ?? new Date())}
-            style={{ width: "auto", padding: "6px 10px", fontSize: "12px" }}
+            className="w-auto"
           >
             {">"}
-          </button>
+          </Button>
         </div>
         {isFutureDate ? (
           <div className="muted" style={{ marginBottom: "12px" }}>
@@ -717,8 +722,6 @@ const DriverTimesheetTodayPage = () => {
             You're viewing a past date. You can add/edit entries, but check-in is only available for today.
           </div>
         ) : null}
-        {loading && <p>Loading...</p>}
-        {dataError && <p className="error">{dataError}</p>}
         {error && <p className="error">Error: {error}</p>}
         {successMessage && <p className="success" style={{ marginTop: "6px" }}>{successMessage}</p>}
         {errorMessage && <p className="error" style={{ marginTop: "6px" }}>{errorMessage}</p>}
@@ -727,9 +730,13 @@ const DriverTimesheetTodayPage = () => {
           <>
             <div style={{ marginTop: "16px" }}>
               <h3 style={{ margin: 0 }}>Entries for this date</h3>
-              {entries.length === 0 ? (
-                <p style={{ marginTop: "8px" }}>No entries yet for this date.</p>
-              ) : (
+              <ListState
+                loading={loading}
+                hasItems={entries.length > 0}
+                emptyTitle="No entries"
+                emptyMessage="No entries yet for this date."
+                errorMessage={dataError}
+              >
                 <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
                   {entries.map((entry) => {
                     const customerName = entry.customerOption?.name || "Internal";
@@ -754,7 +761,7 @@ const DriverTimesheetTodayPage = () => {
                           <div style={{ fontWeight: 700 }}>{customerName}</div>
                           {secondaryParts.length > 0 && (
                             <div className="muted" style={{ margin: 0, fontSize: "11px" }}>
-                              {secondaryParts.join(" • ")}
+                              {secondaryParts.join(" - ")}
                             </div>
                           )}
                         </div>
@@ -789,7 +796,7 @@ const DriverTimesheetTodayPage = () => {
                     );
                   })}
                 </div>
-              )}
+              </ListState>
               <div style={{ fontWeight: 700, marginTop: "10px" }}>
                 Total: {formatMinutes(activitySummary.totalMinutes)}
               </div>
@@ -888,9 +895,10 @@ const DriverTimesheetTodayPage = () => {
                     )}
                     {checkInStatusText}
                   </div>
-                  <button
-                    className="button"
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
                     onClick={() => {
                       if (!hasVehicle) return;
                       const returnTo = `${location.pathname}${location.search}`;
@@ -898,10 +906,9 @@ const DriverTimesheetTodayPage = () => {
                       navigate(tenantPath(companySlug, path));
                     }}
                     disabled={!hasVehicle || isSaving}
-                    style={{ height: "fit-content" }}
                   >
                     Check in
-                  </button>
+                  </Button>
                   {showCheckInWarning && (
                     <p className="muted" style={{ margin: 0 }}>{checkInHelperText}</p>
                   )}
@@ -943,12 +950,12 @@ const DriverTimesheetTodayPage = () => {
                   </select>
                 </label>
               </div>
-              <button
-                className="button"
+              <Button
                 type="button"
+                variant="primary"
                 onClick={handleQuickCreateEntry}
                 disabled={isSaving || durationMin === 0 || !isEditableDate}
-                style={{ width: "100%", marginTop: "10px" }}
+                className="w-full mt-2"
               >
                 {isSaving ? (
                   <span style={{ display: "inline-flex", alignItems: "center" }}>
@@ -958,14 +965,14 @@ const DriverTimesheetTodayPage = () => {
                 ) : (
                   "Add entry"
                 )}
-              </button>
+              </Button>
               {durationMin === 0 && (
                 <p className="muted" style={{ marginTop: "6px" }}>Duration required.</p>
               )}
             </div>
           </>
         )}
-      </div>
+      </Card>
       {entryEditingId ? (
         <div
           role="presentation"
@@ -1003,9 +1010,9 @@ const DriverTimesheetTodayPage = () => {
                   Log your work for {formatDisplayDate(selectedDateObj)}.
                 </p>
               </div>
-              <button className="button secondary" type="button" onClick={closeEditModal} disabled={isSaving}>
+              <Button variant="secondary" size="sm" type="button" onClick={closeEditModal} disabled={isSaving}>
                 Cancel
-              </button>
+              </Button>
             </div>
 
             {errorMessage && <div className="error" style={{ marginTop: "12px" }}>{errorMessage}</div>}
@@ -1067,7 +1074,7 @@ const DriverTimesheetTodayPage = () => {
               </label>
               <label className="field">
                 <span>Duration (HH:MM)</span>
-                <input
+                <Input
                   placeholder="01:30"
                   value={editDuration}
                   onChange={(e) => setEditDuration(e.target.value)}
@@ -1086,10 +1093,10 @@ const DriverTimesheetTodayPage = () => {
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
-              <button className="button secondary" type="button" onClick={closeEditModal} disabled={isSaving}>
+              <Button variant="secondary" onClick={closeEditModal} disabled={isSaving}>
                 Cancel
-              </button>
-              <button className="button" type="button" onClick={handleSaveEditEntry} disabled={isSaving}>
+              </Button>
+              <Button variant="primary" onClick={handleSaveEditEntry} disabled={isSaving}>
                 {isSaving ? (
                   <span style={{ display: "inline-flex", alignItems: "center" }}>
                     <InlineSpinner />
@@ -1098,7 +1105,7 @@ const DriverTimesheetTodayPage = () => {
                 ) : (
                   "Save"
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

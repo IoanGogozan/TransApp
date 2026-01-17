@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createCompanyUser, listCompanyUsers, resetUserPassword, updateUserActive, updateUserPhone } from "../api/users";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import ListState from "../components/ui/ListState";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const AdminUsersPage = () => {
   const { user: me, company } = useAuth();
+  const navigate = useNavigate();
   const myId = me?.id != null ? String(me.id) : "";
 
   const [users, setUsers] = useState<User[]>([]);
@@ -233,6 +240,7 @@ const AdminUsersPage = () => {
       return matchesSearch && includeInactive;
     });
   }, [users, q, showInactive]);
+  const emptyUsersMessage = users.length === 0 ? "No users." : "No users match filters.";
 
   const disabledStyle = (disabled: boolean) =>
     disabled
@@ -243,38 +251,22 @@ const AdminUsersPage = () => {
         }
       : undefined;
 
-  if (initialLoading) {
-    return (
-      <div className="page">
-        <div className="card">
-          <p>Loading users...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && users.length === 0) {
-    return (
-      <div className="page">
-        <div className="card">
-          <div className="error">{error}</div>
-          <button className="button" style={{ width: "auto" }} onClick={() => loadUsers("initial")} disabled={initialLoading || saving}>
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Users</h1>
-        <div style={{ marginBottom: "12px" }}>
-          <Link className="button secondary" to="/change-password" style={{ width: "auto" }}>
-            Change my password
-          </Link>
-        </div>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader
+          title="Users"
+          subtitle="Manage admin and driver accounts."
+          right={(
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate("/change-password")}
+            >
+              Change my password
+            </Button>
+          )}
+        />
 
         {refreshing ? <span className="muted">Refreshing...</span> : null}
         {refreshError ? <div className="error" style={{ marginBottom: "8px" }}>{refreshError}</div> : null}
@@ -287,58 +279,55 @@ const AdminUsersPage = () => {
 
         {/* Create user form */}
         <div className="field" style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <label htmlFor="role">Role</label>
-          <select
-            id="role"
-            value={role}
-            onChange={(e) => setRole(e.target.value as "ADMIN" | "DRIVER" | "")}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || initialLoading || refreshing}
-          >
-            <option value="">Select role</option>
-            <option value="DRIVER">DRIVER</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
+          <FormField label="Role" htmlFor="role">
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as "ADMIN" | "DRIVER" | "")}
+              style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+              disabled={saving || initialLoading || refreshing}
+            >
+              <option value="">Select role</option>
+              <option value="DRIVER">DRIVER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </FormField>
 
           {role !== "DRIVER" ? (
-            <>
-              <label htmlFor="email">Email</label>
-              <input
+            <FormField label="Email" htmlFor="email">
+              <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
                 disabled={saving || initialLoading || refreshing}
               />
-            </>
+            </FormField>
           ) : (
-            <>
-              <label htmlFor="phone">Phone</label>
-              <input
+            <FormField label="Phone" htmlFor="phone">
+              <Input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
                 disabled={saving || initialLoading || refreshing}
               />
-            </>
+            </FormField>
           )}
 
-          <label htmlFor="password">Password {role === "DRIVER" ? "(min 6)" : "(min 8)"}</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-            disabled={saving || initialLoading || refreshing}
-          />
+          <FormField label={`Password ${role === "DRIVER" ? "(min 6)" : "(min 8)"}`} htmlFor="password">
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={saving || initialLoading || refreshing}
+            />
+          </FormField>
 
-          <button className="button" style={{ width: "auto" }} onClick={handleCreate} disabled={saving || initialLoading || refreshing}>
+          <Button size="sm" onClick={handleCreate} disabled={saving || initialLoading || refreshing}>
             {saving ? "Creating..." : "Create user"}
-          </button>
+          </Button>
 
           {formError ? <div className="error">{formError}</div> : null}
           {success ? <div className="muted">{success}</div> : null}
@@ -346,14 +335,14 @@ const AdminUsersPage = () => {
 
         {/* Filters */}
         <div className="field" style={{ marginBottom: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label htmlFor="search">Search by email / phone / username</label>
-          <input
-            id="search"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-          />
+          <FormField label="Search by email / phone / username" htmlFor="search">
+            <Input
+              id="search"
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </FormField>
 
           <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
@@ -366,11 +355,13 @@ const AdminUsersPage = () => {
         </div>
 
         {/* List */}
-        {users.length === 0 ? (
-          <p className="muted">No users.</p>
-        ) : filteredUsers.length === 0 ? (
-          <p className="muted">No users match filters.</p>
-        ) : (
+        <ListState
+          loading={initialLoading}
+          hasItems={filteredUsers.length > 0}
+          emptyTitle="No users"
+          emptyMessage={emptyUsersMessage}
+          errorMessage={users.length === 0 ? error : null}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {filteredUsers.map((u) => {
               const idKey = String(u.id);
@@ -407,15 +398,16 @@ const AdminUsersPage = () => {
                           {u.active ? "Active" : "Inactive"}
                         </span>
 
-                        <button
-                          className="button"
-                          style={{ width: "auto", ...(disabledStyle(toggleDisabled) || {}) }}
+                        <Button
+                          size="sm"
+                          className="w-auto"
+                          style={disabledStyle(toggleDisabled)}
                           onClick={() => handleToggleActive(u)}
                           disabled={toggleDisabled}
-                          title={isSelf ? "You can't modify your own account" : undefined}
+                          title={isSelf ? "You can't modify your own account." : undefined}
                         >
                           {u.active ? "Deactivate" : "Activate"}
-                        </button>
+                        </Button>
 
                         {rowErrors[idKey] ? (
                           <div className="error" style={{ marginTop: "4px" }}>
@@ -426,9 +418,10 @@ const AdminUsersPage = () => {
                     ) : null}
 
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <button
-                        className="button"
-                        style={{ width: "auto", ...(disabledStyle(resetDisabled) || {}) }}
+                      <Button
+                        size="sm"
+                        className="w-auto"
+                        style={disabledStyle(resetDisabled)}
                         onClick={() => {
                           setResetOpenUserId((prev) => (prev === idKey ? null : idKey));
 
@@ -447,26 +440,29 @@ const AdminUsersPage = () => {
                           setResetPasswordConfirm("");
                         }}
                         disabled={resetDisabled}
-                        title={isSelf ? "You can't modify your own account" : undefined}
+                        title={isSelf ? "You can't modify your own account." : undefined}
                       >
                         Reset password
-                      </button>
+                      </Button>
 
                       {u.role === "DRIVER" && company?.slug ? (
                         <>
-                          <button
-                            className="button secondary"
-                            style={{ width: "auto" }}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-auto"
                             onClick={() => {
                               const url = `${window.location.origin}/c/${company.slug}/login`;
                               window.open(url, "_blank");
                             }}
                           >
                             Login link
-                          </button>
-                          <button
-                            className="button secondary"
-                            style={{ width: "auto", ...(disabledStyle(!u.phone) || {}) }}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-auto"
+                            style={disabledStyle(!u.phone)}
                             onClick={() => {
                               if (!u.phone) return;
                               const url = `${window.location.origin}/c/${company.slug}/login?identifier=${encodeURIComponent(u.phone)}`;
@@ -475,10 +471,11 @@ const AdminUsersPage = () => {
                             disabled={!u.phone}
                           >
                             Copy link
-                          </button>
-                          <button
-                            className="button secondary"
-                            style={{ width: "auto" }}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-auto"
                             onClick={() => {
                               setEditPhoneUserId(idKey);
                               setEditPhoneValue(u.phone || "");
@@ -487,7 +484,7 @@ const AdminUsersPage = () => {
                             disabled={saving || initialLoading || refreshing}
                           >
                             Edit phone
-                          </button>
+                          </Button>
                         </>
                       ) : null}
                     </div>
@@ -506,37 +503,37 @@ const AdminUsersPage = () => {
 
                     {resetOpenUserId === idKey ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "240px" }}>
-                        <input
+                        <Input
                           type="password"
                           placeholder="New password"
                           value={resetPasswordValue}
                           onChange={(e) => setResetPasswordValue(e.target.value)}
-                          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                           disabled={resetDisabled}
                         />
 
-                        <input
+                        <Input
                           type="password"
                           placeholder="Confirm password"
                           value={resetPasswordConfirm}
                           onChange={(e) => setResetPasswordConfirm(e.target.value)}
-                          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                           disabled={resetDisabled}
                         />
 
                         <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            className="button"
-                            style={{ width: "auto", ...(disabledStyle(resetDisabled) || {}) }}
+                          <Button
+                            size="sm"
+                            className="w-auto"
+                            style={disabledStyle(resetDisabled)}
                             onClick={() => handleResetPassword(u)}
                             disabled={resetDisabled}
                           >
                             {resetSavingUserId === idKey ? "Saving..." : "Save new password"}
-                          </button>
+                          </Button>
 
-                          <button
-                            className="button secondary"
-                            style={{ width: "auto" }}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-auto"
                             onClick={() => {
                               setResetOpenUserId(null);
                               setResetPasswordValue("");
@@ -555,26 +552,26 @@ const AdminUsersPage = () => {
                             disabled={resetDisabled}
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ) : null}
 
                     {editPhoneUserId === idKey ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "240px" }}>
-                        <input
+                        <Input
                           type="tel"
                           placeholder="Phone"
                           value={editPhoneValue}
                           onChange={(e) => setEditPhoneValue(e.target.value)}
-                          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                           disabled={editPhoneSaving}
                         />
                         {editPhoneError ? <div className="error">{editPhoneError}</div> : null}
                         <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            className="button"
-                            style={{ width: "auto", ...(disabledStyle(editPhoneSaving) || {}) }}
+                          <Button
+                            size="sm"
+                            className="w-auto"
+                            style={disabledStyle(editPhoneSaving)}
                             onClick={async () => {
                               setEditPhoneError(null);
                               if (!editPhoneValue.trim()) {
@@ -597,10 +594,11 @@ const AdminUsersPage = () => {
                             disabled={editPhoneSaving}
                           >
                             {editPhoneSaving ? "Saving..." : "Save"}
-                          </button>
-                          <button
-                            className="button secondary"
-                            style={{ width: "auto" }}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-auto"
                             onClick={() => {
                               setEditPhoneUserId(null);
                               setEditPhoneValue("");
@@ -609,7 +607,7 @@ const AdminUsersPage = () => {
                             disabled={editPhoneSaving}
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ) : null}
@@ -618,8 +616,15 @@ const AdminUsersPage = () => {
               );
             })}
           </div>
-        )}
-      </div>
+        </ListState>
+        {users.length === 0 && error ? (
+          <div style={{ marginTop: "12px" }}>
+            <Button size="sm" onClick={() => loadUsers("initial")} disabled={initialLoading || saving}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
+      </Card>
     </div>
   );
 };

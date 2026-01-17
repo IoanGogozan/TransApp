@@ -1,25 +1,28 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
-  addDefectComment,
-  assignDefect,
   deleteDefectAttachment,
-  downloadDefectAttachment,
   getDefectById,
   listDefectComments,
   listDefectAttachments,
-  listDefectHistory,
   uploadDefectAttachment,
+  updateDefectAdminNote,
   updateDefectStatus,
 } from "../api/defects";
-import { Defect, DefectAttachment, DefectComment, DefectEvent, DefectStatus } from "../types/defect";
-import { listCompanyUsers } from "../api/users";
-import { User } from "../types/user";
+import { Defect, DefectAttachment, DefectComment, DefectStatus } from "../types/defect";
 import { ApiError } from "../api/http";
 import { formatDateTime } from "../utils/time";
 import { getDefectDisplayTitle } from "../utils/defects";
 import { getToken } from "../auth/token";
 import { tenantPath } from "../utils/tenantPath";
+import TableWrap from "../components/TableWrap";
+import Button from "../components/ui/Button";
+import ButtonLink from "../components/ui/ButtonLink";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
+import ModalShell from "../components/ui/ModalShell";
 
 const statusOptions: DefectStatus[] = ["OPEN", "IN_PROGRESS", "RESOLVED"];
 
@@ -33,19 +36,15 @@ const DefectDetailsPage = () => {
   const [saving, setSaving] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updated, setUpdated] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [assignValue, setAssignValue] = useState<string>("");
-  const [assignSaving, setAssignSaving] = useState(false);
-  const [assignError, setAssignError] = useState<string | null>(null);
-  const [assignUpdated, setAssignUpdated] = useState(false);
+  const [adminEditMode, setAdminEditMode] = useState(false);
+  const [adminDraft, setAdminDraft] = useState("");
+  const [adminOriginal, setAdminOriginal] = useState("");
+  const [adminNoteSaving, setAdminNoteSaving] = useState(false);
+  const [adminNoteError, setAdminNoteError] = useState<string | null>(null);
+  const [adminNoteSaved, setAdminNoteSaved] = useState(false);
   const [comments, setComments] = useState<DefectComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
-  const [newComment, setNewComment] = useState("");
-  const [commentSaving, setCommentSaving] = useState(false);
-  const [history, setHistory] = useState<DefectEvent[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<DefectAttachment[]>([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
@@ -55,31 +54,14 @@ const DefectDetailsPage = () => {
   const [attachmentTitle, setAttachmentTitle] = useState("");
   const [attachmentSaving, setAttachmentSaving] = useState(false);
   const [attachmentDeleting, setAttachmentDeleting] = useState<string | number | null>(null);
-  const [activityTab, setActivityTab] = useState<"comments" | "history">("comments");
-  const [activityModalOpen, setActivityModalOpen] = useState(false);
-  const [activityModalTab, setActivityModalTab] = useState<"comments" | "history">("comments");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [previewAlt, setPreviewAlt] = useState<string>("");
   const isResolved = defect?.status === "RESOLVED";
   const canEditAttachments = defect?.status === "OPEN" || defect?.status === "IN_PROGRESS";
 
   const isPlainObject = (v: unknown): v is Record<string, unknown> =>
     !!v && typeof v === "object" && !Array.isArray(v);
-
-  const loadHistory = async (id: string) => {
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const res = await listDefectHistory(id);
-      const items = [...(res.items || [])].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-      setHistory(items);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to load history";
-      setHistoryError(msg);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -87,22 +69,13 @@ const DefectDetailsPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const [defectResult, usersResult] = await Promise.allSettled([getDefectById(defectId), listCompanyUsers()]);
-
-        if (defectResult.status === "rejected") {
-          throw defectResult.reason;
-        }
-
-        const res = defectResult.value;
+        const res = await getDefectById(defectId);
         setDefect(res);
         setStatusValue(res.status);
-        setAssignValue(res.assignedToUserId != null ? String(res.assignedToUserId) : "");
-
-        if (usersResult.status === "fulfilled") {
-          setUsers(usersResult.value);
-        } else {
-          console.warn("[defect] Failed to load users", usersResult.reason);
-        }
+        setAdminOriginal(res.adminNote ?? "");
+        setAdminDraft(res.adminNote ?? "");
+        setAdminEditMode(false);
+        setAdminNoteSaved(false);
       } catch (err) {
         const msg = err instanceof ApiError ? err.message : "Failed to load defect";
         setError(msg);
@@ -129,12 +102,6 @@ const DefectDetailsPage = () => {
       }
     };
     loadComments();
-  }, [defectId]);
-
-  useEffect(() => {
-    if (defectId) {
-      loadHistory(defectId);
-    }
   }, [defectId]);
 
   useEffect(() => {
@@ -169,6 +136,62 @@ const DefectDetailsPage = () => {
       setAttachmentsError(msg);
     }
   };
+
+  const handleSaveAdminNote = async () => {
+    if (!defectId) return;
+    setAdminNoteSaving(true);
+    setAdminNoteError(null);
+    setAdminNoteSaved(false);
+    try {
+      await updateDefectAdminNote(defectId, adminDraft.trim() || null);
+      const refreshed = await getDefectById(defectId);
+      setDefect(refreshed);
+      setAdminOriginal(refreshed.adminNote ?? "");
+      setAdminDraft(refreshed.adminNote ?? "");
+      setAdminEditMode(false);
+      setAdminNoteSaved(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setAdminNoteError(err.message);
+      } else {
+        const msg = err instanceof ApiError ? err.message : "Failed to save admin note";
+        setAdminNoteError(msg);
+      }
+    } finally {
+      setAdminNoteSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!defect) return;
+    if (adminEditMode) return;
+    const note = defect.adminNote ?? "";
+    setAdminOriginal(note);
+    setAdminDraft(note);
+  }, [defect, adminEditMode]);
+
+  const openPreview = (src: string, alt: string) => {
+    setPreviewSrc(src);
+    setPreviewAlt(alt);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setPreviewSrc(null);
+    setPreviewAlt("");
+  };
+
+  useEffect(() => {
+    if (!previewOpen) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePreview();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewOpen]);
 
   useEffect(() => {
     if (!defectId || attachments.length === 0) return;
@@ -227,52 +250,11 @@ const DefectDetailsPage = () => {
       setDefect(updatedDefect);
       setStatusValue(updatedDefect.status);
       setUpdated(true);
-      await loadHistory(defectId);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to update status";
       setUpdateError(msg);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSaveAssignee = async () => {
-    if (!defectId) return;
-    setAssignSaving(true);
-    setAssignError(null);
-    setAssignUpdated(false);
-    try {
-      const assignedToUserId = assignValue === "" ? null : Number(assignValue);
-      const updatedDefect = await assignDefect(defectId, assignedToUserId);
-      setDefect(updatedDefect);
-      setAssignValue(updatedDefect.assignedToUserId != null ? String(updatedDefect.assignedToUserId) : "");
-      setAssignUpdated(true);
-      await loadHistory(defectId);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to update assignment";
-      setAssignError(msg);
-    } finally {
-      setAssignSaving(false);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!defectId) return;
-    const message = newComment.trim();
-    if (!message) return;
-    setCommentSaving(true);
-    setCommentsError(null);
-    try {
-      await addDefectComment(defectId, message);
-      setNewComment("");
-      const res = await listDefectComments(defectId);
-      setComments(res.items || []);
-      await loadHistory(defectId);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to add comment";
-      setCommentsError(msg);
-    } finally {
-      setCommentSaving(false);
     }
   };
 
@@ -285,7 +267,6 @@ const DefectDetailsPage = () => {
       setAttachmentFile(null);
       setAttachmentTitle("");
       await refreshAttachments();
-      await loadHistory(defectId);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to upload attachment";
       setAttachmentsError(msg);
@@ -301,7 +282,6 @@ const DefectDetailsPage = () => {
     try {
       await deleteDefectAttachment(defectId, attachmentId);
       await refreshAttachments();
-      await loadHistory(defectId);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to delete attachment";
       setAttachmentsError(msg);
@@ -310,36 +290,25 @@ const DefectDetailsPage = () => {
     }
   };
 
-  const handleDownloadAttachment = async (attachment: DefectAttachment) => {
-    if (!defectId || attachment.purgedAt) return;
-    setAttachmentsError(null);
-    try {
-      await downloadDefectAttachment(defectId, attachment);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to download attachment";
-      setAttachmentsError(msg);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <p>Loading defect...</p>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (error || !defect) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <div className="error">{error || "Defect not found"}</div>
-          <Link className="button" to={tenantPath(slug, "/admin/defects")} style={{ width: "auto" }}>
+          <ButtonLink to={tenantPath(slug, "/admin/defects")} variant="secondary" size="sm" className="w-auto">
             Back to list
-          </Link>
-        </div>
+          </ButtonLink>
+        </Card>
       </div>
     );
   }
@@ -350,44 +319,26 @@ const DefectDetailsPage = () => {
     defect.reportedByUser?.email ||
     defect.reportedByUserId ||
     "-";
-  const assignedLabel =
-    defect.assignedToUser?.phone ||
-    defect.assignedToUser?.username ||
-    defect.assignedToUser?.email ||
-    defect.assignedToUserId ||
-    "-";
   const vehicleLabel =
     defect.vehicle?.regNumber || defect.vehicle?.name
       ? `${defect.vehicle?.regNumber || defect.vehicleId || "-"}${defect.vehicle?.name ? ` - ${defect.vehicle.name}` : ""}`
       : defect.vehicleId || "-";
   const defectTitle = getDefectDisplayTitle(defect);
-  const historyLabels: Record<string, string> = {
-    CREATED: "Created",
-    STATUS_CHANGED: "Status changed",
-    ASSIGNED: "Assigned",
-    UNASSIGNED: "Unassigned",
-    COMMENTED: "Comment added",
-    DETAILS_UPDATED: "Details updated",
-    ATTACHMENT_ADDED: "Attachment added",
-    ATTACHMENT_DELETED: "Attachment deleted",
-    ARCHIVED: "Archived",
-    ATTACHMENT_PURGED: "Attachment purged",
-  };
   const sortedComments = [...comments].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const latestComments = sortedComments.slice(0, 3);
-  const sortedHistory = history
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const latestHistory = sortedHistory.slice(0, 3);
 
   return (
-    <div className="page defect-details-page">
+    <div className="defect-details-page">
       <style>
         {`
           .defect-details-page {
+            min-height: 100vh;
+            display: flex;
             align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
           }
           .defect-details-container {
             width: 100%;
@@ -448,25 +399,39 @@ const DefectDetailsPage = () => {
             margin: 6px 0 0;
             font-size: 13px;
           }
-          .defect-card-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
+          .defect-details-table-wrap {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
           }
-          .defect-card {
-            min-height: 420px;
-            display: flex;
-            flex-direction: column;
+          .defect-details-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
           }
-          .defect-card-body {
-            flex: 1;
-            overflow: auto;
+          .defect-details-table th {
+            width: 220px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #64748b;
+            background: #f9fafb;
+            vertical-align: top;
           }
-          .defect-attachments-grid {
-            display: grid;
-            gap: 8px;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            margin-bottom: 12px;
+          .defect-details-table td {
+            font-size: 13px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+          }
+          .defect-details-table tr:last-child th,
+          .defect-details-table tr:last-child td {
+            border-bottom: none;
           }
           .defect-attachment-thumb {
             width: 100%;
@@ -506,19 +471,39 @@ const DefectDetailsPage = () => {
           .defect-action-row select {
             flex: 1;
           }
-          .defect-kv {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 12px;
+          .defect-section {
+            margin-top: 18px;
           }
-          @media (min-width: 1024px) {
-            .defect-card-grid {
-              grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-            .defect-card {
-              height: 420px;
-            }
+          .defect-section h2 {
+            margin: 0 0 12px;
+          }
+          .defect-activity-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+          }
+          .defect-activity-table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #64748b;
+            background: #f9fafb;
+          }
+          .defect-activity-table td {
+            font-size: 13px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+          }
+          .defect-activity-table tr:last-child td {
+            border-bottom: none;
           }
           @media (max-width: 640px) {
             .defect-action-row {
@@ -530,346 +515,376 @@ const DefectDetailsPage = () => {
       </style>
       <div className="defect-details-container max-w-6xl mx-auto px-4">
         <div className="defect-header-compact">
-          <div>
-            <div className="defect-title-row">
-              <h1>{defectTitle}</h1>
-              <span className={`defect-status-badge defect-status-${defect.status.toLowerCase()}`}>
-                {defect.status}
-              </span>
-            </div>
-            <p className="muted defect-meta-line">
-              Source: {defect.source} | Vehicle: {vehicleLabel} | Reported by: {reportedLabel} | Created: {formatDateTime(defect.createdAt)}
-            </p>
-          </div>
-          <Link className="button secondary" to={tenantPath(slug, "/admin/defects")} style={{ width: "auto" }}>
-            Back to list
-          </Link>
+          <SectionHeader
+            title={defectTitle}
+            right={(
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span className={`defect-status-badge defect-status-${defect.status.toLowerCase()}`}>
+                  {defect.status}
+                </span>
+                <ButtonLink to={tenantPath(slug, "/admin/defects")} variant="secondary" size="sm" className="w-auto">
+                  Back to list
+                </ButtonLink>
+              </div>
+            )}
+          />
         </div>
-        <div className="defect-card-grid">
-          <div className="card p-6 defect-card">
-            <div className="defect-card-body">
-              <h2 style={{ marginTop: 0 }}>Overview</h2>
-              <div className="defect-kv muted">
-                {defect.source === "MANUAL" ? <div>Source: {defect.source}</div> : null}
-                {defect.checklistQuestionKey ? <div>Checklist: {defect.checklistQuestionKey}</div> : null}
-                <div>Assigned to: {assignedLabel}</div>
-                <div>Updated: {defect.updatedAt ? formatDateTime(defect.updatedAt) : "-"}</div>
-              </div>
-              <label htmlFor="statusSelect">Status</label>
-              <div className="defect-action-row">
-                <select
-                  id="statusSelect"
-                  value={statusValue}
-                  onChange={(e) => setStatusValue(e.target.value as DefectStatus)}
-                  style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-                  disabled={saving}
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="button"
-                  style={{ width: "auto" }}
-                  onClick={handleSaveStatus}
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
-              {updateError ? <div className="error" style={{ marginTop: "8px" }}>{updateError}</div> : null}
-              {updated && !updateError ? <div className="muted" style={{ marginTop: "8px" }}>Status updated</div> : null}
-            </div>
-          </div>
-          <div className="card p-6 defect-card">
-            <div className="defect-card-body">
-              <h2 style={{ marginTop: 0 }}>Attachments</h2>
-              {attachmentsLoading ? <p className="muted">Loading attachments...</p> : null}
-              {attachmentsError ? <div className="error" style={{ marginBottom: "8px" }}>{attachmentsError}</div> : null}
-              {attachments.length === 0 && !attachmentsLoading && !attachmentsError ? (
-                <p className="muted">No attachments.</p>
-              ) : null}
-              <div className="defect-attachments-grid">
-                {attachments.map((a) => (
-                  <div key={a.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div className="defect-attachment-thumb">
-                      {a.purgedAt ? (
-                        <span className="muted">Purged</span>
-                      ) : attachmentPreviewUrls[String(a.id)] ? (
-                        <img
-                          src={attachmentPreviewUrls[String(a.id)]}
-                          alt={a.title || "attachment"}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : attachmentPreviewErrors[String(a.id)] ? (
-                        <span className="muted">(preview unavailable)</span>
-                      ) : (
-                        <span className="muted">Loading preview...</span>
-                      )}
-                    </div>
-                    <div className="muted" style={{ fontSize: "12px" }}>{a.title || "(image)"}</div>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {!a.purgedAt ? (
-                        <button
-                          className="button secondary"
-                          style={{ width: "auto" }}
-                          onClick={() => handleDownloadAttachment(a)}
-                        >
-                          Download
-                        </button>
-                      ) : null}
-                      {canEditAttachments && !a.purgedAt ? (
-                        <button
-                          className="button secondary"
-                          style={{ width: "auto" }}
-                          onClick={() => handleDeleteAttachment(a.id)}
-                          disabled={attachmentDeleting === a.id}
-                        >
-                          {attachmentDeleting === a.id ? "Deleting..." : "Delete"}
-                        </button>
-                      ) : null}
-                    </div>
+        <Card className="p-0">
+          <TableWrap className="defect-details-table-wrap border-0 shadow-none">
+            <table className="defect-details-table min-w-[700px] w-full">
+            <tbody>
+              <tr>
+                <th>Status</th>
+                <td>
+                  <div className="defect-action-row">
+                    <select
+                      id="statusSelect"
+                      value={statusValue}
+                      onChange={(e) => setStatusValue(e.target.value as DefectStatus)}
+                      style={{
+                        width: "220px",
+                        padding: "8px",
+                        borderRadius: "8px",
+                        border: "1px solid #d1d5db",
+                      }}
+                      disabled={saving}
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveStatus}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                    <span className="muted" style={{ fontSize: "12px" }}>
+                      {saving ? "Saving..." : updateError ? updateError : updated ? "Status updated" : ""}
+                    </span>
                   </div>
-                ))}
-              </div>
-              {canEditAttachments ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <label htmlFor="attachmentFile">Upload image</label>
-                  <input
-                    id="attachmentFile"
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
-                    disabled={attachmentSaving}
-                  />
-                  <label htmlFor="attachmentTitle">Title (optional)</label>
-                  <input
-                    id="attachmentTitle"
-                    value={attachmentTitle}
-                    onChange={(e) => setAttachmentTitle(e.target.value)}
-                    placeholder="Attachment title"
-                    disabled={attachmentSaving}
-                    style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-                  />
-                  <button
-                    className="button"
-                    style={{ width: "auto" }}
-                    onClick={handleUploadAttachment}
-                    disabled={attachmentSaving || !attachmentFile}
-                  >
-                    {attachmentSaving ? "Uploading..." : "Upload"}
-                  </button>
-                </div>
-              ) : isResolved ? (
-                <p className="muted">Attachments locked</p>
-              ) : null}
-            </div>
-          </div>
-          <div className="card p-6 defect-card">
-            <div className="defect-card-body">
-              <h2 style={{ marginTop: 0 }}>Activity</h2>
-              <div className="defect-tabs">
-                <button
-                  className={`defect-tab${activityTab === "comments" ? " active" : ""}`}
-                  type="button"
-                  onClick={() => setActivityTab("comments")}
-                >
-                  Comments
-                </button>
-                <button
-                  className={`defect-tab${activityTab === "history" ? " active" : ""}`}
-                  type="button"
-                  onClick={() => setActivityTab("history")}
-                >
-                  History
-                </button>
-              </div>
-              {activityTab === "comments" ? (
-                <>
-                  {commentsLoading ? <p className="muted">Loading comments...</p> : null}
-                  {commentsError ? <div className="error" style={{ marginBottom: "8px" }}>{commentsError}</div> : null}
-                  {latestComments.length === 0 && !commentsLoading && !commentsError ? (
-                    <p className="muted">No comments.</p>
+                </td>
+              </tr>
+              <tr>
+                <th>Attachments</th>
+                <td>
+                  {attachmentsLoading ? <p className="muted">Loading attachments...</p> : null}
+                  {attachmentsError ? <div className="error" style={{ marginBottom: "8px" }}>{attachmentsError}</div> : null}
+                  {attachments.length === 0 && !attachmentsLoading && !attachmentsError ? (
+                    <p className="muted">No attachments.</p>
                   ) : null}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
-                    {latestComments.map((c) => (
-                      <div key={c.id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "8px" }}>
-                        <div style={{ fontWeight: 600 }}>{c.message}</div>
-                        <div className="muted" style={{ fontSize: "12px" }}>
-                          {formatDateTime(c.createdAt)} {c.actorUserId != null ? `User: ${c.actorUserId}` : ""}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <label htmlFor="newComment">Add comment</label>
-                  <textarea
-                    id="newComment"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-                    disabled={commentSaving}
-                  />
-                  <button
-                    className="button"
-                    style={{ width: "auto", marginTop: "8px" }}
-                    onClick={handleAddComment}
-                    disabled={commentSaving || !newComment.trim()}
-                  >
-                    {commentSaving ? "Saving..." : "Add comment"}
-                  </button>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    style={{ width: "auto", marginTop: "12px" }}
-                    onClick={() => {
-                      setActivityModalTab("comments");
-                      setActivityModalOpen(true);
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                      marginBottom: attachments.length > 0 ? "10px" : "0",
                     }}
                   >
-                    View all
-                  </button>
-                </>
-              ) : (
-                <>
-                  {historyLoading ? <p className="muted">Loading history...</p> : null}
-                  {historyError ? <div className="error" style={{ marginBottom: "8px" }}>{historyError}</div> : null}
-                  {latestHistory.length === 0 && !historyLoading && !historyError ? <p className="muted">No history.</p> : null}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
-                    {latestHistory.map((h) => {
-                      const actorEmail = users.find((u) => String(u.id) === String(h.actorUserId))?.email;
-                      const label = historyLabels[h.type] || h.type;
-                      const actorLabel = h.actorUserId != null ? actorEmail || h.actorUserId : "Unknown";
-                      const data = isPlainObject(h.data) ? (h.data as Record<string, unknown>) : null;
-                      const dataEntries = data ? Object.entries(data).slice(0, 6) : [];
+                    {attachments.map((a) => {
+                      const previewUrl = attachmentPreviewUrls[String(a.id)];
+                      const previewFailed = attachmentPreviewErrors[String(a.id)];
                       return (
-                        <div key={h.id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "8px" }}>
-                          <div style={{ fontWeight: 600 }}>{label}</div>
-                          <div className="muted" style={{ fontSize: "12px" }}>
-                            {formatDateTime(h.createdAt)} User: {actorLabel}
+                        <div key={a.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <div
+                            className="defect-attachment-thumb"
+                            style={{ width: "56px", height: "56px", borderRadius: "8px" }}
+                          >
+                            {a.purgedAt ? (
+                              <span className="muted" style={{ fontSize: "11px" }}>Purged</span>
+                            ) : previewUrl && !previewFailed ? (
+                              <button
+                                type="button"
+                                onClick={() => openPreview(previewUrl, a.title || "attachment")}
+                                style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer" }}
+                              >
+                                <img
+                                  src={previewUrl}
+                                  alt={a.title || "attachment"}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              </button>
+                            ) : previewFailed ? (
+                              <span className="muted" style={{ fontSize: "11px" }}>No preview</span>
+                            ) : (
+                              <span className="muted" style={{ fontSize: "11px" }}>Loading</span>
+                            )}
                           </div>
-                          {data ? (
-                            <details style={{ marginTop: "6px" }}>
-                              <summary className="muted" style={{ fontSize: "12px", cursor: "pointer" }}>
-                                Data
-                              </summary>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px" }}>
-                                {dataEntries.map(([key, value]) => (
-                                  <div key={key} className="muted" style={{ fontSize: "12px" }}>
-                                    {key}: {typeof value === "string" ? value : JSON.stringify(value)}
-                                  </div>
-                                ))}
-                                {Object.keys(data).length > dataEntries.length ? (
-                                  <div className="muted" style={{ fontSize: "12px" }}>
-                                    ...more
-                                  </div>
-                                ) : null}
+                          {(() => {
+                            const title = (a.title ?? "").trim();
+                            return title ? (
+                              <div
+                                className="muted"
+                                style={{
+                                  fontSize: "11px",
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {title}
                               </div>
-                            </details>
+                            ) : null;
+                          })()}
+                          {canEditAttachments && !a.purgedAt ? (
+                            <button
+                              className="text-xs text-red-600 hover:underline"
+                              style={{
+                                width: "auto",
+                                padding: 0,
+                                border: "none",
+                                background: "transparent",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => handleDeleteAttachment(a.id)}
+                              disabled={attachmentDeleting === a.id}
+                            >
+                              {attachmentDeleting === a.id ? "Deleting..." : "Delete"}
+                            </button>
                           ) : null}
                         </div>
                       );
                     })}
                   </div>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    style={{ width: "auto" }}
-                    onClick={() => {
-                      setActivityModalTab("history");
-                      setActivityModalOpen(true);
-                    }}
-                  >
-                    View all
-                  </button>
+                  {canEditAttachments ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+                      <input
+                        id="attachmentFile"
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                        disabled={attachmentSaving}
+                        style={{ flex: "1 1 200px" }}
+                      />
+                      <FormField label="Attachment title" htmlFor="attachmentTitle" hint="Optional">
+                        <Input
+                          id="attachmentTitle"
+                          value={attachmentTitle}
+                          onChange={(e) => setAttachmentTitle(e.target.value)}
+                          placeholder="Title (optional)"
+                          disabled={attachmentSaving}
+                          className="w-64"
+                        />
+                      </FormField>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleUploadAttachment}
+                        disabled={attachmentSaving || !attachmentFile}
+                      >
+                        {attachmentSaving ? "Uploading..." : "Upload"}
+                      </Button>
+                    </div>
+                  ) : isResolved ? (
+                    <p className="muted" style={{ marginTop: "8px" }}>
+                      Attachments are locked because the defect is resolved.
+                    </p>
+                  ) : null}
+                </td>
+              </tr>
+              <tr>
+                <th>Vehicle</th>
+                <td>{vehicleLabel}</td>
+              </tr>
+              <tr>
+                <th>Reported by</th>
+                <td>{reportedLabel}</td>
+              </tr>
+              <tr>
+                <th>Created</th>
+                <td>{formatDateTime(defect.createdAt)}</td>
+              </tr>
+              {defect.updatedAt ? (
+                <tr>
+                  <th>Updated</th>
+                  <td>{formatDateTime(defect.updatedAt)}</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+          </TableWrap>
+        </Card>
+
+        <section className="defect-section">
+          <Card>
+            <SectionHeader title="Driver comments" />
+          {commentsLoading ? <p className="muted">Loading comments...</p> : null}
+          {commentsError ? <div className="error" style={{ marginBottom: "8px" }}>{commentsError}</div> : null}
+          {latestComments.length === 0 && !commentsLoading && !commentsError ? (
+            <p className="muted">No comments.</p>
+          ) : (
+            <TableWrap>
+              <table className="defect-activity-table min-w-[700px] w-full">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestComments.map((c) => {
+                    return (
+                      <tr key={c.id}>
+                        <td>{formatDateTime(c.createdAt)}</td>
+                        <td>{c.message}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableWrap>
+          )}
+          </Card>
+        </section>
+
+        <section className="defect-section">
+          <Card>
+            <SectionHeader title="Admin note" />
+          {(() => {
+            const hasNote = (defect.adminNote ?? "").trim() !== "";
+            const noteTimestamp = defect.adminNoteUpdatedAt || defect.createdAt;
+            if (!hasNote || adminEditMode) {
+              return (
+                <>
+                  <FormField label="Note">
+                    <textarea
+                      value={adminDraft}
+                      onChange={(event) => {
+                        setAdminDraft(event.target.value);
+                        setAdminNoteSaved(false);
+                      }}
+                      rows={3}
+                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+                      disabled={isResolved || adminNoteSaving}
+                    />
+                  </FormField>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "8px", flexWrap: "wrap" }}>
+                    {!isResolved ? (
+                      <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveAdminNote}
+                      disabled={adminNoteSaving}
+                    >
+                      {adminNoteSaving ? "Saving..." : "Save note"}
+                    </Button>
+                    {hasNote ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setAdminDraft(adminOriginal);
+                          setAdminEditMode(false);
+                          setAdminNoteError(null);
+                        }}
+                        disabled={adminNoteSaving}
+                      >
+                        Cancel
+                      </Button>
+                    ) : null}
+                  </>
+                ) : null}
+                    {adminNoteSaved ? <span className="muted" style={{ fontSize: "12px" }}>Saved</span> : null}
+                    {isResolved ? (
+                      <span className="muted" style={{ fontSize: "12px" }}>
+                        Locked because resolved.
+                      </span>
+                    ) : null}
+                  </div>
                 </>
-              )}
+              );
+            }
+
+            return (
+              <>
+                <TableWrap>
+                  <table className="defect-activity-table min-w-[700px] w-full">
+                    <thead>
+                      <tr>
+                        <th>When</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{formatDateTime(noteTimestamp)}</td>
+                        <td>{defect.adminNote}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </TableWrap>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "8px", flexWrap: "wrap" }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setAdminDraft(adminOriginal);
+                      setAdminEditMode(true);
+                      setAdminNoteError(null);
+                      setAdminNoteSaved(false);
+                    }}
+                    disabled={isResolved}
+                  >
+                    Edit
+                  </Button>
+                  {isResolved ? (
+                    <span className="muted" style={{ fontSize: "12px" }}>
+                      Locked because resolved.
+                    </span>
+                  ) : null}
+                </div>
+              </>
+            );
+          })()}
+          {adminNoteError ? (
+            <div className="error" style={{ fontSize: "12px", marginTop: "6px" }}>
+              {adminNoteError}
             </div>
-          </div>
-        </div>
-        {activityModalOpen ? (
+          ) : null}
+          </Card>
+        </section>
+      </div>
+      {previewOpen && previewSrc ? (
+        <div
+          role="presentation"
+          onClick={closePreview}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 60,
+          }}
+        >
           <div
-            role="presentation"
+            onClick={(event) => event.stopPropagation()}
             style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(15, 23, 42, 0.45)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-              zIndex: 50,
+              background: "#fff",
+              borderRadius: "12px",
+              padding: "8px",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
             }}
           >
-            <div className="card" style={{ maxWidth: "720px", width: "100%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                <h2 style={{ margin: 0 }}>{activityModalTab === "comments" ? "All comments" : "Full history"}</h2>
-                <button
-                  className="button secondary"
-                  type="button"
-                  style={{ width: "auto" }}
-                  onClick={() => setActivityModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-              <div style={{ marginTop: "12px", maxHeight: "60vh", overflowY: "auto" }}>
-                {activityModalTab === "comments" ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {sortedComments.map((c) => (
-                      <div key={c.id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "8px" }}>
-                        <div style={{ fontWeight: 600 }}>{c.message}</div>
-                        <div className="muted" style={{ fontSize: "12px" }}>
-                          {formatDateTime(c.createdAt)} {c.actorUserId != null ? `User: ${c.actorUserId}` : ""}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {sortedHistory.map((h) => {
-                      const actorEmail = users.find((u) => String(u.id) === String(h.actorUserId))?.email;
-                      const label = historyLabels[h.type] || h.type;
-                      const actorLabel = h.actorUserId != null ? actorEmail || h.actorUserId : "Unknown";
-                      const data = isPlainObject(h.data) ? (h.data as Record<string, unknown>) : null;
-                      const dataEntries = data ? Object.entries(data).slice(0, 6) : [];
-                      return (
-                        <div key={h.id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "8px" }}>
-                          <div style={{ fontWeight: 600 }}>{label}</div>
-                          <div className="muted" style={{ fontSize: "12px" }}>
-                            {formatDateTime(h.createdAt)} User: {actorLabel}
-                          </div>
-                          {data ? (
-                            <details style={{ marginTop: "6px" }}>
-                              <summary className="muted" style={{ fontSize: "12px", cursor: "pointer" }}>
-                                Data
-                              </summary>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px" }}>
-                                {dataEntries.map(([key, value]) => (
-                                  <div key={key} className="muted" style={{ fontSize: "12px" }}>
-                                    {key}: {typeof value === "string" ? value : JSON.stringify(value)}
-                                  </div>
-                                ))}
-                                {Object.keys(data).length > dataEntries.length ? (
-                                  <div className="muted" style={{ fontSize: "12px" }}>
-                                    ...more
-                                  </div>
-                                ) : null}
-                              </div>
-                            </details>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            <ModalShell title="Attachment preview" onClose={closePreview}>
+              <img
+                src={previewSrc}
+                alt={previewAlt || "Attachment preview"}
+                style={{ maxWidth: "86vw", maxHeight: "80vh", objectFit: "contain" }}
+              />
+            </ModalShell>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -6,8 +6,16 @@ import {
   downloadWorkEntriesCsv,
   WorkEntriesItem,
   WorkEntriesTotals,
+  WorkEntriesGroupBy,
 } from "../api/reports";
 import { useAuth } from "../auth/AuthContext";
+import TableWrap from "../components/TableWrap";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import ListState from "../components/ui/ListState";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -112,7 +120,7 @@ const AdminReportsPage = () => {
     loadDrivers();
   }, [user]);
 
-  const groupBy = useMemo(() => {
+  const groupBy = useMemo<WorkEntriesGroupBy>(() => {
     if (exportType === "billing") return "day_customer_route";
     if (exportType === "audit") return "entry";
     return "day_driver";
@@ -199,24 +207,21 @@ const AdminReportsPage = () => {
     setTo(toDateInputValue(endOfMonth(today)));
   };
 
-  const statusMessage = loading
-    ? "Loading preview..."
-    : !hasPreview
-      ? "Run preview to see results."
-      : rowsCount === 0
-        ? "No data for selected range."
-        : "";
+  const emptyReportMessage = hasPreview ? "No data for selected range." : "Run preview to see results.";
 
   const showSummary =
     hasPreview && (exportType === "audit" ? rowsCount > 0 : rowsCount > 1);
 
   return (
-    <div className="page reports-page">
+    <div className="reports-page">
       <style>
         {`
           .reports-page {
+            min-height: 100vh;
+            display: flex;
             align-items: flex-start;
             justify-content: flex-start;
+            padding: 20px;
           }
           .reports-container {
             margin: 0 auto;
@@ -313,14 +318,6 @@ const AdminReportsPage = () => {
             justify-content: flex-end;
             width: 100%;
           }
-          .reports-actions .button {
-            height: 36px !important;
-            padding: 0 14px !important;
-            font-size: 14px !important;
-            border-radius: 10px !important;
-            width: auto !important;
-            min-width: 140px !important;
-          }
           .reports-status {
             margin-bottom: 12px;
             font-size: 14px;
@@ -352,7 +349,6 @@ const AdminReportsPage = () => {
             white-space: nowrap;
           }
 .reports-table-wrap {
-            overflow: auto;
           }
           .reports-table {
             width: 100%;
@@ -381,9 +377,6 @@ const AdminReportsPage = () => {
           .reports-cell-center {
             text-align: center;
           }
-          .reports-button-row .button {
-            min-width: 150px;
-          }
           @media (max-width: 900px) {
             .reports-toolbar-actions {
               align-items: stretch;
@@ -407,63 +400,68 @@ const AdminReportsPage = () => {
         `}
       </style>
       <div className="reports-container">
-        <div className="reports-toolbar">
+        <Card className="reports-toolbar">
           <div className="reports-toolbar-row">
             <div className="reports-header">
-              <h1>Reports / Export</h1>
-              <p className="muted">Work entry reports based on driver timesheets.</p>
+              <SectionHeader
+                title="Reports / Export"
+                subtitle="Work entry reports based on driver timesheets."
+              />
             </div>
             <div className="reports-toolbar-actions">
               <div className="reports-quick-range">
-                <button
-                  className={`button secondary reports-pill${activeRange === "last7" ? " active" : ""}`}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={`reports-pill${activeRange === "last7" ? " active" : ""}`}
                   type="button"
                   onClick={() => applyQuickRange("last7")}
                   disabled={loading || downloading}
                 >
                   Last 7 days
-                </button>
-                <button
-                  className={`button secondary reports-pill${activeRange === "thisWeek" ? " active" : ""}`}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={`reports-pill${activeRange === "thisWeek" ? " active" : ""}`}
                   type="button"
                   onClick={() => applyQuickRange("thisWeek")}
                   disabled={loading || downloading}
                 >
                   This week
-                </button>
-                <button
-                  className={`button secondary reports-pill${activeRange === "thisMonth" ? " active" : ""}`}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={`reports-pill${activeRange === "thisMonth" ? " active" : ""}`}
                   type="button"
                   onClick={() => applyQuickRange("thisMonth")}
                   disabled={loading || downloading}
                 >
                   This month
-                </button>
+                </Button>
               </div>
 
               <div className="reports-controls">
-                <div className="field">
-                  <label>From</label>
-                  <input
+                <FormField label="From">
+                  <Input
                     className="reports-control-input reports-control-date"
                     type="date"
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
                     disabled={loading || downloading}
                   />
-                </div>
-                <div className="field">
-                  <label>To</label>
-                  <input
+                </FormField>
+                <FormField label="To">
+                  <Input
                     className="reports-control-input reports-control-date"
                     type="date"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
                     disabled={loading || downloading}
                   />
-                </div>
-                <div className="field">
-                  <label>Export type</label>
+                </FormField>
+                <FormField label="Export type">
                   <select
                     className="reports-control-input reports-control-select"
                     value={exportType}
@@ -474,10 +472,9 @@ const AdminReportsPage = () => {
                     <option value="billing">Billing (Customer + Route)</option>
                     <option value="audit">Audit (Detailed entries)</option>
                   </select>
-                </div>
+                </FormField>
                 {user?.role !== "DRIVER" ? (
-                  <div className="field">
-                    <label>Driver</label>
+                  <FormField label="Driver">
                     <select
                       className="reports-control-input reports-control-select"
                       value={driverId}
@@ -491,107 +488,92 @@ const AdminReportsPage = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
                 ) : null}
               </div>
 
               <div className="reports-actions reports-button-row">
-                <button
-                  className="button"
+                <Button
                   type="button"
                   onClick={handlePreview}
                   disabled={loading || downloading || !hasValidRange}
                 >
                   {loading ? "Loading..." : "Preview"}
-                </button>
-                <button
-                  className="button secondary"
+                </Button>
+                <Button
+                  variant="secondary"
                   type="button"
                   onClick={handleDownload}
                   disabled={!canDownload}
                 >
                   {downloading ? "Preparing..." : "Download CSV"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {driverLoadError ? <div className="error">{driverLoadError}</div> : null}
-        {error ? <div className="error">{error}</div> : null}
-        {statusMessage ? <div className="reports-status muted">{statusMessage}</div> : null}
 
-        <div className="reports-card-container reports-table-wrap">
-          {showSummary ? (
-            <div className="reports-summary">
-              <span className="reports-chip">Rows: {rowsCount}</span>
-              <span className="reports-chip">Total: {formatMinutesToHHMM(totalMinutes)}</span>
-              {activityTotals.map((entry) => (
-                <span key={entry.key} className="reports-chip">
-                  {entry.label}: {formatMinutesToHHMM(entry.minutes)}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <table className="reports-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                {isPayroll ? (
-                  <>
-                    <th>Driver</th>
-                    <th style={{ textAlign: "right" }}>Total</th>
-                    <th style={{ textAlign: "right" }}>Driving</th>
-                    <th style={{ textAlign: "right" }}>Other work</th>
-                    <th style={{ textAlign: "right" }}>Break</th>
-                    <th style={{ textAlign: "right" }}>Availability</th>
-                  </>
-                ) : null}
-                {isBilling ? (
-                  <>
-                    <th>Customer</th>
-                    <th>Route</th>
-                    <th style={{ textAlign: "right" }}>Total</th>
-                    <th>Driver</th>
-                    <th>Vehicle</th>
-                    <th style={{ textAlign: "right" }}>Entries</th>
-                  </>
-                ) : null}
-                {isAudit ? (
-                  <>
-                    <th>Driver</th>
-                    <th>Activity</th>
-                    <th style={{ textAlign: "right" }}>Minutes</th>
-                    <th>Customer</th>
-                    <th>Route</th>
-                    <th>Vehicle</th>
-                    <th>Note</th>
-                    <th>Source</th>
-                  </>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        <ListState
+          loading={loading}
+          hasItems={hasPreview && items.length > 0}
+          emptyTitle="No report data"
+          emptyMessage={emptyReportMessage}
+          errorMessage={error}
+        >
+          <TableWrap className="reports-card-container reports-table-wrap">
+            {showSummary ? (
+              <div className="reports-summary">
+                <span className="reports-chip">Rows: {rowsCount}</span>
+                <span className="reports-chip">Total: {formatMinutesToHHMM(totalMinutes)}</span>
+                {activityTotals.map((entry) => (
+                  <span key={entry.key} className="reports-chip">
+                    {entry.label}: {formatMinutesToHHMM(entry.minutes)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <table className="reports-table min-w-[900px] w-full">
+              <thead>
                 <tr>
-                  <td colSpan={isPayroll ? 7 : isBilling ? 7 : 9} className="reports-cell-center">
-                    Loading...
-                  </td>
+                  <th>Date</th>
+                  {isPayroll ? (
+                    <>
+                      <th>Driver</th>
+                      <th style={{ textAlign: "right" }}>Total</th>
+                      <th style={{ textAlign: "right" }}>Driving</th>
+                      <th style={{ textAlign: "right" }}>Other work</th>
+                      <th style={{ textAlign: "right" }}>Break</th>
+                      <th style={{ textAlign: "right" }}>Availability</th>
+                    </>
+                  ) : null}
+                  {isBilling ? (
+                    <>
+                      <th>Customer</th>
+                      <th>Route</th>
+                      <th style={{ textAlign: "right" }}>Total</th>
+                      <th>Driver</th>
+                      <th>Vehicle</th>
+                      <th style={{ textAlign: "right" }}>Entries</th>
+                    </>
+                  ) : null}
+                  {isAudit ? (
+                    <>
+                      <th>Driver</th>
+                      <th>Activity</th>
+                      <th style={{ textAlign: "right" }}>Minutes</th>
+                      <th>Customer</th>
+                      <th>Route</th>
+                      <th>Vehicle</th>
+                      <th>Note</th>
+                      <th>Source</th>
+                    </>
+                  ) : null}
                 </tr>
-              ) : !hasPreview ? (
-                <tr>
-                  <td colSpan={isPayroll ? 7 : isBilling ? 7 : 9} className="reports-cell-center">
-                    Run preview to see results.
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={isPayroll ? 7 : isBilling ? 7 : 9} className="reports-cell-center">
-                    No data for selected range.
-                  </td>
-                </tr>
-              ) : (
-                items.map((row, index) => (
+              </thead>
+              <tbody>
+                {items.map((row, index) => (
                   <tr key={`${row.date}-${row.driverId || "all"}-${row.activityType || index}`}>
                     <td>{row.date}</td>
                     {isPayroll ? (
@@ -635,11 +617,11 @@ const AdminReportsPage = () => {
                       </>
                     ) : null}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </TableWrap>
+        </ListState>
       </div>
     </div>
   );

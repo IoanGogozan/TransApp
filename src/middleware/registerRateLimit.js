@@ -1,3 +1,4 @@
+const AppError = require("../utils/AppError");
 const windowMs = 15 * 60 * 1000;
 const ipLimit = 20;
 
@@ -34,8 +35,9 @@ const registerRateLimit = (req, res, next) => {
   const ipCount = !current || current.expiresAt <= now ? 0 : current.count;
 
   if (ipCount >= ipLimit) {
-    res.status(429).json({ error: "Too many registrations. Try again later.", code: "REGISTER_RATE_LIMITED" });
-    return;
+    return next(
+      new AppError(429, "Too many registrations. Try again later.", "REGISTER_RATE_LIMITED"),
+    );
   }
 
   res.on("finish", () => {

@@ -1,24 +1,26 @@
 import { useAuth } from "../../auth/AuthContext";
+import Card from "../../components/ui/Card";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 const DriverProfilePage = () => {
   const { user, company, loading, error } = useAuth();
 
   if (loading) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <p>Loading profile...</p>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (error || !user) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <div className="error">{error || "Unable to load profile."}</div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -27,9 +29,9 @@ const DriverProfilePage = () => {
   const displayName = userName || user.username || null;
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>My profile</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader title="My profile" />
         <div style={{ display: "grid", gap: "12px" }}>
           {displayName ? (
             <div>
@@ -59,7 +61,7 @@ const DriverProfilePage = () => {
             </div>
           ) : null}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

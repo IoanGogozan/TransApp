@@ -12,6 +12,9 @@ const baseSelect = {
   status: true,
   title: true,
   description: true,
+  adminNote: true,
+  adminNoteUpdatedAt: true,
+  adminNoteUpdatedByUserId: true,
   createdAt: true,
   updatedAt: true,
   resolvedAt: true,
@@ -51,6 +54,33 @@ const listSelect = {
       id: true,
       regNumber: true,
       name: true,
+    },
+  },
+  attachments: {
+    where: { purgedAt: null },
+    orderBy: { createdAt: "asc" },
+    take: 1,
+    select: {
+      id: true,
+      mimeType: true,
+      purgedAt: true,
+      createdAt: true,
+    },
+  },
+  reportedByUser: {
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      email: true,
+    },
+  },
+  assignedToUser: {
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      email: true,
     },
   },
 };
@@ -121,6 +151,18 @@ const updateDetails = async ({ companyId, defectId, title, description }) =>
     },
   });
 
+const updateAdminNote = async ({
+  companyId,
+  defectId,
+  adminNote,
+  adminNoteUpdatedAt,
+  adminNoteUpdatedByUserId,
+}) =>
+  prisma.defect.updateMany({
+    where: { id: defectId, companyId, archivedAt: null },
+    data: { adminNote, adminNoteUpdatedAt, adminNoteUpdatedByUserId },
+  });
+
 const setAssignee = async ({ companyId, defectId, assignedToUserId }) =>
   prisma.defect.updateMany({
     where: { id: defectId, companyId },
@@ -134,5 +176,6 @@ module.exports = {
   listDefects,
   updateStatus,
   updateDetails,
+  updateAdminNote,
   setAssignee,
 };

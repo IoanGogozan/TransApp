@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getChecklistStatus, submitChecklist } from "../api/checklists";
 import { createVehicleCheckIn } from "../api/timesheets";
 import { getVehicleById } from "../api/vehicles";
@@ -7,6 +7,11 @@ import { ApiError } from "../api/http";
 import { ChecklistQuestion, ChecklistAnswerInput, ChecklistStatus } from "../types/checklist";
 import { Vehicle } from "../types/vehicle";
 import { tenantPath } from "../utils/tenantPath";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import SectionHeader from "../components/ui/SectionHeader";
+import ModalShell from "../components/ui/ModalShell";
 
 const QUESTIONS: ChecklistQuestion[] = [
   { key: "lights_ok", label: "Do the lights work properly?", required: true },
@@ -151,37 +156,44 @@ const ChecklistPage = () => {
 
   if (!vehicleIdParam || !isValidVehicleId) {
     return (
-      <div className="page">
-        <div className="card">
-          <h1>Daily Checklist</h1>
-          <p className="muted">No vehicle selected.</p>
-          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
+          <SectionHeader title="Daily Checklist" subtitle="No vehicle selected." />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(tenantPath(slug, "/driver/timesheet"))}
+          >
             Back to timesheet
-          </Link>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <p>Loading checklist...</p>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <div className="error">{error}</div>
-          <Link className="button" to={tenantPath(slug, "/driver/timesheet")} style={{ width: "auto" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(tenantPath(slug, "/driver/timesheet"))}
+          >
             Back to timesheet
-          </Link>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -189,41 +201,43 @@ const ChecklistPage = () => {
   const completed = status?.completed;
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Daily Checklist</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader
+          title="Daily Checklist"
+          subtitle={`Vehicle: ${vehicle?.regNumber || vehicleIdParam}${vehicle?.name ? ` (${vehicle.name})` : ""}`}
+        />
         <p className="muted">
-          Vehicle: {vehicle?.regNumber || vehicleIdParam} {vehicle?.name ? `(${vehicle.name})` : ""}
+          Status: {completed ? "Completed" : "Pending"}
         </p>
-        <p className="muted">Status: {completed ? "Completed" : "Pending"}</p>
-        {status?.checklistId && <p className="muted">Checklist ID: {status.checklistId}</p>}
+        {status?.checklistId && <p className="muted break-words">Checklist ID: {status.checklistId}</p>}
 
         {completed ? (
           <>
             <div className="error" style={{ borderColor: "#d1fae5", background: "#ecfdf3", color: "#166534" }}>
               You already submitted a checklist for this vehicle today.
             </div>
-            <button
-              className="button primary"
-              style={{ marginTop: "12px" }}
+            <Button
+              variant="primary"
+              className="mt-3"
               disabled={submitting}
               onClick={handleCreateCheckInNow}
             >
               {submitting ? "Submitting..." : "Create vehicle check-in now"}
-            </button>
+            </Button>
           </>
         ) : (
           <>
             {submitError && <div className="error">{submitError}</div>}
             {alreadySubmitted && (
-              <button
-                className="button primary"
-                style={{ marginBottom: "12px" }}
+              <Button
+                variant="primary"
+                className="mb-3"
                 disabled={submitting}
                 onClick={handleCreateCheckInNow}
               >
                 {submitting ? "Submitting..." : "Create vehicle check-in now"}
-              </button>
+              </Button>
             )}
             {success && <p className="muted">{success}</p>}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -243,54 +257,67 @@ const ChecklistPage = () => {
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{q.label}</div>
-                    <select
-                      value={ans?.answer || ""}
-                      onChange={(e) =>
-                        handleSelectChange(
-                          q.key,
-                          e.target.value as "OK" | "DEVIATION" | "NOT_APPLICABLE" | ""
-                        )
-                      }
-                      style={{
-                        padding: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #d1d5db",
-                      }}
-                    >
-                      <option value="">Select...</option>
-                      <option value="OK">OK</option>
-                      <option value="DEVIATION">Deviation</option>
-                      <option value="NOT_APPLICABLE">Not applicable</option>
-                    </select>
-                    {isDeviation && (
-                      <textarea
-                        placeholder="Comment (optional)"
-                        value={ans?.comment || ""}
-                        onChange={(e) => handleCommentChange(q.key, e.target.value)}
+                    <FormField label="Answer">
+                      <select
+                        value={ans?.answer || ""}
+                        onChange={(e) =>
+                          handleSelectChange(
+                            q.key,
+                            e.target.value as "OK" | "DEVIATION" | "NOT_APPLICABLE" | ""
+                          )
+                        }
                         style={{
-                          minHeight: "60px",
                           padding: "10px",
                           borderRadius: "8px",
                           border: "1px solid #d1d5db",
                         }}
-                        maxLength={500}
-                      />
+                      >
+                        <option value="">Select...</option>
+                        <option value="OK">OK</option>
+                        <option value="DEVIATION">Deviation</option>
+                        <option value="NOT_APPLICABLE">Not applicable</option>
+                      </select>
+                    </FormField>
+                    {isDeviation && (
+                      <FormField label="Comment (optional)">
+                        <textarea
+                          placeholder="Comment (optional)"
+                          value={ans?.comment || ""}
+                          onChange={(e) => handleCommentChange(q.key, e.target.value)}
+                          style={{
+                            minHeight: "60px",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                          }}
+                          maxLength={500}
+                        />
+                      </FormField>
                     )}
                   </div>
                 );
               })}
             </div>
-            <button className="button" style={{ marginTop: "12px" }} disabled={submitting || !allAnswered} onClick={handleSubmit}>
+            <Button
+              variant="primary"
+              className="mt-3"
+              disabled={submitting || !allAnswered}
+              onClick={handleSubmit}
+            >
               {submitting ? "Submitting..." : "Submit checklist"}
-            </button>
+            </Button>
           </>
         )}
         <div className="row" style={{ marginTop: "12px" }}>
-          <Link className="button" to={tenantPath(slug, returnTo)} style={{ width: "auto" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(tenantPath(slug, returnTo))}
+          >
             My Timesheet
-          </Link>
+          </Button>
         </div>
-      </div>
+      </Card>
       {defectDialogOpen ? (
         <div
           role="presentation"
@@ -305,37 +332,44 @@ const ChecklistPage = () => {
             zIndex: 50,
           }}
         >
-          <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
-            <h2 style={{ marginTop: 0 }}>Defects recorded</h2>
-            <p className="muted">Defects were recorded from your checklist. Do you want to add photos now?</p>
-            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-              <button
-                className="button"
-                type="button"
-                style={{ width: "auto" }}
-                onClick={() => {
-                  setDefectDialogOpen(false);
-                  const addPhotosTarget = defectFocusId
-                    ? `/driver/defects/${defectFocusId}`
-                    : "/driver/defects";
-                  navigate(tenantPath(slug, addPhotosTarget));
-                }}
-              >
-                Add photos
-              </button>
-              <button
-                className="button secondary"
-                type="button"
-                style={{ width: "auto" }}
-                onClick={() => {
-                  setDefectDialogOpen(false);
-                  navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
-                }}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
+          <Card className="max-w-[420px] w-full max-h-[80vh] overflow-y-auto">
+            <ModalShell
+              title="Defects recorded"
+              onClose={() => {
+                setDefectDialogOpen(false);
+                navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
+              }}
+              footer={(
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setDefectDialogOpen(false);
+                      navigate(tenantPath(slug, returnTo), { state: { refreshCheckIns: true } });
+                    }}
+                  >
+                    Continue
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setDefectDialogOpen(false);
+                      const addPhotosTarget = defectFocusId
+                        ? `/driver/defects/${defectFocusId}`
+                        : "/driver/defects";
+                      navigate(tenantPath(slug, addPhotosTarget));
+                    }}
+                  >
+                    Add photos
+                  </Button>
+                </>
+              )}
+            >
+              <p className="muted">Defects were recorded from your checklist. Do you want to add photos now?</p>
+            </ModalShell>
+          </Card>
         </div>
       ) : null}
     </div>

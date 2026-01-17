@@ -26,14 +26,15 @@ const listEvents = async ({ companyId, defectId, limit, offset }) =>
     orderBy: { createdAt: "asc" },
     take: limit,
     skip: offset,
-    select: {
-      id: true,
-      companyId: true,
-      defectId: true,
-      actorUserId: true,
-      type: true,
-      data: true,
-      createdAt: true,
+    include: {
+      actor: {
+        select: {
+          id: true,
+          phone: true,
+          username: true,
+          email: true,
+        },
+      },
     },
   });
 

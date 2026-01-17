@@ -130,6 +130,6 @@ describe("Auth login identifiers", () => {
 
     const limited = await request(app).post(`/api/v1/c/${company.slug}/auth/login`).send({ identifier: "ratelimit2@example.com", password: "wrong" });
     expect(limited.status).toBe(429);
-    expect(limited.body.code).toBe("AUTH_RATE_LIMITED");
+    expect(limited.body.error.code).toBe("AUTH_RATE_LIMITED");
   });
 });

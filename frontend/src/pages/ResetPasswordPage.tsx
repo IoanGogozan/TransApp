@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPasswordWithToken, validatePasswordResetToken } from "../api/auth";
 import PublicHeader from "../components/PublicHeader";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -75,10 +80,10 @@ const ResetPasswordPage = () => {
   const forgotLink = companySlug ? `/forgot-password?companySlug=${encodeURIComponent(companySlug)}` : "/forgot-password";
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 520, width: "100%" }}>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-md">
         <PublicHeader />
-        <h1>Reset password</h1>
+        <SectionHeader title="Reset password" />
 
         {validationError === "Invalid reset link." ? (
           <>
@@ -98,9 +103,8 @@ const ResetPasswordPage = () => {
             {error && <div className="error">{error}</div>}
             {success && <div className="success">{success}</div>}
             <form onSubmit={onSubmit}>
-              <div className="field">
-                <label htmlFor="password">New password</label>
-                <input
+              <FormField label="New password" htmlFor="password">
+                <Input
                   id="password"
                   type="password"
                   value={password}
@@ -108,10 +112,9 @@ const ResetPasswordPage = () => {
                   required
                   minLength={8}
                 />
-              </div>
-              <div className="field">
-                <label htmlFor="confirmPassword">Confirm password</label>
-                <input
+              </FormField>
+              <FormField label="Confirm password" htmlFor="confirmPassword">
+                <Input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
@@ -119,14 +122,14 @@ const ResetPasswordPage = () => {
                   required
                   minLength={8}
                 />
-              </div>
-              <button className="button" type="submit" disabled={loading}>
+              </FormField>
+              <Button type="submit" disabled={loading}>
                 {loading ? "Saving..." : "Reset password"}
-              </button>
+              </Button>
             </form>
           </>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

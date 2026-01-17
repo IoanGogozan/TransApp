@@ -1,7 +1,11 @@
+const AppError = require("../utils/AppError");
+
 const requireActiveSubscription = (req, res, next) => {
   const sub = req.subscription;
   if (!sub) {
-    return res.status(402).json({ error: "SUBSCRIPTION_INACTIVE", status: null });
+    return next(
+      new AppError(402, "Subscription inactive", "SUBSCRIPTION_INACTIVE", { status: null }),
+    );
   }
 
   const GRACE_DAYS = 7;
@@ -20,22 +24,28 @@ const requireActiveSubscription = (req, res, next) => {
 
   if (sub.status === "PAST_DUE") {
     if (!sub.pastDueAt) {
-      return res
-        .status(402)
-        .json({ error: "SUBSCRIPTION_INACTIVE", status: sub.status ?? null });
+      return next(
+        new AppError(402, "Subscription inactive", "SUBSCRIPTION_INACTIVE", {
+          status: sub.status ?? null,
+        }),
+      );
     }
     const pastDueAt = new Date(sub.pastDueAt);
     if (Date.now() < pastDueAt.getTime() + graceMs) {
       return next();
     }
-    return res
-      .status(402)
-      .json({ error: "SUBSCRIPTION_INACTIVE", status: sub.status ?? null });
+    return next(
+      new AppError(402, "Subscription inactive", "SUBSCRIPTION_INACTIVE", {
+        status: sub.status ?? null,
+      }),
+    );
   }
 
-  return res
-    .status(402)
-    .json({ error: "SUBSCRIPTION_INACTIVE", status: sub.status ?? null });
+  return next(
+    new AppError(402, "Subscription inactive", "SUBSCRIPTION_INACTIVE", {
+      status: sub.status ?? null,
+    }),
+  );
 };
 
 module.exports = requireActiveSubscription;

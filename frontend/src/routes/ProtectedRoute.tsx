@@ -2,6 +2,7 @@ import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { getCompanySlug, setCompanySlug } from "../auth/companySlug";
 import { tenantPath } from "../utils/tenantPath";
+import Card from "../components/ui/Card";
 
 type Props = {
   children: JSX.Element;
@@ -21,10 +22,10 @@ const ProtectedRoute = ({ children }: Props) => {
   })();
   if (loading) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="min-h-screen flex items-start justify-center p-5">
+        <Card>
           <p>Loading...</p>
-        </div>
+        </Card>
       </div>
     );
   }

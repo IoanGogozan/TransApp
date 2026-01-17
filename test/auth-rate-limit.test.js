@@ -23,6 +23,6 @@ describe("Auth login rate limit", () => {
 
     const limited = await request(app).post(`/api/v1/c/${company.slug}/auth/login`).send({ identifier: user.email, password: "wrongpass" });
     expect(limited.status).toBe(429);
-    expect(limited.body.code).toBe("AUTH_RATE_LIMITED");
+    expect(limited.body.error.code).toBe("AUTH_RATE_LIMITED");
   });
 });

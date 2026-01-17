@@ -9,7 +9,7 @@ type TimesheetResponse = {
   items: Array<{ date: string; minutes: number; hours?: number; userId?: number | string }>;
 };
 
-type WorkEntriesGroupBy =
+export type WorkEntriesGroupBy =
   | "day"
   | "day_driver"
   | "day_driver_activity"

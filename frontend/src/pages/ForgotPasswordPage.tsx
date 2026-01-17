@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { requestPasswordReset } from "../api/auth";
 import PublicHeader from "../components/PublicHeader";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const ForgotPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -36,17 +41,16 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 520, width: "100%" }}>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card className="w-full max-w-md">
         <PublicHeader />
-        <h1>Forgot password</h1>
+        <SectionHeader title="Forgot password" />
         <p className="muted">Enter your company slug and admin email. We will email you a reset link.</p>
         {error && <div className="error">{error}</div>}
         {success && <div className="success">{success}</div>}
         <form onSubmit={onSubmit}>
-          <div className="field">
-            <label htmlFor="companySlug">Company slug</label>
-            <input
+          <FormField label="Company slug" htmlFor="companySlug">
+            <Input
               id="companySlug"
               type="text"
               placeholder="your-company"
@@ -54,10 +58,9 @@ const ForgotPasswordPage = () => {
               onChange={(e) => setCompanySlug(e.target.value)}
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
+          </FormField>
+          <FormField label="Email" htmlFor="email">
+            <Input
               id="email"
               type="email"
               placeholder="admin@company.com"
@@ -65,15 +68,15 @@ const ForgotPasswordPage = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-          </div>
-          <button className="button" type="submit" disabled={loading}>
+          </FormField>
+          <Button type="submit" disabled={loading}>
             {loading ? "Sending..." : "Send reset link"}
-          </button>
+          </Button>
         </form>
         <div style={{ marginTop: "12px" }}>
-          <Link to="/login">Sign in</Link> · <Link to="/help">Help</Link>
+          <Link to="/login">Sign in</Link> Жњ <Link to="/help">Help</Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

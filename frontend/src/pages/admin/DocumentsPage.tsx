@@ -1,5 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ApiError } from "../../api/http";
+import TableWrap from "../../components/TableWrap";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import ListState from "../../components/ui/ListState";
+import SectionHeader from "../../components/ui/SectionHeader";
 import { DocumentMeta, deleteDocument, downloadDocument, getMyDocuments, uploadDocument } from "../../api/documents";
 
 const formatSize = (size: number) => {
@@ -75,22 +82,20 @@ const DocumentsPage = () => {
   };
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Documents</h1>
+    <div className="min-h-screen flex items-start justify-center p-5">
+      <Card>
+        <SectionHeader title="Documents" subtitle="Upload and manage company documents." />
         <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
-          <div className="field">
-            <label htmlFor="doc-title">Title</label>
-            <input
+          <FormField label="Title" htmlFor="doc-title">
+            <Input
               id="doc-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Policy, manual, or template"
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="doc-file">File (PDF or DOCX)</label>
+          </FormField>
+          <FormField label="File (PDF or DOCX)" htmlFor="doc-file">
             <input
               id="doc-file"
               type="file"
@@ -98,22 +103,22 @@ const DocumentsPage = () => {
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               required
             />
-          </div>
-          <button className="button" type="submit" disabled={uploading}>
+          </FormField>
+          <Button type="submit" disabled={uploading}>
             {uploading ? "Uploading..." : "Upload document"}
-          </button>
+          </Button>
           {uploadError ? <div className="error" style={{ marginTop: "8px" }}>{uploadError}</div> : null}
         </form>
 
-        {error ? <div className="error">{error}</div> : null}
-
-        {loading ? (
-          <p>Loading documents...</p>
-        ) : documents.length === 0 ? (
-          <p className="muted">No documents yet.</p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
+        <ListState
+          loading={loading}
+          hasItems={documents.length > 0}
+          emptyTitle="No documents"
+          emptyMessage="No documents yet."
+          errorMessage={error}
+        >
+          <TableWrap>
+            <table className="min-w-[700px] w-full">
               <thead>
                 <tr>
                   <th>Title</th>
@@ -132,21 +137,21 @@ const DocumentsPage = () => {
                     <td>{new Date(doc.createdAt).toISOString().slice(0, 10)}</td>
                     <td>
                       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        <button className="button" type="button" style={{ width: "auto" }} onClick={() => downloadDocument(doc)}>
+                        <Button variant="secondary" size="sm" onClick={() => downloadDocument(doc)}>
                           Download
-                        </button>
-                        <button className="button" type="button" style={{ width: "auto" }} onClick={() => handleDelete(doc)}>
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => handleDelete(doc)}>
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
+          </TableWrap>
+        </ListState>
+      </Card>
     </div>
   );
 };
