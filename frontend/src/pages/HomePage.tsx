@@ -5,7 +5,6 @@ import Button from "../components/ui/Button";
 import ButtonLink from "../components/ui/ButtonLink";
 import Card from "../components/ui/Card";
 import ListState from "../components/ui/ListState";
-import SectionHeader from "../components/ui/SectionHeader";
 
 const HomePage = () => {
   const { user, company, loading, error, logout } = useAuth();
@@ -13,67 +12,74 @@ const HomePage = () => {
   const slug = companySlug || company?.slug;
 
   const errorMessage = error || (!user || !company ? "Unable to load profile." : null);
+  const navButtonClass =
+    "w-full justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 " +
+    "hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-5">
-      <Card>
-        <ListState
-          loading={loading}
-          hasItems={true}
-          errorMessage={errorMessage}
-        >
-          <SectionHeader
-            title="Admin hub"
-            subtitle="Manage users, vehicles, routes, customers and timesheets."
-          />
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto w-full max-w-4xl">
+        <Card className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <ListState
+            loading={loading}
+            hasItems={true}
+            errorMessage={errorMessage}
+          >
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Admin hub</h1>
+              <p className="mt-1 text-sm text-slate-600">
+                Manage users, vehicles, routes, customers and timesheets.
+              </p>
+            </div>
           {(user?.role === "ADMIN" || user?.role === "PLATFORM_ADMIN") && (
             <>
-              <div style={{ marginTop: "16px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/users")}>
+              <div className="mt-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/users")}>
                     Users
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/vehicles")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/vehicles")}>
                     Vehicles
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/routes")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/routes")}>
                     Routes
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/customers")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/customers")}>
                     Customers
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/defects")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/defects")}>
                     Defects
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/timesheets")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/timesheets")}>
                     Timesheets
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/admin/reports")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/admin/reports")}>
                     Reports / Export
                   </ButtonLink>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/app/help")}>
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/app/help")}>
                     Help
                   </ButtonLink>
                 </div>
               </div>
 
-              <div style={{ marginTop: "16px" }}>
-                <h2 style={{ marginBottom: "8px" }}>Personal</h2>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  <ButtonLink variant="secondary" to={tenantPath(slug, "/driver/timesheet")}>
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold text-slate-900">Personal</h2>
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <ButtonLink className={navButtonClass} variant="secondary" to={tenantPath(slug, "/driver/timesheet")}>
                     My Timesheet
                   </ButtonLink>
                 </div>
               </div>
             </>
           )}
-        </ListState>
-        {errorMessage ? (
-          <div style={{ marginTop: "12px" }}>
-            <Button onClick={logout}>Go to login</Button>
-          </div>
-        ) : null}
-      </Card>
+          </ListState>
+          {errorMessage ? (
+            <div className="mt-3">
+              <Button onClick={logout}>Go to login</Button>
+            </div>
+          ) : null}
+        </Card>
+      </div>
     </div>
   );
 };

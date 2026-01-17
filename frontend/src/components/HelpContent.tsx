@@ -53,7 +53,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-setup">Admin: setup checklist</h2>
+        <h2 id="admin-setup" className="scroll-mt-24">Admin: setup checklist</h2>
         <ul>
           <li>Add vehicles</li>
           <li>Create drivers</li>
@@ -65,7 +65,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-users">Admin: users & drivers</h2>
+        <h2 id="admin-users" className="scroll-mt-24">Admin: users & drivers</h2>
         <ul>
           <li>Drivers are created by company admins (drivers do not self-register)</li>
           <li>Assign roles (ADMIN or DRIVER)</li>
@@ -76,7 +76,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-master-data">Admin: vehicles / customers / routes</h2>
+        <h2 id="admin-master-data" className="scroll-mt-24">Admin: vehicles / customers / routes</h2>
         <ul>
           <li>Create vehicles used by drivers</li>
           <li>Add customers and routes if you use them for billing</li>
@@ -86,7 +86,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-review">Admin: review & corrections</h2>
+        <h2 id="admin-review" className="scroll-mt-24">Admin: review & corrections</h2>
         <ul>
           <li>Review daily entries submitted by drivers</li>
           <li>Correct records when needed</li>
@@ -96,7 +96,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-exports">Admin: exports</h2>
+        <h2 id="admin-exports" className="scroll-mt-24">Admin: exports</h2>
         <ul>
           <li>Generate CSV exports for payroll, billing, and audit</li>
           <li>Verify date range and filters</li>
@@ -106,7 +106,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="admin-billing">Admin: billing</h2>
+        <h2 id="admin-billing" className="scroll-mt-24">Admin: billing</h2>
         <ul>
           <li>Manage subscription in Admin → Billing</li>
           <li>Plans are billed monthly (prices eks. mva.)</li>
@@ -115,7 +115,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="driver-basics">Driver: basics</h2>
+        <h2 id="driver-basics" className="scroll-mt-24">Driver: basics</h2>
         <ul>
           <li>Log daily work entries (DRIVING / OTHER WORK / BREAK / AVAILABILITY)</li>
           <li>Edit entries for a day and view weekly totals</li>
@@ -125,7 +125,7 @@
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <h2 id="login-password">Login & password</h2>
+        <h2 id="login-password" className="scroll-mt-24">Login & password</h2>
         <ul>
           <li>Company slug is provided by your company admin</li>
           <li>If you cannot sign in, verify the company slug and your credentials</li>

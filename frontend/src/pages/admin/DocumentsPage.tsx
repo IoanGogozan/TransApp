@@ -82,76 +82,97 @@ const DocumentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-5">
-      <Card>
-        <SectionHeader title="Documents" subtitle="Upload and manage company documents." />
-        <form onSubmit={onSubmit} style={{ marginBottom: "16px" }}>
-          <FormField label="Title" htmlFor="doc-title">
-            <Input
-              id="doc-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Policy, manual, or template"
-              required
-            />
-          </FormField>
-          <FormField label="File (PDF or DOCX)" htmlFor="doc-file">
-            <input
-              id="doc-file"
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              required
-            />
-          </FormField>
-          <Button type="submit" disabled={uploading}>
-            {uploading ? "Uploading..." : "Upload document"}
-          </Button>
-          {uploadError ? <div className="error" style={{ marginTop: "8px" }}>{uploadError}</div> : null}
-        </form>
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto w-full max-w-6xl">
+        <Card className="mx-auto w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <SectionHeader title="Documents" subtitle="Upload and manage company documents." />
+          <form onSubmit={onSubmit}>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 items-end">
+              <div className="w-full">
+                <FormField label="Title" htmlFor="doc-title">
+                  <Input
+                    id="doc-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Policy, manual, or template"
+                    required
+                  />
+                </FormField>
+              </div>
+              <div className="w-full">
+                <label htmlFor="doc-file" className="block text-sm font-medium text-slate-700">
+                  File (PDF or DOCX)
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="doc-file"
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button className="w-full sm:w-auto" type="submit" disabled={uploading}>
+                {uploading ? "Uploading..." : "Upload document"}
+              </Button>
+            </div>
+            {uploadError ? <div className="error" style={{ marginTop: "8px" }}>{uploadError}</div> : null}
+          </form>
 
-        <ListState
-          loading={loading}
-          hasItems={documents.length > 0}
-          emptyTitle="No documents"
-          emptyMessage="No documents yet."
-          errorMessage={error}
-        >
-          <TableWrap>
-            <table className="min-w-[700px] w-full">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Type</th>
-                  <th>Size</th>
-                  <th>Uploaded</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((doc) => (
-                  <tr key={doc.id}>
-                    <td>{doc.title}</td>
-                    <td>{doc.mimeType.includes("pdf") ? "PDF" : "DOCX"}</td>
-                    <td>{formatSize(doc.size)}</td>
-                    <td>{new Date(doc.createdAt).toISOString().slice(0, 10)}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        <Button variant="secondary" size="sm" onClick={() => downloadDocument(doc)}>
-                          Download
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => handleDelete(doc)}>
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </ListState>
-      </Card>
+          {!loading && !error && documents.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+              <div className="text-sm font-semibold text-slate-900">No documents</div>
+              <div className="mt-1 text-sm text-slate-600">No documents yet.</div>
+            </div>
+          ) : (
+            <ListState
+              loading={loading}
+              hasItems={documents.length > 0}
+              emptyTitle="No documents"
+              emptyMessage="No documents yet."
+              errorMessage={error}
+            >
+              <TableWrap>
+                <table className="min-w-[700px] w-full">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Type</th>
+                      <th>Size</th>
+                      <th>Uploaded</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map((doc) => (
+                      <tr key={doc.id}>
+                        <td>{doc.title}</td>
+                        <td>{doc.mimeType.includes("pdf") ? "PDF" : "DOCX"}</td>
+                        <td>{formatSize(doc.size)}</td>
+                        <td>{new Date(doc.createdAt).toISOString().slice(0, 10)}</td>
+                        <td>
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            <Button variant="secondary" size="sm" onClick={() => downloadDocument(doc)}>
+                              Download
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => handleDelete(doc)}>
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+            </ListState>
+          )}
+        </Card>
+      </div>
     </div>
   );
 };

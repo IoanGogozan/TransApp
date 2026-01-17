@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../api/http";
 import { listCompanyUsers } from "../api/users";
 import {
@@ -9,7 +9,6 @@ import {
   WorkEntriesGroupBy,
 } from "../api/reports";
 import { useAuth } from "../auth/AuthContext";
-import TableWrap from "../components/TableWrap";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
@@ -208,426 +207,260 @@ const AdminReportsPage = () => {
   };
 
   const emptyReportMessage = hasPreview ? "No data for selected range." : "Run preview to see results.";
+  const hasItems = hasPreview && items.length > 0;
 
   const showSummary =
     hasPreview && (exportType === "audit" ? rowsCount > 0 : rowsCount > 1);
 
   return (
-    <div className="reports-page">
-      <style>
-        {`
-          .reports-page {
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 20px;
-          }
-          .reports-container {
-            margin: 0 auto;
-            max-width: 1280px;
-            padding: 32px 24px;
-            width: 100%;
-          }
-          .reports-toolbar {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-            padding: 16px 18px;
-            margin-bottom: 16px;
-          }
-          .reports-toolbar-row {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-          }
-          .reports-header {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          }
-          .reports-header h1,
-          .reports-header p {
-            margin: 0;
-          }
-          .reports-toolbar-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: flex-end;
-            flex: 1 1 420px;
-            min-width: 280px;
-          }
-          .reports-quick-range {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-end;
-          }
-          .reports-pill {
-            background: transparent !important;
-            border: 1px solid #d1d5db !important;
-            color: #111827 !important;
-            border-radius: 999px !important;
-            padding: 0 12px !important;
-            height: 30px !important;
-            font-size: 13px !important;
-            font-weight: 600 !important;
-            line-height: 30px !important;
-          }
-          .reports-pill.active {
-            background: #2563eb !important;
-            border-color: #2563eb !important;
-            color: #fff !important;
-          }
-          .reports-quick-range .reports-pill {
-            width: auto !important;
-            min-width: 0 !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-          }
-          .reports-control-input {
-            height: 36px !important;
-            padding: 6px 10px !important;
-            font-size: 14px !important;
-          }
-          .reports-control-date {
-            min-width: 160px;
-          }
-          .reports-control-select {
-            min-width: 200px;
-          }
-          .reports-controls {
-            display: grid;
-            gap: 10px;
-            grid-template-columns: 160px 160px 220px 220px;
-            justify-content: end;
-          }
-          .reports-controls .field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-          }
-          .reports-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            width: 100%;
-          }
-          .reports-status {
-            margin-bottom: 12px;
-            font-size: 14px;
-          }
-          .reports-card-container {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-          }
-          .reports-summary {
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 14px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            color: #111827;
-          }
-          .reports-chip {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border: 1px solid #e5e7eb;
-            background: #f9fafb;
-            border-radius: 999px;
-            font-size: 13px;
-            gap: 6px;
-            white-space: nowrap;
-          }
-.reports-table-wrap {
-          }
-          .reports-table {
-            width: 100%;
-            min-width: 900px;
-            border-collapse: collapse;
-          }
-          .reports-table thead th {
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            z-index: 1;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            text-align: left;
-            padding: 10px 12px;
-          }
-          .reports-table tbody td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-          }
-          .reports-table tbody tr:nth-child(even) {
-            background: #fcfcfd;
-          }
-          .reports-cell-center {
-            text-align: center;
-          }
-          @media (max-width: 900px) {
-            .reports-toolbar-actions {
-              align-items: stretch;
-            }
-            .reports-quick-range {
-              justify-content: flex-start;
-            }
-            .reports-controls {
-              grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            }
-            .reports-actions {
-              justify-content: flex-start;
-              flex-wrap: wrap;
-            }
-          }
-          @media (max-width: 640px) {
-            .reports-controls {
-              grid-template-columns: 1fr;
-            }
-          }
-        `}
-      </style>
-      <div className="reports-container">
-        <Card className="reports-toolbar">
-          <div className="reports-toolbar-row">
-            <div className="reports-header">
-              <SectionHeader
-                title="Reports / Export"
-                subtitle="Work entry reports based on driver timesheets."
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto w-full max-w-6xl">
+        <Card className="w-full rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-xl font-bold text-slate-900">Reports / Export</div>
+              <div className="mt-1 text-sm text-slate-600">Work entry reports based on driver timesheets.</div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                className={`text-sm rounded-full ${activeRange === "last7" ? "bg-blue-600 text-white border-blue-600" : ""}`}
+                type="button"
+                onClick={() => applyQuickRange("last7")}
+                disabled={loading || downloading}
+              >
+                Last 7 days
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className={`text-sm rounded-full ${activeRange === "thisWeek" ? "bg-blue-600 text-white border-blue-600" : ""}`}
+                type="button"
+                onClick={() => applyQuickRange("thisWeek")}
+                disabled={loading || downloading}
+              >
+                This week
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className={`text-sm rounded-full ${activeRange === "thisMonth" ? "bg-blue-600 text-white border-blue-600" : ""}`}
+                type="button"
+                onClick={() => applyQuickRange("thisMonth")}
+                disabled={loading || downloading}
+              >
+                This month
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <FormField label="From">
+              <Input
+                className="w-full"
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                disabled={loading || downloading}
               />
-            </div>
-            <div className="reports-toolbar-actions">
-              <div className="reports-quick-range">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`reports-pill${activeRange === "last7" ? " active" : ""}`}
-                  type="button"
-                  onClick={() => applyQuickRange("last7")}
+            </FormField>
+            <FormField label="To">
+              <Input
+                className="w-full"
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                disabled={loading || downloading}
+              />
+            </FormField>
+            <FormField label="Export type">
+              <select
+                className="w-full"
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value as typeof exportType)}
+                disabled={loading || downloading}
+              >
+                <option value="payroll">Payroll</option>
+                <option value="billing">Billing (Customer + Route)</option>
+                <option value="audit">Audit (Detailed entries)</option>
+              </select>
+            </FormField>
+            {user?.role !== "DRIVER" ? (
+              <FormField label="Driver">
+                <select
+                  className="w-full"
+                  value={driverId}
+                  onChange={(e) => setDriverId(e.target.value)}
                   disabled={loading || downloading}
                 >
-                  Last 7 days
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`reports-pill${activeRange === "thisWeek" ? " active" : ""}`}
-                  type="button"
-                  onClick={() => applyQuickRange("thisWeek")}
-                  disabled={loading || downloading}
-                >
-                  This week
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`reports-pill${activeRange === "thisMonth" ? " active" : ""}`}
-                  type="button"
-                  onClick={() => applyQuickRange("thisMonth")}
-                  disabled={loading || downloading}
-                >
-                  This month
-                </Button>
-              </div>
+                  <option value="">All drivers</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            ) : null}
+          </div>
 
-              <div className="reports-controls">
-                <FormField label="From">
-                  <Input
-                    className="reports-control-input reports-control-date"
-                    type="date"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                    disabled={loading || downloading}
-                  />
-                </FormField>
-                <FormField label="To">
-                  <Input
-                    className="reports-control-input reports-control-date"
-                    type="date"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    disabled={loading || downloading}
-                  />
-                </FormField>
-                <FormField label="Export type">
-                  <select
-                    className="reports-control-input reports-control-select"
-                    value={exportType}
-                    onChange={(e) => setExportType(e.target.value as typeof exportType)}
-                    disabled={loading || downloading}
-                  >
-                    <option value="payroll">Payroll</option>
-                    <option value="billing">Billing (Customer + Route)</option>
-                    <option value="audit">Audit (Detailed entries)</option>
-                  </select>
-                </FormField>
-                {user?.role !== "DRIVER" ? (
-                  <FormField label="Driver">
-                    <select
-                      className="reports-control-input reports-control-select"
-                      value={driverId}
-                      onChange={(e) => setDriverId(e.target.value)}
-                      disabled={loading || downloading}
-                    >
-                      <option value="">All drivers</option>
-                      {drivers.map((driver) => (
-                        <option key={driver.id} value={driver.id}>
-                          {driver.label}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                ) : null}
-              </div>
-
-              <div className="reports-actions reports-button-row">
-                <Button
-                  type="button"
-                  onClick={handlePreview}
-                  disabled={loading || downloading || !hasValidRange}
-                >
-                  {loading ? "Loading..." : "Preview"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={handleDownload}
-                  disabled={!canDownload}
-                >
-                  {downloading ? "Preparing..." : "Download CSV"}
-                </Button>
-              </div>
-            </div>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              onClick={handlePreview}
+              disabled={loading || downloading || !hasValidRange}
+              className="w-full sm:w-auto"
+            >
+              {loading ? "Loading..." : "Preview"}
+            </Button>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={handleDownload}
+              disabled={!canDownload}
+              className="w-full sm:w-auto"
+            >
+              {downloading ? "Preparing..." : "Download CSV"}
+            </Button>
           </div>
         </Card>
 
-        {driverLoadError ? <div className="error">{driverLoadError}</div> : null}
+        <div className="mt-4">
+          {driverLoadError ? <div className="error">{driverLoadError}</div> : null}
 
-        <ListState
-          loading={loading}
-          hasItems={hasPreview && items.length > 0}
-          emptyTitle="No report data"
-          emptyMessage={emptyReportMessage}
-          errorMessage={error}
-        >
-          <TableWrap className="reports-card-container reports-table-wrap">
-            {showSummary ? (
-              <div className="reports-summary">
-                <span className="reports-chip">Rows: {rowsCount}</span>
-                <span className="reports-chip">Total: {formatMinutesToHHMM(totalMinutes)}</span>
-                {activityTotals.map((entry) => (
-                  <span key={entry.key} className="reports-chip">
-                    {entry.label}: {formatMinutesToHHMM(entry.minutes)}
-                  </span>
-                ))}
+          {!loading && !error && !hasItems ? (
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+              <div className="text-sm font-semibold text-slate-900">No report data</div>
+              <div className="mt-1 text-sm text-slate-600">{emptyReportMessage}</div>
+            </div>
+          ) : (
+            <ListState
+              loading={loading}
+              hasItems={hasItems}
+              emptyTitle="No report data"
+              emptyMessage={emptyReportMessage}
+              errorMessage={error}
+            >
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                {showSummary ? (
+                  <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3 text-sm text-slate-900">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium">
+                      Rows: {rowsCount}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium">
+                      Total: {formatMinutesToHHMM(totalMinutes)}
+                    </span>
+                    {activityTotals.map((entry) => (
+                      <span key={entry.key} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium">
+                        {entry.label}: {formatMinutesToHHMM(entry.minutes)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="overflow-x-auto">
+                  <table className="min-w-[900px] w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Date</th>
+                      {isPayroll ? (
+                        <>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Driver</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Total</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Driving</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Other work</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Break</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Availability</th>
+                        </>
+                      ) : null}
+                      {isBilling ? (
+                        <>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Customer</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Route</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Total</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Driver</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Vehicle</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Entries</th>
+                        </>
+                      ) : null}
+                      {isAudit ? (
+                        <>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Driver</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Activity</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-right">Minutes</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Customer</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Route</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Vehicle</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Note</th>
+                          <th className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600 px-4 py-3 text-left">Source</th>
+                        </>
+                      ) : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((row, index) => (
+                      <tr
+                        key={`${row.date}-${row.driverId || "all"}-${row.activityType || index}`}
+                        className="odd:bg-white even:bg-slate-50"
+                      >
+                        <td className="px-4 py-3 text-sm text-slate-900">{row.date}</td>
+                        {isPayroll ? (
+                          <>
+                            <td className="px-4 py-3 text-sm text-slate-900">{formatDriverLabel(row)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">{formatMinutesToHHMM(row.minutesTotal)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">
+                              {formatMinutesToHHMM(row.minutesByActivity?.DRIVING || 0)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">
+                              {formatMinutesToHHMM(row.minutesByActivity?.OTHER_WORK || 0)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">
+                              {formatMinutesToHHMM(row.minutesByActivity?.BREAK || 0)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">
+                              {formatMinutesToHHMM(row.minutesByActivity?.AVAILABILITY || 0)}
+                            </td>
+                          </>
+                        ) : null}
+                        {isBilling ? (
+                          <>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.customer}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.route}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">{formatMinutesToHHMM(row.minutesTotal)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{formatDriverLabel(row)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.vehicleReg}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">{row.entriesCount}</td>
+                          </>
+                        ) : null}
+                        {isAudit ? (
+                          <>
+                            <td className="px-4 py-3 text-sm text-slate-900">{formatDriverLabel(row)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{formatActivityLabel(row.activityType)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900 text-right">{formatMinutesToHHMM(row.minutes || 0)}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.customer}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.route}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.vehicleReg}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.note}</td>
+                            <td className="px-4 py-3 text-sm text-slate-900">{row.source}</td>
+                          </>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                  </table>
+                </div>
               </div>
-            ) : null}
-            <table className="reports-table min-w-[900px] w-full">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  {isPayroll ? (
-                    <>
-                      <th>Driver</th>
-                      <th style={{ textAlign: "right" }}>Total</th>
-                      <th style={{ textAlign: "right" }}>Driving</th>
-                      <th style={{ textAlign: "right" }}>Other work</th>
-                      <th style={{ textAlign: "right" }}>Break</th>
-                      <th style={{ textAlign: "right" }}>Availability</th>
-                    </>
-                  ) : null}
-                  {isBilling ? (
-                    <>
-                      <th>Customer</th>
-                      <th>Route</th>
-                      <th style={{ textAlign: "right" }}>Total</th>
-                      <th>Driver</th>
-                      <th>Vehicle</th>
-                      <th style={{ textAlign: "right" }}>Entries</th>
-                    </>
-                  ) : null}
-                  {isAudit ? (
-                    <>
-                      <th>Driver</th>
-                      <th>Activity</th>
-                      <th style={{ textAlign: "right" }}>Minutes</th>
-                      <th>Customer</th>
-                      <th>Route</th>
-                      <th>Vehicle</th>
-                      <th>Note</th>
-                      <th>Source</th>
-                    </>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row, index) => (
-                  <tr key={`${row.date}-${row.driverId || "all"}-${row.activityType || index}`}>
-                    <td>{row.date}</td>
-                    {isPayroll ? (
-                      <>
-                        <td>{formatDriverLabel(row)}</td>
-                        <td style={{ textAlign: "right" }}>{formatMinutesToHHMM(row.minutesTotal)}</td>
-                        <td style={{ textAlign: "right" }}>
-                          {formatMinutesToHHMM(row.minutesByActivity?.DRIVING || 0)}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {formatMinutesToHHMM(row.minutesByActivity?.OTHER_WORK || 0)}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {formatMinutesToHHMM(row.minutesByActivity?.BREAK || 0)}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {formatMinutesToHHMM(row.minutesByActivity?.AVAILABILITY || 0)}
-                        </td>
-                      </>
-                    ) : null}
-                    {isBilling ? (
-                      <>
-                        <td>{row.customer}</td>
-                        <td>{row.route}</td>
-                        <td style={{ textAlign: "right" }}>{formatMinutesToHHMM(row.minutesTotal)}</td>
-                        <td>{formatDriverLabel(row)}</td>
-                        <td>{row.vehicleReg}</td>
-                        <td style={{ textAlign: "right" }}>{row.entriesCount}</td>
-                      </>
-                    ) : null}
-                    {isAudit ? (
-                      <>
-                        <td>{formatDriverLabel(row)}</td>
-                        <td>{formatActivityLabel(row.activityType)}</td>
-                        <td style={{ textAlign: "right" }}>{formatMinutesToHHMM(row.minutes || 0)}</td>
-                        <td>{row.customer}</td>
-                        <td>{row.route}</td>
-                        <td>{row.vehicleReg}</td>
-                        <td>{row.note}</td>
-                        <td>{row.source}</td>
-                      </>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </ListState>
+            </ListState>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default AdminReportsPage;
+
+
 
 
 

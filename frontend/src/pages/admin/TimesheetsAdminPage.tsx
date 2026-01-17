@@ -375,15 +375,24 @@ const TimesheetsAdminPage = () => {
         {`
           .timesheets-page {
             min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 20px;
+            width: 100%;
+            padding: 12px;
+          }
+          @media (min-width: 640px) {
+            .timesheets-page {
+              padding: 20px;
+            }
           }
           .timesheets-container {
+            width: 100%;
             margin: 0 auto;
             max-width: 1280px;
-            padding: 32px 24px;
+            padding: 0;
+          }
+          @media (min-width: 640px) {
+            .timesheets-container {
+              padding: 24px 16px;
+            }
           }
           .timesheets-topcard {
             background: #fff;
@@ -392,31 +401,6 @@ const TimesheetsAdminPage = () => {
             padding: 24px;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
             margin-bottom: 20px;
-          }
-          .timesheets-topbar {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-          }
-          .ts-header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-          }
-          .ts-quick-buttons {
-            display: flex;
-            gap: 10px;
-          }
-          .timesheets-filters-right {
-            margin-left: auto;
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-            flex-wrap: wrap;
           }
           .quick-btn {
             background: #f1f5f9;
@@ -427,21 +411,6 @@ const TimesheetsAdminPage = () => {
             background: #2563eb;
             color: #fff;
             border: 1px solid #2563eb;
-          }
-          .timesheets-filters {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-          }
-          .timesheets-field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 160px;
-          }
-          .timesheets-field.search {
-            min-width: 240px;
           }
           .timesheets-modal {
             background: #fff;
@@ -584,15 +553,68 @@ const TimesheetsAdminPage = () => {
               display: none;
             }
           }
-        `}
+        `} 
       </style>
       <div className="timesheets-container">
-        <Card className="timesheets-topcard">
-          <SectionHeader
-            title="Timesheets"
-            subtitle={`${from} to ${to}`}
-            right={
-              <div className="ts-quick-buttons">
+        <Card className="timesheets-topcard w-full max-w-none">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <SectionHeader
+                title="Timesheets"
+                subtitle={`${from} to ${to}`}
+              />
+              <div className="flex flex-wrap gap-2 md:hidden">
+                <Button variant="primary" size="sm" onClick={load} disabled={loading}>
+                  {loading ? "Loading..." : "Load"}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <FormField label="From">
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setActiveQuickRange(null);
+                    setFrom(e.target.value);
+                  }}
+                />
+              </FormField>
+              <FormField label="To">
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(e) => {
+                    setActiveQuickRange(null);
+                    setTo(e.target.value);
+                  }}
+                />
+              </FormField>
+              <FormField label="Driver">
+                <select
+                  value={selectedDriverId}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSelectedDriverId(next);
+                    setActiveQuickRange(null);
+                    load();
+                  }}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="ALL">All drivers</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={String(driver.id)}>
+                      {driver.label}
+                    </option>
+                  ))}
+                </select>
+                </FormField>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -634,55 +656,7 @@ const TimesheetsAdminPage = () => {
                   This month
                 </Button>
               </div>
-            }
-          />
-          <div className="timesheets-filters">
-            <div className="timesheets-field">
-              <FormField label="From">
-                <Input
-                  type="date"
-                  value={from}
-                  onChange={(e) => {
-                    setActiveQuickRange(null);
-                    setFrom(e.target.value);
-                  }}
-                />
-              </FormField>
-            </div>
-            <div className="timesheets-field">
-              <FormField label="To">
-                <Input
-                  type="date"
-                  value={to}
-                  onChange={(e) => {
-                    setActiveQuickRange(null);
-                    setTo(e.target.value);
-                  }}
-                />
-              </FormField>
-            </div>
-            <div className="timesheets-filters-right">
-              <div className="timesheets-field search">
-                <FormField label="Driver">
-                  <select
-                    value={selectedDriverId}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setSelectedDriverId(next);
-                      setActiveQuickRange(null);
-                      load();
-                    }}
-                  >
-                    <option value="ALL">All drivers</option>
-                    {drivers.map((driver) => (
-                      <option key={driver.id} value={String(driver.id)}>
-                        {driver.label}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
+              <div className="hidden flex-wrap gap-2 md:flex md:justify-end">
                 <Button variant="primary" size="sm" onClick={load} disabled={loading}>
                   {loading ? "Loading..." : "Load"}
                 </Button>
@@ -740,14 +714,39 @@ const TimesheetsAdminPage = () => {
                             {bestIdentifier(row.driver)}
                           </div>
                         </td>
-                        <td>{vehiclesLabel}</td>
-                        <td>{routesLabel}</td>
+                        <td>
+                          {vehiclesLabel ? (
+                            <span
+                              className="block max-w-[240px] truncate"
+                              title={row.vehicles.map((vehicle) => vehicle.regNumber).join(", ")}
+                            >
+                              {vehiclesLabel}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td>
+                          {routesLabel ? (
+                            <span
+                              className="block max-w-[240px] truncate"
+                              title={row.routes.map((route) => route.name).join(", ")}
+                            >
+                              {routesLabel}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                         {showRuns ? <td>{row.entriesCount}</td> : null}
                         <td style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</td>
                         <td>
-                          <div className="timesheets-breakdown">
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-700">
                             {breakdown.map((item) => (
-                              <span key={item.label}>
+                              <span
+                                key={item.label}
+                                className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1"
+                              >
                                 {item.label}: {formatDurationHours(item.minutes)}
                               </span>
                             ))}
@@ -782,7 +781,7 @@ const TimesheetsAdminPage = () => {
                 ].filter((item) => item.minutes > 0);
 
                 return (
-                  <Card key={`${row.date}-${row.driver.id}-${idx}`} className="timesheets-mobile-card">
+                  <Card key={`${row.date}-${row.driver.id}-${idx}`} className="timesheets-mobile-card w-full max-w-none">
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                       <div>
                         <strong>{row.date}</strong>
@@ -1009,6 +1008,7 @@ const TimesheetsAdminPage = () => {
                       <select
                         value={editActivityType}
                         onChange={(event) => setEditActivityType(event.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-100 disabled:text-slate-500"
                       >
                         <option value="DRIVING">DRIVING</option>
                         <option value="OTHER_WORK">OTHER_WORK</option>

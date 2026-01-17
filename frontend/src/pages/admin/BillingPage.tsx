@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { ApiError } from "../../api/http";
@@ -89,30 +89,36 @@ const StripeCardSetupForm = ({ plan, companySlug, onSuccess }: StripeCardSetupFo
 
   return (
     <form onSubmit={handleSubmit}>
-      <FormField label="Card details">
-        <div
-          style={{
-            padding: "12px",
-            border: "1px solid #d1d5db",
-            borderRadius: "10px",
-            background: "#fff",
-          }}
-        >
-          <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 items-end">
+        <div className="w-full sm:col-span-2">
+          <FormField label="Card details">
+            <div
+              style={{
+                padding: "12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "10px",
+                background: "#fff",
+              }}
+            >
+              <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
+            </div>
+          </FormField>
         </div>
-      </FormField>
+      </div>
       {error ? <div className="error">{error}</div> : null}
-      <Button type="submit" disabled={!stripe || submitting}>
-        {submitting ? "Processing..." : "Add/Update Card"}
-      </Button>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button type="submit" disabled={!stripe || submitting} className="w-full sm:w-auto">
+          {submitting ? "Processing..." : "Add/Update Card"}
+        </Button>
+      </div>
     </form>
   );
 };
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "ÔÇö";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "ÔÇö";
   return date.toLocaleString();
 };
 
@@ -356,267 +362,283 @@ const BillingPage = () => {
     }
     return null;
   })();
+  const statusBadgeClass = subscription?.status === "ACTIVE"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : subscription?.status === "PAST_DUE" || subscription?.status === "CANCELED"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-5">
-      <Card style={{ maxWidth: "640px" }}>
-        <SectionHeader
-          title="Billing"
-          subtitle="Manage your subscription and payment methods."
-        />
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto w-full max-w-6xl">
+        <div className="mb-4">
+          <SectionHeader
+            title="Billing"
+            subtitle="Manage your subscription and payment methods."
+          />
+        </div>
 
         {loading ? <p>Loading status...</p> : null}
         {error ? <div className="error">{error}</div> : null}
 
-        {!loading && subscription ? (
-          <div style={{ marginBottom: "16px" }}>
-            <div className="row">
-              <strong>Plan</strong>
-              <span>{subscription.plan || "—"}</span>
-            </div>
-            <div className="row">
-              <strong>Status</strong>
-              <span>{subscription.status || "—"}</span>
-            </div>
-            <div className="row">
-              <strong>Provider</strong>
-              <span>{status?.billingProvider || "�"}</span>
-            </div>
-            {statusMessage ? (
-              <div
-                className={
-                  subscription.status === "PAST_DUE" || subscription.status === "CANCELED"
-                    ? "error"
-                    : "muted"
-                }
-              >
-                {statusMessage}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <Card className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm lg:col-span-6">
+            {!loading && subscription ? (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Plan</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.plan || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Status</div>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClass}`}>
+                      {subscription.status || "—"}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Provider</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{status?.billingProvider || "—"}</div>
+                </div>
+                {subscription.status === "TRIALING" && subscription.trialEnd ? (
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Trial ends</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatDate(subscription.trialEnd)}</div>
+                  </div>
+                ) : null}
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Past due at</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatDate(subscription.pastDueAt)}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Stripe subscription</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.stripeSubscriptionId || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Vipps agreement</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementId || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Vipps status</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementStatus || "—"}</div>
+                </div>
+                {statusMessage ? (
+                  <div className="sm:col-span-2 text-sm text-slate-600">
+                    {statusMessage}
+                  </div>
+                ) : null}
               </div>
             ) : null}
-            {subscription.status === "TRIALING" && subscription.trialEnd ? (
-              <div className="row">
-                <strong>Trial ends</strong>
-                <span>{formatDate(subscription.trialEnd)}</span>
-              </div>
-            ) : null}
-            <div className="row">
-              <strong>Past due at</strong>
-              <span>{formatDate(subscription.pastDueAt)}</span>
-            </div>
-            <div className="row">
-              <strong>Stripe subscription</strong>
-              <span>{subscription.stripeSubscriptionId || "—"}</span>
-            </div>
-            <div className="row">
-              <strong>Vipps agreement</strong>
-              <span>{subscription.vippsAgreementId || "—"}</span>
-            </div>
-            <div className="row">
-              <strong>Vipps status</strong>
-              <span>{subscription.vippsAgreementStatus || "—"}</span>
-            </div>
-          </div>
-        ) : null}
+          </Card>
 
-        <FormField label="Plan">
-          <select
-            value={plan}
-            onChange={(event) => setPlan(event.target.value)}
-            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #d1d5db" }}
-          >
-            <option value="BASIC">Basic</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="PRO">Pro</option>
-          </select>
-        </FormField>
-
-        <div style={{ marginBottom: "20px" }}>
-          <h3 style={{ marginBottom: "8px" }}>Card</h3>
-          {!stripeReady ? (
-            <p className="muted">Stripe is not configured for this environment.</p>
-          ) : (
-            <>
-              <Elements stripe={stripePromise}>
-                <StripeCardSetupForm plan={plan} companySlug={slug} onSuccess={loadStatus} />
-              </Elements>
-              {stripePortalError ? <div className="error">{stripePortalError}</div> : null}
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={handleStripePortal}
-                disabled={stripePortalBusy}
-                style={{ marginTop: "10px" }}
-              >
-                {stripePortalBusy ? "Opening..." : "Manage in Stripe"}
-              </Button>
-            </>
-          )}
-        </div>
-
-        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-          <h3 style={{ marginBottom: "8px" }}>Vipps</h3>
-          {vippsActiveOrPending ? (
-            <div style={{ marginBottom: "12px" }}>
-              <p className="muted">Vipps is connected.</p>
-              <div className="row">
-                <strong>Agreement ID</strong>
-                <span>{subscription?.vippsAgreementId || "—"}</span>
-              </div>
-              <div className="row">
-                <strong>Status</strong>
-                <span>{subscription?.vippsAgreementStatus || "—"}</span>
-              </div>
-              {vippsError ? <div className="error">{vippsError}</div> : null}
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  onClick={handleVippsSync}
-                  disabled={vippsActionBusy}
-                >
-                  Sync Vipps status
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  onClick={handleVippsChangePlan}
-                  disabled={vippsActionBusy}
-                >
-                  Change Vipps plan
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  onClick={handleVippsCancel}
-                  disabled={vippsActionBusy}
-                >
-                  Cancel Vipps
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <FormField label="Phone number (optional)">
-                <Input
-                  value={vippsPhone}
-                  onChange={(event) => setVippsPhone(event.target.value)}
-                  placeholder="+47 999 99 999"
-                />
+          <div className="grid gap-4 lg:col-span-6">
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+              <FormField label="Plan">
+                <div className="mt-1 w-full sm:w-[220px]">
+                  <select
+                    value={plan}
+                    onChange={(event) => setPlan(event.target.value)}
+                    style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #d1d5db" }}
+                  >
+                    <option value="BASIC">Basic</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="PRO">Pro</option>
+                  </select>
+                </div>
               </FormField>
-              {vippsError ? <div className="error">{vippsError}</div> : null}
-              <Button type="button" onClick={handleVipps} disabled={vippsBusy}>
-                {vippsBusy ? "Redirecting..." : "Pay with Vipps"}
-              </Button>
-            </>
-          )}
 
-          {vippsExists ? (
-            <div style={{ marginTop: "16px" }}>
-              <h4 style={{ marginBottom: "8px" }}>Recent charges</h4>
-              <ListState
-                loading={vippsChargesLoading}
-                hasItems={vippsCharges.length > 0}
-                emptyTitle="No charges"
-                emptyMessage="No Vipps charges yet."
-                errorMessage={vippsChargesError}
-              >
-                <TableWrap>
-                  <table className="min-w-[700px] w-full" style={{ borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", padding: "6px 8px" }}>Due date</th>
-                        <th style={{ textAlign: "left", padding: "6px 8px" }}>Amount</th>
-                        <th style={{ textAlign: "left", padding: "6px 8px" }}>Status</th>
-                        <th style={{ textAlign: "left", padding: "6px 8px" }}>Charge</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vippsCharges.map((charge) => (
-                        <tr key={charge.id}>
-                          <td style={{ padding: "6px 8px" }}>{formatDate(charge.dueDate)}</td>
-                          <td style={{ padding: "6px 8px" }}>
-                            {charge.amount} {charge.currency}
-                          </td>
-                          <td style={{ padding: "6px 8px" }}>{charge.status}</td>
-                          <td style={{ padding: "6px 8px" }}>
-                            {charge.chargeId || charge.externalId}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </TableWrap>
-              </ListState>
-            </div>
-          ) : null}
+              <div className="mt-6 border-t border-slate-200 pt-4">
+                <h3 className="mb-2">Card</h3>
+                {!stripeReady ? (
+                  <p className="muted">Stripe is not configured for this environment.</p>
+                ) : (
+                  <>
+                    <Elements stripe={stripePromise}>
+                      <StripeCardSetupForm plan={plan} companySlug={slug} onSuccess={loadStatus} />
+                    </Elements>
+                    {stripePortalError ? <div className="error">{stripePortalError}</div> : null}
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        onClick={handleStripePortal}
+                        disabled={stripePortalBusy}
+                        className="w-full sm:w-auto"
+                      >
+                        {stripePortalBusy ? "Opening..." : "Manage in Stripe"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+              <h3 className="mb-2">Vipps</h3>
+              {vippsActiveOrPending ? (
+                <div>
+                  <p className="muted">Vipps is connected.</p>
+                  <div className="row">
+                    <strong>Agreement ID</strong>
+                    <span>{subscription?.vippsAgreementId || "—"}</span>
+                  </div>
+                  <div className="row">
+                    <strong>Status</strong>
+                    <span>{subscription?.vippsAgreementStatus || "—"}</span>
+                  </div>
+                  {vippsError ? <div className="error">{vippsError}</div> : null}
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={handleVippsSync}
+                      disabled={vippsActionBusy}
+                    >
+                      Sync Vipps status
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={handleVippsChangePlan}
+                      disabled={vippsActionBusy}
+                    >
+                      Change Vipps plan
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={handleVippsCancel}
+                      disabled={vippsActionBusy}
+                    >
+                      Cancel Vipps
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <FormField label="Phone number (optional)">
+                    <Input
+                      value={vippsPhone}
+                      onChange={(event) => setVippsPhone(event.target.value)}
+                      placeholder="+47 999 99 999"
+                    />
+                  </FormField>
+                  {vippsError ? <div className="error">{vippsError}</div> : null}
+                  <Button type="button" onClick={handleVipps} disabled={vippsBusy}>
+                    {vippsBusy ? "Redirecting..." : "Pay with Vipps"}
+                  </Button>
+                </>
+              )}
+
+              {vippsExists ? (
+                <div style={{ marginTop: "16px" }}>
+                  <h4 style={{ marginBottom: "8px" }}>Recent charges</h4>
+                  <ListState
+                    loading={vippsChargesLoading}
+                    hasItems={vippsCharges.length > 0}
+                    emptyTitle="No charges"
+                    emptyMessage="No Vipps charges yet."
+                    errorMessage={vippsChargesError}
+                  >
+                    <TableWrap>
+                      <table className="min-w-[700px] w-full" style={{ borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: "left", padding: "6px 8px" }}>Due date</th>
+                            <th style={{ textAlign: "left", padding: "6px 8px" }}>Amount</th>
+                            <th style={{ textAlign: "left", padding: "6px 8px" }}>Status</th>
+                            <th style={{ textAlign: "left", padding: "6px 8px" }}>Charge</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vippsCharges.map((charge) => (
+                            <tr key={charge.id}>
+                              <td style={{ padding: "6px 8px" }}>{formatDate(charge.dueDate)}</td>
+                              <td style={{ padding: "6px 8px" }}>
+                                {charge.amount} {charge.currency}
+                              </td>
+                              <td style={{ padding: "6px 8px" }}>{charge.status}</td>
+                              <td style={{ padding: "6px 8px" }}>
+                                {charge.chargeId || charge.externalId}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </TableWrap>
+                  </ListState>
+                </div>
+              ) : null}
+
+              {import.meta.env.MODE !== "production" && vippsActiveOrPending ? (
+                <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "16px", marginTop: "16px" }}>
+                  <h3 style={{ marginBottom: "8px" }}>Developer tools</h3>
+                  {vippsTestMessage ? <div className="muted">{vippsTestMessage}</div> : null}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={handleVippsTestCharge}
+                    disabled={vippsTestBusy}
+                    style={{ marginTop: "8px" }}
+                  >
+                    {vippsTestBusy ? "Creating..." : "Create Vipps test charge (due in 2 days)"}
+                  </Button>
+                </div>
+              ) : null}
+              {import.meta.env.DEV ? (
+                <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "16px" }}>
+                  <h3 style={{ marginBottom: "8px" }}>DEV Tools</h3>
+                  {devError ? <div className="error">{devError}</div> : null}
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      disabled={devBusy}
+                      onClick={() => handleDevAction("reset-trial")}
+                    >
+                      Reset trial
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      disabled={devBusy}
+                      onClick={() => handleDevAction("activate")}
+                    >
+                      Activate
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      disabled={devBusy}
+                      onClick={() => handleDevAction("past-due")}
+                    >
+                      Past due
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      disabled={devBusy}
+                      onClick={() => handleDevAction("cancel")}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+          </div>
         </div>
-
-
-        {import.meta.env.MODE !== "production" && vippsActiveOrPending ? (
-          <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "16px", marginTop: "16px" }}>
-            <h3 style={{ marginBottom: "8px" }}>Developer tools</h3>
-            {vippsTestMessage ? <div className="muted">{vippsTestMessage}</div> : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              onClick={handleVippsTestCharge}
-              disabled={vippsTestBusy}
-              style={{ marginTop: "8px" }}
-            >
-              {vippsTestBusy ? "Creating..." : "Create Vipps test charge (due in 2 days)"}
-            </Button>
-          </div>
-        ) : null}
-        {import.meta.env.DEV ? (
-          <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "16px" }}>
-            <h3 style={{ marginBottom: "8px" }}>DEV Tools</h3>
-            {devError ? <div className="error">{devError}</div> : null}
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={devBusy}
-                onClick={() => handleDevAction("reset-trial")}
-              >
-                Reset trial
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={devBusy}
-                onClick={() => handleDevAction("activate")}
-              >
-                Activate
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={devBusy}
-                onClick={() => handleDevAction("past-due")}
-              >
-                Past due
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={devBusy}
-                onClick={() => handleDevAction("cancel")}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Card>
+      </div>
     </div>
   );
 };

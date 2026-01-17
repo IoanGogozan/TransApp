@@ -1,15 +1,11 @@
 ﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/http";
 import Button from "../../components/ui/Button";
-import Card from "../../components/ui/Card";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import ListState from "../../components/ui/ListState";
-import SectionHeader from "../../components/ui/SectionHeader";
-import ModalShell from "../../components/ui/ModalShell";
 import TableWrap from "../../components/TableWrap";
 import { CustomerAdmin, createCustomer, listCustomers, updateCustomer } from "../../api/customers";
-import "./CustomersPage.css";
 
 const emptyForm = {
   name: "",
@@ -174,55 +170,32 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="customers-page">
-      <style>
-        {`
-          .customers-page {
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 20px;
-          }
-          .customers-page .customers-toolbar {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-          }
-          .customers-page .customers-table-wrap {
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-          }
-        `}
-      </style>
-      <div className="customers-container">
-        <Card className="customers-toolbar">
-          <div className="customers-toolbar-row">
-            <div className="customers-header">
-              <SectionHeader
-                title="Customers"
-                subtitle="Manage customer details and activation status."
-              />
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto grid w-full max-w-6xl gap-4">
+        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Customers</h1>
+            <p className="mt-1 text-sm text-slate-600">Manage customer details and activation status.</p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end sm:justify-end lg:w-auto">
+            <div className="w-full sm:w-[340px]">
+              <FormField label="Search" htmlFor="customers-search-input">
+                <Input
+                  id="customers-search-input"
+                  type="text"
+                  placeholder="Name, org nr, email, phone"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </FormField>
             </div>
-            <div className="customers-toolbar-actions customers-header-actions">
-              <div className="customers-search">
-                <FormField label="Search" htmlFor="customers-search-input">
-                  <Input
-                    id="customers-search-input"
-                    type="text"
-                    placeholder="Name, org nr, email, phone"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </FormField>
-              </div>
-              <Button variant="primary" size="sm" onClick={openCreate} disabled={loading}>
+            <div className="shrink-0">
+              <Button variant="primary" size="sm" className="w-full sm:w-auto" onClick={openCreate} disabled={loading}>
                 Add customer
               </Button>
             </div>
           </div>
-        </Card>
+        </div>
 
         {successMessage && <div className="success">{successMessage}</div>}
 
@@ -233,42 +206,59 @@ const CustomersPage = () => {
           emptyMessage="No customers yet."
           errorMessage={error}
         >
-          <div className="customers-table-desktop">
-            <TableWrap className="customers-card-container customers-table-wrap">
-              <table className="customers-table min-w-[900px] w-full">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Org nr</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Active</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCustomers.map((customer) => {
-                    const isUpdating = updatingId === customer.id;
-                    const isActive = Boolean(customer.active);
-                    return (
-                      <tr key={customer.id} className={isActive ? "" : "customers-row--inactive"}>
-                        <td>{displayValue(customer.name)}</td>
-                        <td>{displayValue(customer.orgNumber)}</td>
-                        <td className="customers-truncate">{displayValue(customer.email)}</td>
-                        <td>{displayValue(customer.phone)}</td>
-                        <td className="customers-truncate">{displayValue(customer.address)}</td>
-                        <td>
-                          <span className={`customers-status ${isActive ? "" : "inactive"}`}>
-                            {isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="customers-actions">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openEdit(customer)}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-[900px] w-full border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Name
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Org nr
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Email
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Phone
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Address
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Active
+                  </th>
+                  <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.map((customer) => {
+                  const isUpdating = updatingId === customer.id;
+                  const isActive = Boolean(customer.active);
+                  return (
+                    <tr key={customer.id} className={`odd:bg-white even:bg-slate-50/50 ${isActive ? "" : "customers-row--inactive"}`}>
+                      <td className="border-b border-slate-100 px-3 py-2 text-sm text-slate-800">{displayValue(customer.name)}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-sm text-slate-800">{displayValue(customer.orgNumber)}</td>
+                      <td className="customers-truncate border-b border-slate-100 px-3 py-2 text-sm text-slate-800">
+                        {displayValue(customer.email)}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-sm text-slate-800">{displayValue(customer.phone)}</td>
+                      <td className="customers-truncate border-b border-slate-100 px-3 py-2 text-sm text-slate-800">
+                        {displayValue(customer.address)}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-center text-sm text-slate-800">
+                        <span className={`customers-status ${isActive ? "" : "inactive"}`}>
+                          {isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right text-sm text-slate-800">
+                        <div className="inline-flex gap-2 justify-end">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openEdit(customer)}
                               disabled={isUpdating}
                             >
                               Edit
@@ -280,66 +270,62 @@ const CustomersPage = () => {
                               disabled={isUpdating}
                             >
                               {isActive ? "Deactivate" : "Activate"}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableWrap>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          <div className="customers-cards-mobile">
+          <div className="mt-4 grid gap-3 md:hidden">
             {filteredCustomers.map((customer) => {
               const isUpdating = updatingId === customer.id;
               const isActive = Boolean(customer.active);
               return (
-                <div key={customer.id} className={`customers-card ${isActive ? "" : "customers-row--inactive"}`}>
-                  <h3>{displayValue(customer.name)}</h3>
-                  <div className="customers-card-row">
-                    <span>Org nr</span>
-                    <strong>{displayValue(customer.orgNumber)}</strong>
-                  </div>
-                  <div className="customers-card-row">
-                    <span>Email</span>
-                    <strong>{displayValue(customer.email)}</strong>
-                  </div>
-                  <div className="customers-card-row">
-                    <span>Phone</span>
-                    <strong>{displayValue(customer.phone)}</strong>
-                  </div>
-                  <div className="customers-card-row">
-                    <span>Address</span>
-                    <strong>{displayValue(customer.address)}</strong>
-                  </div>
-                  <div className="customers-card-row">
-                    <span>Sort</span>
-                    <strong>{Number.isFinite(customer.sortOrder) ? customer.sortOrder : 0}</strong>
-                  </div>
-                  <div className="customers-card-actions">
+                <div key={customer.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-sm font-semibold text-slate-900">{displayValue(customer.name)}</span>
                     <span className={`customers-status ${isActive ? "" : "inactive"}`}>
                       {isActive ? "Active" : "Inactive"}
                     </span>
-                    <div className="customers-actions">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openEdit(customer)}
-                        disabled={isUpdating}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleToggleActive(customer)}
-                        disabled={isUpdating}
-                      >
-                        {isActive ? "Deactivate" : "Activate"}
-                      </Button>
+                  </div>
+                  <dl className="mt-3 grid gap-2 text-sm text-slate-800">
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500">Org nr</dt>
+                      <dd>{displayValue(customer.orgNumber)}</dd>
                     </div>
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500">Email</dt>
+                      <dd>{displayValue(customer.email)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500">Phone</dt>
+                      <dd>{displayValue(customer.phone)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500">Address</dt>
+                      <dd>{displayValue(customer.address)}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openEdit(customer)}
+                      disabled={isUpdating}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleToggleActive(customer)}
+                      disabled={isUpdating}
+                    >
+                      {isActive ? "Deactivate" : "Activate"}
+                    </Button>
                   </div>
                 </div>
               );
@@ -349,31 +335,30 @@ const CustomersPage = () => {
       </div>
 
       {modalOpen ? (
-        <div role="presentation" onClick={closeModal} className="customers-modal-overlay">
+        <div
+          role="presentation"
+          onClick={closeModal}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+        >
           <div
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
-            className="customers-modal"
+            className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
           >
-            <form onSubmit={handleSubmit}>
-              <ModalShell
-                title={editingCustomer ? "Edit customer" : "Add customer"}
-                onClose={closeModal}
-                footer={(
-                  <>
-                    <Button variant="secondary" size="sm" type="button" onClick={closeModal} disabled={saving}>
-                      Cancel
-                    </Button>
-                    <Button variant="primary" size="sm" type="submit" disabled={saving}>
-                      {saving ? "Saving..." : editingCustomer ? "Save" : "Create"}
-                    </Button>
-                  </>
-                )}
-              >
-                {modalError && <div className="error customers-modal-error">{modalError}</div>}
+            <form onSubmit={handleSubmit} className="flex h-full flex-col">
+              <div className="flex items-start justify-between gap-4 px-4 pt-4 sm:px-6 sm:pt-6">
+                <div className="text-lg font-semibold text-slate-900">
+                  {editingCustomer ? "Edit customer" : "Add customer"}
+                </div>
+                <Button variant="ghost" size="sm" type="button" onClick={closeModal}>
+                  Close
+                </Button>
+              </div>
+              {modalError ? <div className="error px-4 pt-3 sm:px-6">{modalError}</div> : null}
 
-                <div className="customers-modal-fields">
+              <div className="flex-1 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField label="Name *">
                     <Input
                       value={form.name}
@@ -405,25 +390,40 @@ const CustomersPage = () => {
                       disabled={saving}
                     />
                   </FormField>
-                  <FormField label="Address">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700" htmlFor="customer-address">
+                      Address
+                    </label>
                     <textarea
-                      rows={3}
+                      id="customer-address"
+                      rows={4}
+                      className="mt-1 min-h-[110px] w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                       value={form.address}
                       onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
                       disabled={saving}
                     />
-                  </FormField>
-                  <label className="field customers-field-inline">
-                    <input
-                      type="checkbox"
-                      checked={form.active}
-                      onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-                      disabled={saving}
-                    />
-                    <span>Active</span>
-                  </label>
+                  </div>
                 </div>
-              </ModalShell>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                    checked={form.active}
+                    onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+                    disabled={saving}
+                  />
+                  <span className="text-sm text-slate-700">Active</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
+                <Button variant="secondary" size="sm" type="button" onClick={closeModal} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit" disabled={saving}>
+                  {saving ? "Saving..." : editingCustomer ? "Save" : "Create"}
+                </Button>
+              </div>
             </form>
           </div>
         </div>

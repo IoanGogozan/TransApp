@@ -252,29 +252,9 @@ const DefectsListPage = () => {
   };
 
   return (
-    <div className="defects-page">
+    <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
       <style>
         {`
-          .defects-page {
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 20px;
-          }
-          .defects-container {
-            margin: 0 auto;
-            max-width: 1280px;
-            padding: 32px 24px;
-          }
-          .defects-topcard {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-            margin-bottom: 20px;
-          }
           .defects-table-wrap {
             border: 1px solid #e5e7eb;
             border-radius: 12px;
@@ -314,24 +294,6 @@ const DefectsListPage = () => {
           .defects-table tbody td:last-child {
             text-align: center;
           }
-          .defects-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-end;
-          }
-          .defects-field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 180px;
-          }
-          .defects-actions {
-            margin-left: auto;
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-          }
           .defects-overdue {
             align-self: flex-end;
             font-size: 13px;
@@ -339,86 +301,89 @@ const DefectsListPage = () => {
             color: #b91c1c;
             cursor: pointer;
           }
-          .defects-clear {
-            color: #2563eb;
-            font-size: 13px;
-            text-decoration: underline;
-            cursor: pointer;
-          }
         `}
       </style>
-      <div className="defects-container">
-        <Card className="defects-topcard">
-          <SectionHeader title="Defects" />
-          <div className="defects-filters">
-            <div className="defects-field">
-              <FormField label="From" htmlFor="from">
-                <Input
-                  id="from"
-                  type="date"
-                  value={filterFrom}
-                  onChange={(event) => setFilterFrom(event.target.value)}
-                />
-              </FormField>
+      <div className="mx-auto w-full max-w-6xl">
+        <Card className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <SectionHeader title="Defects" />
             </div>
-            <div className="defects-field">
-              <FormField label="To" htmlFor="to">
-                <Input
-                  id="to"
-                  type="date"
-                  value={filterTo}
-                  onChange={(event) => setFilterTo(event.target.value)}
-                />
-              </FormField>
+            <div className="flex justify-start sm:justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                onClick={resetFilters}
+              >
+                Clear filters
+              </Button>
             </div>
-            <div className="defects-field">
-              <FormField label="View" htmlFor="view">
-                <select
-                  id="view"
-                  value={filterView}
-                  onChange={(event) => setFilterView(event.target.value as (typeof viewOptions)[number])}
-                >
-                  {viewOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt === "ALL" ? "All" : opt}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </div>
-            <div className="defects-field">
-              <FormField label="Vehicle" htmlFor="vehicle">
-                <select
-                  id="vehicle"
-                  value={filterVehicleId}
-                  onChange={(event) => setFilterVehicleId(event.target.value)}
-                >
-                  <option value="ALL">All</option>
-                  {vehicleOptions.map((option) => (
-                    <option key={option.id} value={String(option.id)}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </div>
-            <div className="defects-field">
-              <FormField label="Reported by" htmlFor="reportedBy">
-                <select
-                  id="reportedBy"
-                  value={filterReporterId}
-                  onChange={(event) => setFilterReporterId(event.target.value)}
-                >
-                  <option value="ALL">All</option>
-                  {reporterOptions.map((option) => (
-                    <option key={option.id} value={String(option.id)}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </div>
-            {overdueCount > 0 ? (
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4 items-end">
+            <FormField label="From" htmlFor="from">
+              <Input
+                id="from"
+                type="date"
+                value={filterFrom}
+                onChange={(event) => setFilterFrom(event.target.value)}
+              />
+            </FormField>
+            <FormField label="To" htmlFor="to">
+              <Input
+                id="to"
+                type="date"
+                value={filterTo}
+                onChange={(event) => setFilterTo(event.target.value)}
+              />
+            </FormField>
+            <FormField label="View" htmlFor="view">
+              <select
+                id="view"
+                className="w-full"
+                value={filterView}
+                onChange={(event) => setFilterView(event.target.value as (typeof viewOptions)[number])}
+              >
+                {viewOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "ALL" ? "All" : opt}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Vehicle" htmlFor="vehicle">
+              <select
+                id="vehicle"
+                className="w-full"
+                value={filterVehicleId}
+                onChange={(event) => setFilterVehicleId(event.target.value)}
+              >
+                <option value="ALL">All</option>
+                {vehicleOptions.map((option) => (
+                  <option key={option.id} value={String(option.id)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Reported by" htmlFor="reportedBy">
+              <select
+                id="reportedBy"
+                className="w-full"
+                value={filterReporterId}
+                onChange={(event) => setFilterReporterId(event.target.value)}
+              >
+                <option value="ALL">All</option>
+                {reporterOptions.map((option) => (
+                  <option key={option.id} value={String(option.id)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+          {overdueCount > 0 ? (
+            <div className="mt-3 flex justify-start">
               <Button
                 variant="ghost"
                 size="sm"
@@ -431,13 +396,8 @@ const DefectsListPage = () => {
               >
                 Overdue: {overdueCount}
               </Button>
-            ) : null}
-            <div className="defects-actions">
-              <Button variant="ghost" size="sm" className="defects-clear" onClick={resetFilters}>
-                Clear filters
-              </Button>
             </div>
-          </div>
+          ) : null}
         </Card>
 
         <ListState
@@ -447,127 +407,235 @@ const DefectsListPage = () => {
           emptyMessage="No defects found for the current filters."
           errorMessage={error}
         >
-          <TableWrap className="defects-table-wrap">
-            <table className="table defects-table min-w-[900px] w-full">
-              <thead>
-                <tr>
-                  <th>Photo</th>
-                  <th>Category/Title</th>
-                  <th>Vehicle</th>
-                  <th>Reported by</th>
-                  <th>Created</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((d) => {
-                  const reporterFallback = usersById[Number(d.reportedByUserId)];
-                  const reportedLabel =
-                    d.reportedByUser?.phone ||
-                    d.reportedByUser?.username ||
-                    d.reportedByUser?.email ||
-                    d.reportedByUser?.id ||
-                    reporterFallback?.phone ||
-                    reporterFallback?.username ||
-                    reporterFallback?.email ||
-                    reporterFallback?.id ||
-                    d.reportedByUserId ||
-                    "-";
-                  const title = d.source === "CHECKLIST" ? getDefectCategoryLabel(d) : d.title || "(No title)";
-                  const regNumber = d.vehicle?.regNumber || vehiclesById[Number(d.vehicleId)]?.regNumber;
-                  const vehicleName = d.vehicle?.name || vehiclesById[Number(d.vehicleId)]?.name;
+          <div className="mt-4 hidden md:block overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <TableWrap className="defects-table-wrap">
+              <table className="min-w-[1000px] w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Photo
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Category/Title
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Vehicle
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Reported by
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Created
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Status
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((d) => {
+                    const reporterFallback = usersById[Number(d.reportedByUserId)];
+                    const reportedLabel =
+                      d.reportedByUser?.phone ||
+                      d.reportedByUser?.username ||
+                      d.reportedByUser?.email ||
+                      d.reportedByUser?.id ||
+                      reporterFallback?.phone ||
+                      reporterFallback?.username ||
+                      reporterFallback?.email ||
+                      reporterFallback?.id ||
+                      d.reportedByUserId ||
+                      "-";
+                    const title = d.source === "CHECKLIST" ? getDefectCategoryLabel(d) : d.title || "(No title)";
+                    const regNumber = d.vehicle?.regNumber || vehiclesById[Number(d.vehicleId)]?.regNumber;
+                    const vehicleName = d.vehicle?.name || vehiclesById[Number(d.vehicleId)]?.name;
                   const vehicleLabel = regNumber
                     ? `${regNumber}${vehicleName ? ` - ${vehicleName}` : ""}`
                     : d.vehicleId
                       ? `Vehicle ID ${d.vehicleId}`
                       : "-";
+                  const [vehiclePrimary, ...vehicleRest] = vehicleLabel.split(" - ");
+                  const vehicleSecondary = vehicleRest.length ? vehicleRest.join(" - ") : "";
                   const firstAttachment = d.attachments?.[0];
                   const previewUrl = attachmentPreviewUrls[String(d.id)];
                   const previewFailed = attachmentPreviewErrors[String(d.id)];
                   const overdue = isOverdue(d.createdAt, d.status);
+                  const statusClass =
+                    d.status === "OPEN"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : d.status === "IN_PROGRESS"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-slate-50 text-slate-700";
                   return (
-                    <tr key={d.id}>
-                      <td>
+                    <tr key={d.id} className="odd:bg-white even:bg-slate-50/50">
+                      <td className="border-b border-slate-100 px-3 py-3 align-middle text-slate-800">
                         {firstAttachment && !firstAttachment.purgedAt && previewUrl && !previewFailed ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                            <button
-                              type="button"
-                              onClick={() => setPreviewDefectId(d.id)}
-                              style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer" }}
-                              aria-label="Open attachment preview"
-                            >
-                              <img
-                                src={previewUrl}
-                                width={48}
-                                height={48}
-                                className="rounded-md object-cover border"
-                                alt="attachment"
-                                onError={() => handlePreviewError(d.id)}
-                              />
-                            </button>
-                            {(() => {
-                              const title = (firstAttachment.title ?? "").trim();
-                              return title ? (
-                                <div
-                                  className="muted"
-                                  style={{
-                                    fontSize: "11px",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                    maxWidth: "72px",
-                                  }}
-                                >
-                                  {title}
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        ) : (
-                          <span className="muted">-</span>
-                        )}
-                      </td>
-                      <td>{title}</td>
-                      <td>{vehicleLabel}</td>
-                      <td>{reportedLabel}</td>
-                      <td>{formatDateTime(d.createdAt)}</td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                          <span>{d.status}</span>
-                          {overdue ? (
-                            <span
-                              style={{
-                                fontSize: "10px",
-                                fontWeight: 700,
-                                padding: "2px 6px",
-                                borderRadius: "999px",
-                                background: "#fee2e2",
-                                color: "#991b1b",
-                                border: "1px solid #fecaca",
-                              }}
-                            >
-                              OVERDUE
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDefectId(d.id)}
+                                style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer" }}
+                                aria-label="Open attachment preview"
+                              >
+                                <img
+                                  src={previewUrl}
+                                  width={48}
+                                  height={48}
+                                  className="h-12 w-12 rounded-lg object-cover border border-slate-200"
+                                  alt="attachment"
+                                  onError={() => handlePreviewError(d.id)}
+                                />
+                              </button>
+                              {(() => {
+                                const title = (firstAttachment.title ?? "").trim();
+                                return title ? (
+                                  <div
+                                    className="muted"
+                                    style={{
+                                      fontSize: "11px",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                      maxWidth: "72px",
+                                    }}
+                                  >
+                                    {title}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          ) : (
+                            <span className="muted">-</span>
+                          )}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-slate-800">
+                          <div className="text-sm font-semibold text-slate-900">{title}</div>
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-slate-800">
+                          {vehicleSecondary ? (
+                            <div className="text-sm text-slate-800">
+                              <span className="font-medium text-slate-900">{vehiclePrimary}</span>
+                              <span className="text-slate-700">{" - "}{vehicleSecondary}</span>
+                            </div>
+                          ) : (
+                            <div className="text-sm font-medium text-slate-900">{vehicleLabel}</div>
+                          )}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-sm text-slate-600">
+                          {reportedLabel}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-sm text-slate-600">
+                          {formatDateTime(d.createdAt)}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-slate-800">
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass}`}>
+                              {d.status}
                             </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => navigate(tenantPath(slug, `/admin/defects/${d.id}`))}
-                        >
-                          Manage
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableWrap>
+                            {overdue ? (
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  padding: "2px 6px",
+                                  borderRadius: "999px",
+                                  background: "#fee2e2",
+                                  color: "#991b1b",
+                                  border: "1px solid #fecaca",
+                                }}
+                              >
+                                OVERDUE
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-3 align-middle text-right text-slate-800">
+                          <div className="flex justify-end">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => navigate(tenantPath(slug, `/admin/defects/${d.id}`))}
+                            >
+                              Manage
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableWrap>
+          </div>
+          <div className="mt-4 grid gap-3 md:hidden">
+            {filteredItems.map((d) => {
+              const reporterFallback = usersById[Number(d.reportedByUserId)];
+              const reportedLabel =
+                d.reportedByUser?.phone ||
+                d.reportedByUser?.username ||
+                d.reportedByUser?.email ||
+                d.reportedByUser?.id ||
+                reporterFallback?.phone ||
+                reporterFallback?.username ||
+                reporterFallback?.email ||
+                reporterFallback?.id ||
+                d.reportedByUserId ||
+                "-";
+              const title = d.source === "CHECKLIST" ? getDefectCategoryLabel(d) : d.title || "(No title)";
+              const regNumber = d.vehicle?.regNumber || vehiclesById[Number(d.vehicleId)]?.regNumber;
+              const vehicleName = d.vehicle?.name || vehiclesById[Number(d.vehicleId)]?.name;
+              const vehicleLabel = regNumber
+                ? `${regNumber}${vehicleName ? ` - ${vehicleName}` : ""}`
+                : d.vehicleId
+                  ? `Vehicle ID ${d.vehicleId}`
+                  : "-";
+              const firstAttachment = d.attachments?.[0];
+              const previewUrl = attachmentPreviewUrls[String(d.id)];
+              const previewFailed = attachmentPreviewErrors[String(d.id)];
+              const statusClass =
+                d.status === "OPEN"
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : d.status === "IN_PROGRESS"
+                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                    : "border-slate-200 bg-slate-50 text-slate-700";
+              return (
+                <div key={d.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-sm font-semibold text-slate-900">{title}</span>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass}`}>
+                      {d.status}
+                    </span>
+                  </div>
+                  {firstAttachment && !firstAttachment.purgedAt && previewUrl && !previewFailed ? (
+                    <img
+                      src={previewUrl}
+                      alt="attachment"
+                      className="mt-3 h-16 w-16 rounded-lg object-cover border border-slate-200"
+                      onError={() => handlePreviewError(d.id)}
+                    />
+                  ) : null}
+                  <div className="mt-3 grid gap-1 text-sm text-slate-700">
+                    <div>Vehicle: {vehicleLabel}</div>
+                    <div>Reported by: {reportedLabel}</div>
+                    <div>Created: {formatDateTime(d.createdAt)}</div>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(tenantPath(slug, `/admin/defects/${d.id}`))}
+                    >
+                      Manage
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </ListState>
         {error ? (
           <div style={{ marginTop: "12px" }}>
