@@ -253,56 +253,6 @@ const DefectsListPage = () => {
 
   return (
     <div className="min-h-screen w-full px-3 py-4 sm:px-6 sm:py-6">
-      <style>
-        {`
-          .defects-table-wrap {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-          }
-          .defects-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-          }
-          .defects-table thead th {
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            z-index: 1;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            text-align: left;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-          }
-          .defects-table tbody td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-            text-align: left;
-            font-size: 13px;
-          }
-          .defects-table tbody tr:nth-child(even) {
-            background: #eef2ff;
-          }
-          .defects-table tbody tr:hover {
-            background: #f8fafc;
-          }
-          .defects-table thead th:last-child,
-          .defects-table tbody td:last-child {
-            text-align: center;
-          }
-          .defects-overdue {
-            align-self: flex-end;
-            font-size: 13px;
-            font-weight: 600;
-            color: #b91c1c;
-            cursor: pointer;
-          }
-        `}
-      </style>
       <div className="mx-auto w-full max-w-6xl">
         <Card className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -387,7 +337,7 @@ const DefectsListPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="defects-overdue"
+                className="text-sm font-semibold text-red-600 hover:text-red-700"
                 onClick={() => {
                   setFilterFrom("2000-01-01");
                   setFilterTo(defaultTo);
@@ -408,7 +358,7 @@ const DefectsListPage = () => {
           errorMessage={error}
         >
           <div className="mt-4 hidden md:block overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <TableWrap className="defects-table-wrap">
+            <TableWrap>
               <table className="min-w-[1000px] w-full text-sm">
                 <thead>
                   <tr>

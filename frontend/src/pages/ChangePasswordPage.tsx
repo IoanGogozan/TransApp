@@ -49,8 +49,8 @@ const ChangePasswordPage = () => {
     <div className="min-h-screen flex items-start justify-center p-5">
       <Card className="w-full max-w-md">
         <SectionHeader title="Change password" />
-        <p className="muted">Your account requires a new password before continuing.</p>
-        {error && <div className="error">{error}</div>}
+        <p className="text-sm text-slate-600">Your account requires a new password before continuing.</p>
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         <form onSubmit={onSubmit}>
           <FormField label="New password" htmlFor="newPassword">
             <Input

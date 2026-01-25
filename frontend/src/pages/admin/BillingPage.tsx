@@ -480,13 +480,13 @@ const BillingPage = () => {
               {vippsActiveOrPending ? (
                 <div>
                   <p className="muted">Vipps is connected.</p>
-                  <div className="row">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <strong>Agreement ID</strong>
-                    <span>{subscription?.vippsAgreementId || "—"}</span>
+                    <span>{subscription?.vippsAgreementId || "-"}</span>
                   </div>
-                  <div className="row">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <strong>Status</strong>
-                    <span>{subscription?.vippsAgreementStatus || "—"}</span>
+                    <span>{subscription?.vippsAgreementStatus || "-"}</span>
                   </div>
                   {vippsError ? <div className="error">{vippsError}</div> : null}
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>

@@ -83,6 +83,12 @@ const InfoIcon = () => (
   </svg>
 );
 
+const CalendarIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+    <path d="M6 2.5a.75.75 0 0 1 .75.75V4h6.5v-.75a.75.75 0 0 1 1.5 0V4H16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1.75v-.75A.75.75 0 0 1 6 2.5Zm9.5 6.5H4v6a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-6Z" />
+  </svg>
+);
+
 const IconButton = ({ label, title, disabled, onClick, children }: {
   label: string;
   title: string;
@@ -186,6 +192,7 @@ const DriverTimesheetTodayPage = () => {
   const [durationHours, setDurationHours] = useState(initialHours);
   const [durationMinutes, setDurationMinutes] = useState(initialMinutes);
   const dayStripRef = useRef<HTMLDivElement | null>(null);
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { companySlug } = useParams();
@@ -228,6 +235,10 @@ const DriverTimesheetTodayPage = () => {
     BREAK: "Break",
     AVAILABILITY: "Availability",
   };
+  const visibleDays = useMemo(() => {
+    const start = addDays(anchorDate, -13);
+    return Array.from({ length: 14 }, (_, idx) => addDays(start, idx));
+  }, [anchorDate]);
 
   const buildTimesheetParams = () => {
     const params = new URLSearchParams(searchParams);
@@ -542,13 +553,6 @@ const DriverTimesheetTodayPage = () => {
   }, [selectedDate, selectedVehicleId, activityType]);
 
   useEffect(() => {
-    if (!isTodaySelected) return;
-    const container = dayStripRef.current;
-    if (!container) return;
-    container.scrollLeft = container.scrollWidth;
-  }, [isTodaySelected]);
-
-  useEffect(() => {
     const shouldRefresh = Boolean(location.state && (location.state as { refreshCheckIns?: boolean }).refreshCheckIns);
     if (!shouldRefresh) return;
     loadCheckInStatus(selectedVehicleId, selectedDate, activityType).finally(() => {
@@ -622,14 +626,19 @@ const DriverTimesheetTodayPage = () => {
     const totalMinutes = Object.values(totals).reduce((sum, value) => sum + value, 0);
     return { totals, totalMinutes };
   }, [entries]);
-  const visibleDays = useMemo(() => {
-    const start = addDays(anchorDate, -6);
-    return Array.from({ length: 7 }, (_, idx) => addDays(start, idx));
-  }, [anchorDate]);
+
+  useEffect(() => {
+    const container = dayStripRef.current;
+    if (!container) return;
+    const activeChip = container.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
+    if (activeChip) {
+      activeChip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedDate, visibleDays]);
 
   return (
     <div className="min-h-screen flex items-start justify-center p-5">
-      <Card>
+      <Card className="w-full max-w-full sm:max-w-2xl lg:max-w-4xl">
         <SectionHeader
           title="Timesheet"
           subtitle={formatDisplayDate(selectedDateObj)}
@@ -649,29 +658,24 @@ const DriverTimesheetTodayPage = () => {
             variant="secondary"
             size="sm"
             onClick={() => setAnchorDate((prev) => addDays(prev, -7))}
-            className="w-auto"
+            className="hidden w-auto md:inline-flex"
           >
             {"<"}
           </Button>
           <div
             ref={dayStripRef}
-            style={{
-              display: "flex",
-              flexWrap: "nowrap",
-              overflow: "hidden",
-              gap: "6px",
-              flex: 1,
-              justifyContent: "space-between",
-            }}
+            className="flex flex-1 flex-nowrap gap-2 overflow-x-auto snap-x snap-mandatory"
           >
             {visibleDays.map((d) => {
               const dateStr = formatYYYYMMDD(d);
               const { dow, dm } = formatDisplayDayChip(d);
               const isSelected = dateStr === selectedDate;
+              const isFutureDay = dateStr > todayStr;
               return (
                 <Button
                   key={dateStr}
                   type="button"
+                  data-date={dateStr}
                   style={{
                     flex: "0 0 54px",
                     width: "54px",
@@ -685,14 +689,46 @@ const DriverTimesheetTodayPage = () => {
                     borderRadius: "10px",
                     background: isSelected ? "#2563eb" : "#f3f4f6",
                     color: isSelected ? "#fff" : "#111827",
+                    opacity: isFutureDay ? 0.5 : 1,
+                    cursor: isFutureDay ? "not-allowed" : "pointer",
                   }}
-                  onClick={() => setSearchParams({ date: dateStr }, { replace: true })}
+                  className="snap-center"
+                  disabled={isFutureDay}
+                  onClick={() => setSelectedDate(dateStr)}
                 >
                   <div style={{ fontWeight: 700, fontSize: "12px" }}>{dow}</div>
                   <div style={{ fontSize: "11px" }}>{dm}</div>
                 </Button>
               );
             })}
+          </div>
+          <div className="flex items-center">
+            <IconButton
+              label="Jump to date"
+              title="Jump to date"
+              disabled={false}
+              onClick={() => {
+                const input = dateInputRef.current;
+                if (!input) return;
+                if (typeof input.showPicker === "function") {
+                  input.showPicker();
+                  return;
+                }
+                input.click();
+              }}
+            >
+              <CalendarIcon />
+            </IconButton>
+            <input
+              ref={dateInputRef}
+              type="date"
+              className="sr-only"
+              value={selectedDate}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                setSelectedDate(e.target.value);
+              }}
+            />
           </div>
           <Button
             type="button"
@@ -704,7 +740,7 @@ const DriverTimesheetTodayPage = () => {
               return next > today ? today : next;
             })}
             disabled={anchorDate >= (parseYYYYMMDD(todayStr) ?? new Date())}
-            className="w-auto"
+            className="hidden w-auto md:inline-flex"
           >
             {">"}
           </Button>
@@ -730,13 +766,25 @@ const DriverTimesheetTodayPage = () => {
           <>
             <div style={{ marginTop: "16px" }}>
               <h3 style={{ margin: 0 }}>Entries for this date</h3>
-              <ListState
-                loading={loading}
-                hasItems={entries.length > 0}
-                emptyTitle="No entries"
-                emptyMessage="No entries yet for this date."
-                errorMessage={dataError}
-              >
+              {loading || dataError ? (
+                <ListState
+                  loading={loading}
+                  hasItems={false}
+                  emptyTitle="No entries"
+                  emptyMessage="No entries yet for this date."
+                  errorMessage={dataError}
+                >
+                  <></>
+                </ListState>
+              ) : entries.length === 0 ? (
+                <Card className="mt-2 flex min-h-[120px] flex-col items-center justify-center gap-2 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <InfoIcon />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-800">No entries</div>
+                  <div className="text-sm text-slate-600">No entries yet for this date.</div>
+                </Card>
+              ) : (
                 <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
                   {entries.map((entry) => {
                     const customerName = entry.customerOption?.name || "Internal";
@@ -796,18 +844,19 @@ const DriverTimesheetTodayPage = () => {
                     );
                   })}
                 </div>
-              </ListState>
+              )}
               <div style={{ fontWeight: 700, marginTop: "10px" }}>
                 Total: {formatMinutes(activitySummary.totalMinutes)}
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginTop: "16px" }}>
-              <label className="field">
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <label className="field w-full">
                 <span>Customer</span>
                 <select
                   value={customerOptionId}
                   onChange={(e) => setCustomerOptionId(e.target.value)}
                   disabled={customersLoading || !isEditableDate || isSaving}
+                  className="w-full"
                 >
                   <option value="">Select customer</option>
                   {customers.map((customer) => (
@@ -819,12 +868,13 @@ const DriverTimesheetTodayPage = () => {
                 {customersError && <p className="error" style={{ marginTop: "6px" }}>{customersError}</p>}
               </label>
 
-              <label className="field">
+              <label className="field w-full">
                 <span>Activity</span>
                 <select
                   value={activityType}
                   onChange={(e) => setActivityType(e.target.value as WorkEntry["activityType"])}
                   disabled={!isEditableDate || isSaving}
+                  className="w-full"
                 >
                   <option value="DRIVING">Driving</option>
                   <option value="OTHER_WORK">Other work</option>
@@ -833,9 +883,14 @@ const DriverTimesheetTodayPage = () => {
                 </select>
               </label>
 
-              <label className="field">
+              <label className="field w-full">
                 <span>Route</span>
-                <select value={routeOptionId} onChange={(e) => setRouteOptionId(e.target.value)} disabled={!isEditableDate || isSaving}>
+                <select
+                  value={routeOptionId}
+                  onChange={(e) => setRouteOptionId(e.target.value)}
+                  disabled={!isEditableDate || isSaving}
+                  className="w-full"
+                >
                   <option value="">Select route</option>
                   {routes.map((route) => (
                     <option key={route.id} value={route.id}>
@@ -847,18 +902,15 @@ const DriverTimesheetTodayPage = () => {
               </label>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isTodaySelected ? "1fr 1fr" : "1fr",
-                gap: "12px",
-                alignItems: "end",
-                marginTop: "12px",
-              }}
-            >
-              <label className="field">
+            <div className="mt-3 flex flex-col gap-4 md:flex-row md:items-end">
+              <label className="field w-full md:flex-1">
                 <span>Vehicle</span>
-                <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} disabled={!isEditableDate || isSaving}>
+                <select
+                  value={vehicleId}
+                  onChange={(e) => setVehicleId(e.target.value)}
+                  disabled={!isEditableDate || isSaving}
+                  className="w-full"
+                >
                   <option value="">No vehicle</option>
                   {vehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
@@ -870,31 +922,18 @@ const DriverTimesheetTodayPage = () => {
                 {vehicles.length === 0 && (
                   <p style={{ marginTop: "6px", color: "#666" }}>No active vehicles available. Ask your admin to add vehicles.</p>
                 )}
+                <p className={checkInStatusClassName} style={{ marginTop: "6px", fontWeight: 600 }}>
+                  {checkInStatusText}
+                </p>
+                {showCheckInWarning && (
+                  <p className="muted" style={{ marginTop: "4px" }}>{checkInHelperText}</p>
+                )}
+                {checkInStatusError && (
+                  <p className="error" style={{ marginTop: "4px" }}>{checkInStatusError}</p>
+                )}
               </label>
               {isTodaySelected && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div
-                    className={checkInStatusClassName}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {hasValidCheckIn && (
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 20 20"
-                        width="14"
-                        height="14"
-                        fill="currentColor"
-                      >
-                        <path d="M7.667 13.2 4.4 9.933l-1.2 1.2 4.467 4.467 9.133-9.133-1.2-1.2-8.133 8.133Z" />
-                      </svg>
-                    )}
-                    {checkInStatusText}
-                  </div>
+                <div className="flex flex-col gap-2 md:items-start">
                   <Button
                     type="button"
                     variant="primary"
@@ -906,27 +945,23 @@ const DriverTimesheetTodayPage = () => {
                       navigate(tenantPath(companySlug, path));
                     }}
                     disabled={!hasVehicle || isSaving}
+                    className="w-full sm:w-auto"
                   >
                     Check in
                   </Button>
-                  {showCheckInWarning && (
-                    <p className="muted" style={{ margin: 0 }}>{checkInHelperText}</p>
-                  )}
-                  {checkInStatusError && (
-                    <p className="error" style={{ margin: 0 }}>{checkInStatusError}</p>
-                  )}
                 </div>
               )}
             </div>
 
             <div style={{ marginTop: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <label className="field" style={{ margin: 0 }}>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="field w-full sm:w-auto">
                   <span>Hours</span>
                   <select
                     value={durationHours}
                     onChange={(e) => setDurationHours(Number(e.target.value))}
                     disabled={!isEditableDate || isSaving}
+                    className="h-10 w-full"
                   >
                     {Array.from({ length: 25 }, (_, idx) => (
                       <option key={idx} value={idx}>
@@ -935,12 +970,13 @@ const DriverTimesheetTodayPage = () => {
                     ))}
                   </select>
                 </label>
-                <label className="field" style={{ margin: 0 }}>
+                <label className="field w-full sm:w-auto">
                   <span>Minutes</span>
                   <select
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
                     disabled={!isEditableDate || isSaving}
+                    className="h-10 w-full"
                   >
                     {[0, 15, 30, 45].map((value) => (
                       <option key={value} value={value}>
@@ -955,7 +991,7 @@ const DriverTimesheetTodayPage = () => {
                 variant="primary"
                 onClick={handleQuickCreateEntry}
                 disabled={isSaving || durationMin === 0 || !isEditableDate}
-                className="w-full mt-2"
+                className="mt-2 h-11 w-full rounded-xl bg-slate-900 px-4 text-white shadow-sm hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving ? (
                   <span style={{ display: "inline-flex", alignItems: "center" }}>

@@ -370,193 +370,9 @@ const TimesheetsAdminPage = () => {
   };
 
   return (
-    <div className="timesheets-page">
-      <style>
-        {`
-          .timesheets-page {
-            min-height: 100vh;
-            width: 100%;
-            padding: 12px;
-          }
-          @media (min-width: 640px) {
-            .timesheets-page {
-              padding: 20px;
-            }
-          }
-          .timesheets-container {
-            width: 100%;
-            margin: 0 auto;
-            max-width: 1280px;
-            padding: 0;
-          }
-          @media (min-width: 640px) {
-            .timesheets-container {
-              padding: 24px 16px;
-            }
-          }
-          .timesheets-topcard {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-            margin-bottom: 20px;
-          }
-          .quick-btn {
-            background: #f1f5f9;
-            color: #0f172a;
-            border: 1px solid #e2e8f0;
-          }
-          .quick-btn.quick-btn-active {
-            background: #2563eb;
-            color: #fff;
-            border: 1px solid #2563eb;
-          }
-          .timesheets-modal {
-            background: #fff;
-            border-radius: 16px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
-            padding: 24px;
-            max-width: 1100px;
-            width: calc(100vw - 96px);
-          }
-          .timesheets-modal-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 16px;
-          }
-          .timesheets-modal-title {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1.1;
-            margin: 0;
-          }
-          .timesheets-modal-subtitle {
-            margin-top: 6px;
-            color: #64748b;
-          }
-          .timesheets-modal-close {
-            padding: 10px 14px;
-            font-size: 14px;
-            border-radius: 12px;
-            width: auto;
-          }
-          .timesheets-modal .timesheets-modal-table {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fff;
-          }
-          .timesheets-modal .timesheets-modal-table table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-          }
-          .timesheets-modal .timesheets-modal-table.compact thead th {
-            padding: 8px 10px;
-            font-size: 11px;
-          }
-          .timesheets-modal .timesheets-modal-table.compact tbody td {
-            padding: 8px 10px;
-            font-size: 13px;
-          }
-          .timesheets-modal .timesheets-modal-table thead th {
-            background: #f9fafb;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            padding: 12px 14px;
-          }
-          .timesheets-modal .timesheets-modal-table tbody td {
-            padding: 14px;
-            border-top: 1px solid #f1f5f9;
-          }
-          @media (max-width: 640px) {
-            .timesheets-modal {
-              width: calc(100vw - 24px);
-              padding: 16px;
-            }
-            .timesheets-modal .timesheets-modal-table {
-              border-radius: 10px;
-            }
-          }
-          .timesheets-table-wrap {
-            max-height: 70vh;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-          }
-          .timesheets-table thead th {
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            z-index: 1;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            text-align: left;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-          }
-          .timesheets-table tbody tr:nth-child(even) {
-            background: #eef2ff;
-          }
-          .timesheets-table td {
-            vertical-align: middle;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-            text-align: left;
-          }
-          .timesheets-table thead th:last-child,
-          .timesheets-table tbody td:last-child {
-            text-align: center;
-          }
-          .timesheets-table thead th:not(:last-child),
-          .timesheets-table tbody td:not(:last-child) {
-            border-right: 1px solid #f1f5f9;
-          }
-          .timesheets-driver {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 200px;
-          }
-          .timesheets-driver span {
-            word-break: break-word;
-          }
-          .timesheets-breakdown {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(70px, 1fr));
-            gap: 6px;
-            font-size: 12px;
-            color: #374151;
-            white-space: nowrap;
-          }
-          .timesheets-breakdown span {
-            display: inline-flex;
-            gap: 4px;
-          }
-          .timesheets-desktop {
-            display: none;
-          }
-          .timesheets-mobile {
-            display: block;
-          }
-          @media (min-width: 768px) {
-            .timesheets-desktop {
-              display: block;
-            }
-            .timesheets-mobile {
-              display: none;
-            }
-          }
-        `} 
-      </style>
-      <div className="timesheets-container">
-        <Card className="timesheets-topcard w-full max-w-none">
+    <div className="min-h-screen w-full px-3 py-3 sm:px-5 sm:py-5">
+      <div className="mx-auto w-full max-w-7xl px-0 sm:px-4 sm:py-6">
+        <Card className="mb-5 w-full max-w-none rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <SectionHeader
@@ -618,7 +434,7 @@ const TimesheetsAdminPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`quick-btn ${activeQuickRange === "WEEK" ? "quick-btn-active" : ""}`}
+                  className={`border ${activeQuickRange === "WEEK" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
                   onClick={() => {
                     if (activeQuickRange === "WEEK") {
                       setActiveQuickRange(null);
@@ -638,7 +454,7 @@ const TimesheetsAdminPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`quick-btn ${activeQuickRange === "MONTH" ? "quick-btn-active" : ""}`}
+                  className={`border ${activeQuickRange === "MONTH" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
                   onClick={() => {
                     if (activeQuickRange === "MONTH") {
                       setActiveQuickRange(null);
@@ -675,19 +491,37 @@ const TimesheetsAdminPage = () => {
           emptyMessage="No rows found for the current filters."
           errorMessage={error}
         >
-          <div className="timesheets-desktop">
-            <TableWrap className="timesheets-table-wrap">
-              <table className="table timesheets-table min-w-[900px] w-full">
+          <div className="hidden md:block">
+            <TableWrap className="max-h-[70vh] rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+              <table className="min-w-[900px] w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Driver</th>
-                    <th>Vehicles</th>
-                    <th>Routes</th>
-                    {showRuns ? <th>Entries</th> : null}
-                    <th>Total</th>
-                    <th>Breakdown</th>
-                    <th>Actions</th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Date
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Driver
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Vehicles
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Routes
+                    </th>
+                    {showRuns ? (
+                      <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                        Entries
+                      </th>
+                    ) : null}
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Total
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Breakdown
+                    </th>
+                    <th className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -707,14 +541,16 @@ const TimesheetsAdminPage = () => {
                     const routesLabel = formatList(row.routes.map((route) => route.name));
 
                     return (
-                      <tr key={`${row.date}-${row.driver.id}-${idx}`}>
-                        <td>{row.date}</td>
-                        <td>
-                          <div className="timesheets-driver">
+                      <tr key={`${row.date}-${row.driver.id}-${idx}`} className="odd:bg-white even:bg-slate-50/50">
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle text-slate-800">
+                          {row.date}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle text-slate-800">
+                          <div className="flex min-w-[200px] flex-col gap-0.5 break-words">
                             {bestIdentifier(row.driver)}
                           </div>
                         </td>
-                        <td>
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle text-slate-800">
                           {vehiclesLabel ? (
                             <span
                               className="block max-w-[240px] truncate"
@@ -726,7 +562,7 @@ const TimesheetsAdminPage = () => {
                             "-"
                           )}
                         </td>
-                        <td>
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle text-slate-800">
                           {routesLabel ? (
                             <span
                               className="block max-w-[240px] truncate"
@@ -738,9 +574,15 @@ const TimesheetsAdminPage = () => {
                             "-"
                           )}
                         </td>
-                        {showRuns ? <td>{row.entriesCount}</td> : null}
-                        <td style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</td>
-                        <td>
+                        {showRuns ? (
+                          <td className="border-b border-slate-100 px-3 py-2 align-middle text-slate-800">
+                            {row.entriesCount}
+                          </td>
+                        ) : null}
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle font-semibold text-slate-900">
+                          {formatTotal(totalMinutes)}
+                        </td>
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle">
                           <div className="flex flex-wrap gap-2 text-xs text-slate-700">
                             {breakdown.map((item) => (
                               <span
@@ -752,7 +594,7 @@ const TimesheetsAdminPage = () => {
                             ))}
                           </div>
                         </td>
-                        <td>
+                        <td className="border-b border-slate-100 px-3 py-2 align-middle text-center">
                           <Button variant="secondary" size="sm" type="button" onClick={() => openDetails(row)}>
                             Details
                           </Button>
@@ -765,8 +607,8 @@ const TimesheetsAdminPage = () => {
             </TableWrap>
           </div>
 
-          <div className="timesheets-mobile">
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div className="block md:hidden">
+            <div className="flex flex-col gap-3">
               {filteredRows.map((row, idx) => {
                 const totalMinutes =
                   row.totalsMinutes.DRIVING +
@@ -781,60 +623,72 @@ const TimesheetsAdminPage = () => {
                 ].filter((item) => item.minutes > 0);
 
                 return (
-                  <Card key={`${row.date}-${row.driver.id}-${idx}`} className="timesheets-mobile-card w-full max-w-none">
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                  <Card
+                    key={`${row.date}-${row.driver.id}-${idx}`}
+                    className="w-full max-w-none rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex flex-wrap justify-between gap-2">
                       <div>
                         <strong>{row.date}</strong>
-                        <div className="muted">{bestIdentifier(row.driver)}</div>
+                        <div className="text-sm text-slate-600">{bestIdentifier(row.driver)}</div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 700 }}>{formatTotal(totalMinutes)}</div>
-                        {showRuns ? <div className="muted">{row.entriesCount} entries</div> : null}
+                      <div className="text-right">
+                        <div className="font-semibold">{formatTotal(totalMinutes)}</div>
+                        {showRuns ? <div className="text-sm text-slate-600">{row.entriesCount} entries</div> : null}
                       </div>
                     </div>
-                    <div style={{ marginTop: "10px" }}>
-                      <div className="muted" style={{ marginBottom: "4px" }}>Vehicles</div>
+                    <div className="mt-2.5">
+                      <div className="mb-1 text-sm text-slate-600">Vehicles</div>
                       {row.vehicles.length === 0 ? (
                         <div>-</div>
                       ) : (
-                        <div className="timesheets-chips">
+                        <div className="flex flex-wrap gap-2">
                           {row.vehicles.map((vehicle) => (
-                            <span key={vehicle.id} className="timesheets-chip">
+                            <span
+                              key={vehicle.id}
+                              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
+                            >
                               {vehicle.regNumber}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div style={{ marginTop: "10px" }}>
-                      <div className="muted" style={{ marginBottom: "4px" }}>Routes</div>
+                    <div className="mt-2.5">
+                      <div className="mb-1 text-sm text-slate-600">Routes</div>
                       {row.routes.length === 0 ? (
                         <div>-</div>
                       ) : (
-                        <div className="timesheets-chips">
+                        <div className="flex flex-wrap gap-2">
                           {row.routes.map((route) => (
-                            <span key={route.id} className="timesheets-chip">
+                            <span
+                              key={route.id}
+                              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
+                            >
                               {route.name}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div style={{ marginTop: "10px" }}>
-                      <div className="muted" style={{ marginBottom: "4px" }}>Breakdown</div>
+                    <div className="mt-2.5">
+                      <div className="mb-1 text-sm text-slate-600">Breakdown</div>
                       {breakdown.length === 0 ? (
                         <div>-</div>
                       ) : (
-                        <div className="timesheets-chips">
+                        <div className="flex flex-wrap gap-2">
                           {breakdown.map((item) => (
-                            <span key={item.label} className="timesheets-chip">
+                            <span
+                              key={item.label}
+                              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
+                            >
                               {item.label} {formatDurationHours(item.minutes)}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div style={{ marginTop: "12px" }}>
+                    <div className="mt-3">
                       <Button variant="secondary" size="sm" type="button" onClick={() => openDetails(row)}>
                         Details
                       </Button>
@@ -865,17 +719,13 @@ const TimesheetsAdminPage = () => {
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
-            className="timesheets-modal"
-            style={{
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
+            className="w-[calc(100vw-96px)] max-w-[1100px] max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] max-sm:w-[calc(100vw-24px)] max-sm:p-4"
           >
-              <div className="timesheets-modal-header">
+            <div className="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h2 className="timesheets-modal-title">Work run details</h2>
+                <h2 className="text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl">Work run details</h2>
                 {detailsDriver && detailsDate ? (
-                  <p className="muted" style={{ margin: 0 }}>
+                  <p className="mt-1 text-sm text-slate-500">
                     {detailsDate} · {driverLabel(detailsDriver)}
                   </p>
                 ) : null}
@@ -884,33 +734,33 @@ const TimesheetsAdminPage = () => {
                 variant="ghost"
                 size="sm"
                 type="button"
-                className="timesheets-modal-close"
+                className="w-auto rounded-xl px-3 py-2 text-sm"
                 onClick={closeDetails}
               >
                 Close
               </Button>
             </div>
 
-            {detailsError ? <div className="error" style={{ marginTop: "12px" }}>{detailsError}</div> : null}
+            {detailsError ? (<div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{detailsError}</div>) : null}
 
-            <div style={{ marginTop: "12px" }}>
-              <TableWrap className="timesheets-modal-table compact">
-                <table className="table min-w-[900px] w-full" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
+            <div className="mt-3">
+              <TableWrap className="rounded-xl border border-slate-200 bg-white">
+                <table className="min-w-[900px] w-full table-fixed border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Activity</th>
-                      <th style={{ width: "180px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Customer</th>
-                      <th style={{ width: "160px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Route</th>
-                      <th style={{ width: "120px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Vehicle</th>
-                      <th style={{ width: "210px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Check-in</th>
-                      <th style={{ width: "90px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>Duration</th>
-                      <th style={{ width: "110px", padding: "8px 10px", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>Actions</th>
+                      <th className="w-[120px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Activity</th>
+                      <th className="w-[180px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+                      <th className="w-[160px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Route</th>
+                      <th className="w-[120px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Vehicle</th>
+                      <th className="w-[210px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Check-in</th>
+                      <th className="w-[90px] whitespace-nowrap border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Duration</th>
+                      <th className="w-[110px] border-b border-slate-200 bg-slate-50 px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {detailsRuns.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: "center", padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                        <td colSpan={7} className="border-b border-slate-200 px-2.5 py-2 text-center">
                           {detailsLoading ? "Loading..." : "No runs"}
                         </td>
                       </tr>
@@ -926,30 +776,19 @@ const TimesheetsAdminPage = () => {
                           : "-";
                         return (
                         <tr key={`${run.activityType}-${idx}`}>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.activityType}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.customer?.name || "-"}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{run.route?.name || "-"}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{vehicleLabel}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>{checkInLabel}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)", whiteSpace: "nowrap" }}>{formatDurationMinutes(run.durationMin)}</td>
-                          <td style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                          <td className="border-b border-slate-200 px-2.5 py-2">{run.activityType}</td>
+                          <td className="border-b border-slate-200 px-2.5 py-2">{run.customer?.name || "-"}</td>
+                          <td className="border-b border-slate-200 px-2.5 py-2">{run.route?.name || "-"}</td>
+                          <td className="border-b border-slate-200 px-2.5 py-2">{vehicleLabel}</td>
+                          <td className="border-b border-slate-200 px-2.5 py-2">{checkInLabel}</td>
+                          <td className="whitespace-nowrap border-b border-slate-200 px-2.5 py-2">{formatDurationMinutes(run.durationMin)}</td>
+                          <td className="border-b border-slate-200 px-2.5 py-2">
                             <button
                               type="button"
                               onClick={() => openEditModal(run)}
                               aria-label="Edit entry"
                               title="Edit"
-                              style={{
-                                width: "36px",
-                                height: "36px",
-                                padding: 0,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                borderRadius: "10px",
-                                border: "1px solid #e2e8f0",
-                                background: "#f8fafc",
-                                color: "#334155",
-                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                             >
                               <svg
                                 width="16"
@@ -1059,3 +898,6 @@ const TimesheetsAdminPage = () => {
 };
 
 export default TimesheetsAdminPage;
+
+
+

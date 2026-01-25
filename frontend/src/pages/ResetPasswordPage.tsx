@@ -87,21 +87,29 @@ const ResetPasswordPage = () => {
 
         {validationError === "Invalid reset link." ? (
           <>
-            <div className="error">{validationError}</div>
-            <Link to="/forgot-password">Request a new link</Link>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{validationError}</div>
+            <Link className="text-sm text-blue-600 hover:underline" to="/forgot-password">
+              Request a new link
+            </Link>
           </>
         ) : validating ? (
-          <p className="muted">Validating reset link...</p>
+          <p className="text-sm text-slate-600">Validating reset link...</p>
         ) : validationError ? (
           <>
-            <div className="error">{validationError}</div>
-            <Link to={forgotLink}>Request a new link</Link>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{validationError}</div>
+            <Link className="text-sm text-blue-600 hover:underline" to={forgotLink}>
+              Request a new link
+            </Link>
           </>
         ) : (
           <>
-            <p className="muted">Choose a new password for your account.</p>
-            {error && <div className="error">{error}</div>}
-            {success && <div className="success">{success}</div>}
+            <p className="text-sm text-slate-600">Choose a new password for your account.</p>
+            {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+            {success && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {success}
+              </div>
+            )}
             <form onSubmit={onSubmit}>
               <FormField label="New password" htmlFor="password">
                 <Input

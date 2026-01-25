@@ -308,7 +308,7 @@ const ChecklistPage = () => {
             </Button>
           </>
         )}
-        <div className="row" style={{ marginTop: "12px" }}>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="secondary"
             size="sm"

@@ -45,9 +45,13 @@ const ForgotPasswordPage = () => {
       <Card className="w-full max-w-md">
         <PublicHeader />
         <SectionHeader title="Forgot password" />
-        <p className="muted">Enter your company slug and admin email. We will email you a reset link.</p>
-        {error && <div className="error">{error}</div>}
-        {success && <div className="success">{success}</div>}
+        <p className="text-sm text-slate-600">Enter your company slug and admin email. We will email you a reset link.</p>
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+        {success && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {success}
+          </div>
+        )}
         <form onSubmit={onSubmit}>
           <FormField label="Company slug" htmlFor="companySlug">
             <Input
@@ -73,8 +77,12 @@ const ForgotPasswordPage = () => {
             {loading ? "Sending..." : "Send reset link"}
           </Button>
         </form>
-        <div style={{ marginTop: "12px" }}>
-          <Link to="/login">Sign in</Link> Ð–Ñš <Link to="/help">Help</Link>
+        <div className="mt-3 text-sm text-slate-600">
+          <Link className="hover:text-slate-900 hover:underline" to="/login">
+            Sign in
+          </Link> Ñ-¥s <Link className="hover:text-slate-900 hover:underline" to="/help">
+            Help
+          </Link>
         </div>
       </Card>
     </div>
@@ -82,3 +90,4 @@ const ForgotPasswordPage = () => {
 };
 
 export default ForgotPasswordPage;
+

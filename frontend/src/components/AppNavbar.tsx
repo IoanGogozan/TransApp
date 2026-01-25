@@ -75,7 +75,7 @@ const AppNavbar = ({
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className="muted" style={{ color: "#cbd5f5", fontSize: "13px" }}>
+          <span className="muted max-w-[140px] truncate sm:max-w-[220px]" style={{ color: "#cbd5f5", fontSize: "13px" }}>
             {userLabel}
           </span>
           <button

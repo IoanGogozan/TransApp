@@ -122,7 +122,7 @@ const VehiclePage = () => {
               </select>
             </FormField>
           </div>
-          <div className="row" style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <Button type="button" onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : "Save"}
             </Button>

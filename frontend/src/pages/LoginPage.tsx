@@ -86,7 +86,7 @@ const LoginPage = () => {
       <Card className="w-full max-w-md">
         <PublicHeader />
         <SectionHeader title={title} />
-        <p className="muted">
+        <p className="text-sm text-slate-600">
           {companyLoading
             ? "Loading company..."
             : companyError
@@ -94,8 +94,8 @@ const LoginPage = () => {
               : "Enter your phone and password to continue."}
         </p>
         {!companyLoading ? (
-          <div style={{ marginBottom: "8px" }}>
-            <Link to="/login" style={{ fontSize: "14px", textDecoration: "none", color: "#2563eb" }}>
+          <div className="mb-2">
+            <Link to="/login" className="text-sm text-blue-600 hover:underline">
               Not your company? Enter a different slug
             </Link>
           </div>
@@ -105,7 +105,7 @@ const LoginPage = () => {
             Back to company slug
           </ButtonLink>
         ) : null}
-        {error && <div className="error">{error}</div>}
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         <form onSubmit={onSubmit}>
           <FormField label="Phone (email/username also accepted)" htmlFor="phone">
             <Input
@@ -132,11 +132,10 @@ const LoginPage = () => {
           <Button variant="primary" type="submit" disabled={loading || companyLoading || Boolean(companyError)}>
             {loading ? "Signing in..." : "Sign in"}
           </Button>
-          <div style={{ marginTop: "8px" }}>
+          <div className="mt-2">
             <Link
               to={`/forgot-password?companySlug=${encodeURIComponent(forgotSlug)}`}
-              className="muted"
-              style={{ fontSize: 14, textDecoration: "none" }}
+              className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
             >
               Forgot password?
             </Link>
