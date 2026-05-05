@@ -116,9 +116,9 @@ const StripeCardSetupForm = ({ plan, companySlug, onSuccess }: StripeCardSetupFo
 };
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "ÔÇö";
+  if (!value) return "N/A";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "ÔÇö";
+  if (Number.isNaN(date.getTime())) return "N/A";
   return date.toLocaleString();
 };
 
@@ -387,19 +387,19 @@ const BillingPage = () => {
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Plan</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.plan || "—"}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.plan || "N/A"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Status</div>
                   <div className="mt-1">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClass}`}>
-                      {subscription.status || "—"}
+                      {subscription.status || "N/A"}
                     </span>
                   </div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Provider</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{status?.billingProvider || "—"}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{status?.billingProvider || "N/A"}</div>
                 </div>
                 {subscription.status === "TRIALING" && subscription.trialEnd ? (
                   <div>
@@ -413,15 +413,15 @@ const BillingPage = () => {
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Stripe subscription</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.stripeSubscriptionId || "—"}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.stripeSubscriptionId || "N/A"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Vipps agreement</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementId || "—"}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementId || "N/A"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Vipps status</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementStatus || "—"}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{subscription.vippsAgreementStatus || "N/A"}</div>
                 </div>
                 {statusMessage ? (
                   <div className="sm:col-span-2 text-sm text-slate-600">

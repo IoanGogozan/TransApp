@@ -223,7 +223,7 @@ const PublicTermsPage = () => {
               Acceptable use
             </h2>
             <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
-              <li>Do not misuse the service or attempt to access other companiesƒ?T data.</li>
+              <li>Do not misuse the service or attempt to access other companies' data.</li>
               <li>Do not upload malicious files or content.</li>
               <li>Do not overload the service (abuse protection such as rate limits may apply).</li>
             </ul>
@@ -239,7 +239,7 @@ const PublicTermsPage = () => {
                 Documents/uploads are provided by your company users; you should avoid uploading sensitive data unless
                 necessary for operations.
               </li>
-              <li>Exports are provided ƒ?oas-isƒ?? to support payroll, billing, and audit workflows.</li>
+              <li>Exports are provided "as-is" to support payroll, billing, and audit workflows.</li>
             </ul>
           </section>
 

@@ -22,7 +22,7 @@ const ListState = ({
   if (loading) {
     return (
       <Card>
-        <p className="text-center text-sm text-slate-600">Loading…</p>
+        <p className="text-center text-sm text-slate-600">Loading...</p>
       </Card>
     );
   }

@@ -112,7 +112,7 @@ model Company {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Relații
+  // Relations
   users              User[]
   vehicles           Vehicle[]
   shifts             Shift[]
@@ -210,9 +210,9 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Relații
+  // Relations
   company            Company?            @relation(fields: [companyId], references: [id])
-  shifts             Shift[] // turele la care e driver
+  shifts             Shift[] // shifts assigned to the driver
   checklistInstances ChecklistInstance[]
   defectsReported    Defect[]            @relation("DefectsReportedByUser")
   defectsAssigned    Defect[]            @relation("DefectsAssignedToUser")
@@ -265,7 +265,7 @@ model Vehicle {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Relații
+  // Relations
   company            Company             @relation(fields: [companyId], references: [id])
   shifts             Shift[]
   checklistInstances ChecklistInstance[]
@@ -273,13 +273,13 @@ model Vehicle {
   workEntries        WorkEntry[]
   checkIns           VehicleCheckIn[]
 
-  @@unique([companyId, regNumber]) // aceeași firmă nu poate avea 2 vehicule cu același nr
+  @@unique([companyId, regNumber]) // one company cannot have two vehicles with the same registration number
   @@index([companyId])
   @@map("vehicles")
 }
 
 /**
- * ------------- SHIFTS (ture) -------------
+ * ------------- SHIFTS -------------
  */
 
 model Shift {
@@ -452,7 +452,7 @@ model Document {
 }
 
 /**
- * ------------- DEFECTS / AVVIK -------------
+ * ------------- DEFECTS -------------
  */
 
 model Defect {

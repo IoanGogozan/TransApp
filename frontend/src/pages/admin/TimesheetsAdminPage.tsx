@@ -338,9 +338,9 @@ const TimesheetsAdminPage = () => {
         const checkInCell = checkIns.length
           ? checkIns
             .filter((ci) => vehicleIds.has(ci.vehicleId))
-            .map((ci) => `${ci.regNumber || `Vehicle#${ci.vehicleId}`} ${timeFmt.format(new Date(ci.checkedAt))} • ${ci.allOk ? "OK" : "Issues"}`)
-            .join("; ") || "—"
-          : "—";
+            .map((ci) => `${ci.regNumber || `Vehicle#${ci.vehicleId}`} ${timeFmt.format(new Date(ci.checkedAt))} - ${ci.allOk ? "OK" : "Issues"}`)
+            .join("; ") || "N/A"
+          : "N/A";
         return [
           row.date,
           bestIdentifier(row.driver),
@@ -726,7 +726,7 @@ const TimesheetsAdminPage = () => {
                 <h2 className="text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl">Work run details</h2>
                 {detailsDriver && detailsDate ? (
                   <p className="mt-1 text-sm text-slate-500">
-                    {detailsDate} · {driverLabel(detailsDriver)}
+                    {detailsDate} | {driverLabel(detailsDriver)}
                   </p>
                 ) : null}
               </div>

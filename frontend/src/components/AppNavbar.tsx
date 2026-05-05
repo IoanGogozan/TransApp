@@ -52,7 +52,7 @@ const AppNavbar = ({
             aria-expanded={isMenuOpen}
             style={{ width: "auto", padding: "6px 10px", fontSize: "14px" }}
           >
-            ☰
+            Menu
           </button>
           <button
             type="button"

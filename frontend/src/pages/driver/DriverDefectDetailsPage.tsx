@@ -319,7 +319,7 @@ const DriverDefectDetailsPage = () => {
     previewAttachmentId != null ? attachmentPreviewUrls[String(previewAttachmentId)] : undefined;
   const rawManualTitle = defect.title ?? "Defect";
   const manualTitleNeedsTruncate = defect.source === "MANUAL" && rawManualTitle.length > 60;
-  const manualTitle = manualTitleNeedsTruncate ? `${rawManualTitle.slice(0, 60)}…` : rawManualTitle;
+  const manualTitle = manualTitleNeedsTruncate ? `${rawManualTitle.slice(0, 60)}...` : rawManualTitle;
   const headerTitle =
     defect.source === "CHECKLIST" ? getDefectCategoryLabel(defect) : manualTitle;
   const headerTitleTooltip = manualTitleNeedsTruncate ? rawManualTitle : undefined;

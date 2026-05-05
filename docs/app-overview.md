@@ -34,7 +34,7 @@ Frontend:
 - `src/` - backend (controllers, services, repositories, middleware, routes)
 - `frontend/` - React client app
 - `prisma/` - database schema and migrations
-- `docs/` - documentation (data model, project map)
+- `docs/` - project documentation
 - `test/` - tests (Vitest + Supertest)
 
 ## Core features
@@ -66,7 +66,6 @@ Tenants are identified by `companySlug` and enforced by backend middleware. Typi
 
 ## Database
 Schema lives in `prisma/schema.prisma` with migrations under `prisma/migrations/`.
-For details, see `docs/data-model.md`.
 
 ## API and architecture
 - Controllers handle request/response
@@ -80,6 +79,4 @@ For details, see `docs/data-model.md`.
 - Token-based auth in frontend utilities
 
 ## Repo references
-- `docs/project-map.md` - repository map
-- `docs/data-model.md` - data model
 - `README.md` - DB and migration notes
