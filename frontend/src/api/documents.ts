@@ -1,5 +1,5 @@
 import { ApiError, ApiErrorShape, http } from "./http";
-import { getToken } from "../auth/token";
+import { addCsrfHeader } from "./csrf";
 
 export type DocumentMeta = {
   id: string;
@@ -17,14 +17,11 @@ export const uploadDocument = async (payload: { title: string; file: File }) => 
   form.append("title", payload.title);
   form.append("file", payload.file);
 
-  const headers: Record<string, string> = {};
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-
   const res = await fetch("/api/v1/admin/documents", {
     method: "POST",
     body: form,
-    headers,
+    credentials: "include",
+    headers: addCsrfHeader({ Accept: "application/json" }, "POST"),
   });
 
   const contentType = res.headers.get("content-type") || "";
@@ -44,10 +41,7 @@ export const deleteDocument = (id: string) =>
   http<{ ok: boolean }>(`/api/v1/admin/documents/${id}`, { method: "DELETE" });
 
 export const downloadDocument = async (doc: DocumentMeta) => {
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`/api/v1/me/documents/${doc.id}/download`, { headers });
+  const res = await fetch(`/api/v1/me/documents/${doc.id}/download`, { credentials: "include" });
   if (!res.ok) {
     throw new ApiError(res.status, res.statusText || "Download failed");
   }

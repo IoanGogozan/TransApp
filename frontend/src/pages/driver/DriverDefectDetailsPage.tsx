@@ -14,7 +14,6 @@ import { ApiError } from "../../api/http";
 import { Defect, DefectAttachment, DefectComment } from "../../types/defect";
 import { getDefectCategoryLabel } from "../../utils/defects";
 import { formatDateTime } from "../../utils/time";
-import { getToken } from "../../auth/token";
 import { tenantPath } from "../../utils/tenantPath";
 
 const DriverDefectDetailsPage = () => {
@@ -116,17 +115,13 @@ const DriverDefectDetailsPage = () => {
     let isCancelled = false;
     const createdUrls: string[] = [];
     const loadPreviews = async () => {
-      const token = getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
       const previewUrls: Record<string, string> = {};
       for (const attachment of attachments) {
         if (attachment.purgedAt) continue;
         try {
           const res = await fetch(
             `/api/v1/defects/${defectId}/attachments/${attachment.id}/download`,
-            { headers },
+            { credentials: "include" },
           );
           if (!res.ok) {
             throw new Error("Preview fetch failed");

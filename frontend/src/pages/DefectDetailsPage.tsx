@@ -13,7 +13,6 @@ import { Defect, DefectAttachment, DefectComment, DefectStatus } from "../types/
 import { ApiError } from "../api/http";
 import { formatDateTime } from "../utils/time";
 import { getDefectDisplayTitle } from "../utils/defects";
-import { getToken } from "../auth/token";
 import { tenantPath } from "../utils/tenantPath";
 import TableWrap from "../components/TableWrap";
 import Button from "../components/ui/Button";
@@ -198,17 +197,13 @@ const DefectDetailsPage = () => {
     let isCancelled = false;
     const createdUrls: string[] = [];
     const loadPreviews = async () => {
-      const token = getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
       const previewUrls: Record<string, string> = {};
       for (const attachment of attachments) {
         if (attachment.purgedAt) continue;
         try {
           const res = await fetch(
             `/api/v1/defects/${defectId}/attachments/${attachment.id}/download`,
-            { headers },
+            { credentials: "include" },
           );
           if (!res.ok) {
             throw new Error("Preview fetch failed");

@@ -1,4 +1,4 @@
-import { getToken } from "../auth/token";
+import { addCsrfHeader } from "./csrf";
 
 export type ApiErrorShape = {
   error?: {
@@ -24,11 +24,10 @@ export class ApiError extends Error {
 type HttpOptions = {
   method?: string;
   body?: unknown;
-  token?: string | null;
 };
 
 export async function http<T>(path: string, options: HttpOptions = {}): Promise<T> {
-  const { method = "GET", body, token } = options;
+  const { method = "GET", body } = options;
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -41,15 +40,12 @@ export async function http<T>(path: string, options: HttpOptions = {}): Promise<
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }
-
-  const authToken = token ?? getToken();
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
+  addCsrfHeader(headers, method);
 
   const res = await fetch(path, {
     method,
     cache: "no-store",
+    credentials: "include",
     headers,
     body: payload,
   });

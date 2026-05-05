@@ -44,7 +44,7 @@ describe("User creation rules", () => {
     expect(res.status).toBe(400);
   });
 
-  it("rejects creating driver with password shorter than 6 characters", async () => {
+  it("rejects creating driver with password shorter than 8 characters", async () => {
     const company = await createCompany({ name: "Driver Short Pass Co" });
     const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.shortpass@example.com", passwordPlain: ownerPassword });
     const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
@@ -57,7 +57,7 @@ describe("User creation rules", () => {
     expect(res.status).toBe(400);
   });
 
-  it("creates driver with minimum password length 6", async () => {
+  it("creates driver with minimum password length 8", async () => {
     const company = await createCompany({ name: "Driver Min Pass Co" });
     const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.driver.min@example.com", passwordPlain: ownerPassword });
     const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
@@ -65,7 +65,7 @@ describe("User creation rules", () => {
     const res = await request(app)
       .post("/api/v1/users")
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ phone: "+12345670000", role: "DRIVER", password: "123456" });
+      .send({ phone: "+12345670000", role: "DRIVER", password: "12345678" });
 
     expect(res.status).toBe(201);
     expect(res.body.user.mustChangePassword).toBe(true);
@@ -95,6 +95,52 @@ describe("User creation rules", () => {
       .send({ email: "admin.min@example.com", role: "ADMIN", password: "12345678" });
 
     expect(res.status).toBe(201);
+  });
+
+  it("prevents admin from creating platform admin", async () => {
+    const company = await createCompany({ name: "Admin Escalation Co", plan: "PRO" });
+    const admin = await createUser({
+      companyId: company.id,
+      role: "ADMIN",
+      email: "admin.escalation@example.com",
+      passwordPlain: ownerPassword,
+    });
+    const adminToken = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        email: "new.platform.admin@example.com",
+        role: "PLATFORM_ADMIN",
+        password: "Password123!",
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("USER_CANNOT_CREATE_PLATFORM_ADMIN");
+  });
+
+  it("allows platform admin to create platform admin", async () => {
+    const company = await createCompany({ name: "Owner Creates Owner Co", plan: "PRO" });
+    const owner = await createUser({
+      companyId: company.id,
+      role: "PLATFORM_ADMIN",
+      email: "owner.creates.owner@example.com",
+      passwordPlain: ownerPassword,
+    });
+    const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({
+        email: "second.platform.admin@example.com",
+        role: "PLATFORM_ADMIN",
+        password: "Password123!",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.role).toBe("PLATFORM_ADMIN");
   });
 
   it("allows same phone in different companies", async () => {

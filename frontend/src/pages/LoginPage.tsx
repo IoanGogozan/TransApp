@@ -4,13 +4,13 @@ import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
 import { getPublicCompany } from "../api/auth";
 import { setCompanySlug } from "../auth/companySlug";
-import PublicHeader from "../components/PublicHeader";
+import PublicLayout from "../components/layout/PublicLayout";
 import Button from "../components/ui/Button";
-import ButtonLink from "../components/ui/ButtonLink";
 import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
 import SectionHeader from "../components/ui/SectionHeader";
+import ButtonLink from "../components/ui/ButtonLink";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -82,67 +82,79 @@ const LoginPage = () => {
   const forgotSlug = companySlug || "";
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-5">
-      <Card className="w-full max-w-md">
-        <PublicHeader />
-        <SectionHeader title={title} />
-        <p className="text-sm text-slate-600">
-          {companyLoading
-            ? "Loading company..."
-            : companyError
-              ? companyError
-              : "Enter your phone and password to continue."}
-        </p>
-        {!companyLoading ? (
-          <div className="mb-2">
-            <Link to="/login" className="text-sm text-blue-600 hover:underline">
-              Not your company? Enter a different slug
-            </Link>
+    <PublicLayout contentClassName="mt-5 sm:mt-7">
+      <div className="mx-auto w-full max-w-[560px] sm:max-w-[600px]">
+        <Card className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm sm:p-8">
+          <div className="space-y-4 sm:space-y-6 [&_form]:space-y-4 sm:[&_form]:space-y-5">
+            <SectionHeader title={title} />
+            <p className="text-sm text-slate-600">
+              {companyLoading
+                ? "Loading company..."
+                : companyError
+                  ? companyError
+                  : "Enter your phone and password to continue."}
+            </p>
+            {!companyLoading ? (
+              <div>
+                <Link to="/login" className="text-sm text-blue-600 hover:underline">
+                  Not your company? Enter a different slug
+                </Link>
+              </div>
+            ) : null}
+            {companyError ? (
+              <ButtonLink variant="secondary" to="/login" className="w-auto">
+                Back to company slug
+              </ButtonLink>
+            ) : null}
+            {error ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
+            <form onSubmit={onSubmit} className="flex flex-col">
+              <FormField label="Phone (email/username also accepted)" htmlFor="phone">
+                <Input
+                  id="phone"
+                  type="tel"
+                  autoComplete="username"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  disabled={companyLoading || Boolean(companyError)}
+                />
+              </FormField>
+              <FormField label="Password" htmlFor="password">
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={companyLoading || Boolean(companyError)}
+                />
+              </FormField>
+              <Button
+                variant="primary"
+                type="submit"
+                className="w-full shadow-sm hover:shadow-md sm:w-auto"
+                disabled={loading || companyLoading || Boolean(companyError)}
+              >
+                {loading ? "Signing in..." : "Sign in"}
+              </Button>
+              <div className="mt-2">
+                <Link
+                  to={`/forgot-password?companySlug=${encodeURIComponent(forgotSlug)}`}
+                  className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </form>
           </div>
-        ) : null}
-        {companyError ? (
-          <ButtonLink variant="secondary" to="/login" className="w-auto mb-3">
-            Back to company slug
-          </ButtonLink>
-        ) : null}
-        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-        <form onSubmit={onSubmit}>
-          <FormField label="Phone (email/username also accepted)" htmlFor="phone">
-            <Input
-              id="phone"
-              type="tel"
-              autoComplete="username"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              disabled={companyLoading || Boolean(companyError)}
-            />
-          </FormField>
-          <FormField label="Password" htmlFor="password">
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={companyLoading || Boolean(companyError)}
-            />
-          </FormField>
-          <Button variant="primary" type="submit" disabled={loading || companyLoading || Boolean(companyError)}>
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
-          <div className="mt-2">
-            <Link
-              to={`/forgot-password?companySlug=${encodeURIComponent(forgotSlug)}`}
-              className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-        </form>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </PublicLayout>
   );
 };
 

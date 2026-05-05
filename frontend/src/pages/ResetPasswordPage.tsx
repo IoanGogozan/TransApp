@@ -7,6 +7,7 @@ import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
 import SectionHeader from "../components/ui/SectionHeader";
+import { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "../utils/passwordPolicy";
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -56,8 +57,8 @@ const ResetPasswordPage = () => {
     setError(null);
     setSuccess(null);
 
-    if (!password || password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!password || password.length < PASSWORD_MIN_LENGTH) {
+      setError(PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
     if (password !== confirmPassword) {
@@ -118,7 +119,7 @@ const ResetPasswordPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={8}
+                  minLength={PASSWORD_MIN_LENGTH}
                 />
               </FormField>
               <FormField label="Confirm password" htmlFor="confirmPassword">
@@ -128,7 +129,7 @@ const ResetPasswordPage = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  minLength={8}
+                  minLength={PASSWORD_MIN_LENGTH}
                 />
               </FormField>
               <Button type="submit" disabled={loading}>

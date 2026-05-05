@@ -24,6 +24,52 @@ describe("Auth login identifiers", () => {
     expect(res.body.user.email).toBe("test@example.com");
   });
 
+  it("rejects generic login without company slug", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ identifier: "test@example.com", password });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("TENANT_REQUIRED");
+  });
+
+  it("rejects legacy generic registration", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ companyName: "Legacy Register Co", email: "legacy@example.com", password });
+
+    expect(res.status).toBe(410);
+    expect(res.body.error.code).toBe("AUTH_REGISTER_MOVED");
+  });
+
+  it("logs into the correct company when the same email exists in multiple tenants", async () => {
+    const companyA = await createCompany({ name: "Same Email Company A" });
+    const companyB = await createCompany({ name: "Same Email Company B" });
+    const sharedEmail = "shared.login@example.com";
+
+    const userA = await createUser({
+      companyId: companyA.id,
+      email: sharedEmail,
+      passwordPlain: password,
+    });
+    const userB = await createUser({
+      companyId: companyB.id,
+      email: sharedEmail,
+      passwordPlain: password,
+    });
+
+    const loginA = await loginWithSlug({ companySlug: companyA.slug, identifier: sharedEmail, password });
+    const loginB = await loginWithSlug({ companySlug: companyB.slug, identifier: sharedEmail, password });
+
+    expect(loginA.status).toBe(200);
+    expect(loginA.body.user.id).toBe(userA.id);
+    expect(loginA.body.company.id).toBe(companyA.id);
+
+    expect(loginB.status).toBe(200);
+    expect(loginB.body.user.id).toBe(userB.id);
+    expect(loginB.body.company.id).toBe(companyB.id);
+  });
+
   it("rejects creating duplicate user with different email casing", async () => {
     const company = await createCompany({ name: "Company A" });
     const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner@example.com", passwordPlain: password });
@@ -49,17 +95,17 @@ describe("Auth login identifiers", () => {
   it("allows driver login with phone", async () => {
     const company = await createCompany({ name: "Company Phone" });
     const phone = "+1 234-567-8901";
-    await createUser({ companyId: company.id, phone, email: null, role: "DRIVER", passwordPlain: "abcd" });
+    await createUser({ companyId: company.id, phone, email: null, role: "DRIVER", passwordPlain: "Driver123!" });
 
-    const res = await loginWithSlug({ companySlug: company.slug, identifier: " +1 (234) 567-8901 ", password: "abcd" });
+    const res = await loginWithSlug({ companySlug: company.slug, identifier: " +1 (234) 567-8901 ", password: "Driver123!" });
     expect(res.status).toBe(200);
   });
 
   it("allows driver login with username", async () => {
     const company = await createCompany({ name: "Company Username" });
-    await createUser({ companyId: company.id, username: "driverOne", email: null, role: "DRIVER", passwordPlain: "abcd" });
+    await createUser({ companyId: company.id, username: "driverOne", email: null, role: "DRIVER", passwordPlain: "Driver123!" });
 
-    const res = await loginWithSlug({ companySlug: company.slug, identifier: "DriverOne", password: "abcd" });
+    const res = await loginWithSlug({ companySlug: company.slug, identifier: "DriverOne", password: "Driver123!" });
     expect(res.status).toBe(200);
   });
 
@@ -85,15 +131,42 @@ describe("Auth login identifiers", () => {
     expect(patchRes.status).toBe(200);
     expect(patchRes.body.user.mustChangePassword).toBe(false);
 
-    const meRes = await request(app).get("/api/v1/me").set("Authorization", `Bearer ${token}`);
-    expect(meRes.status).toBe(200);
-    expect(meRes.body.user.mustChangePassword).toBe(false);
+    const oldTokenRes = await request(app).get("/api/v1/me").set("Authorization", `Bearer ${token}`);
+    expect(oldTokenRes.status).toBe(401);
+    expect(oldTokenRes.body.error.code).toBe("AUTH_TOKEN_REVOKED");
 
     const oldLogin = await loginWithSlug({ companySlug: company.slug, identifier: driver.email, password: "temp1234", expectedStatus: 401 });
     expect(oldLogin.status).toBe(401);
 
     const newLogin = await loginWithSlug({ companySlug: company.slug, identifier: driver.email, password: "newpass123" });
     expect(newLogin.status).toBe(200);
+
+    const meRes = await request(app).get("/api/v1/me").set("Authorization", `Bearer ${newLogin.body.token}`);
+    expect(meRes.status).toBe(200);
+    expect(meRes.body.user.mustChangePassword).toBe(false);
+  });
+
+  it("rejects changing own password below the shared minimum length", async () => {
+    const company = await createCompany({ name: "Password Short Change Co" });
+    const driver = await createUser({
+      companyId: company.id,
+      email: "driver.shortchange@example.com",
+      role: "DRIVER",
+      passwordPlain: "temp1234",
+      mustChangePassword: true,
+    });
+
+    const loginRes = await loginWithSlug({ companySlug: company.slug, identifier: driver.email, password: "temp1234" });
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    const patchRes = await request(app)
+      .patch("/api/v1/me/password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "short" });
+
+    expect(patchRes.status).toBe(400);
+    expect(patchRes.body.error?.code).toBe("VALIDATION_ERROR");
   });
 
   it("rejects creating admin with short password", async () => {

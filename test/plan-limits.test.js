@@ -31,7 +31,7 @@ describe("Plan limits", () => {
         companyId: company.id,
         role: "DRIVER",
         email: `driver${i}.basic@example.com`,
-        passwordPlain: "abcd",
+        passwordPlain: password,
       });
     }
 
@@ -56,7 +56,7 @@ describe("Plan limits", () => {
         companyId: company.id,
         role: "DRIVER",
         email: `driver${i}.medium@example.com`,
-        passwordPlain: "abcd",
+        passwordPlain: password,
       });
     }
 

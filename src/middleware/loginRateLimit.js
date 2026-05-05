@@ -1,92 +1,60 @@
 const AppError = require("../utils/AppError");
+const {
+  createCounterStore,
+  getClientIp,
+  normalizeIdentifier,
+  normalizeRateLimitPart,
+} = require("../utils/rateLimitStore");
+
 const windowMs = 15 * 60 * 1000;
 const ipLimit = 10;
 const identifierLimit = 5;
 
-const ipAttempts = new Map();
-const identifierAttempts = new Map();
+const attempts = createCounterStore({ windowMs, prefix: "rate-limit:login" });
 
-const normalizeIdentifier = (value) => {
-  const raw = (value || "").toString().trim();
-  if (!raw) return "";
-  if (raw.includes("@")) return raw.toLowerCase();
-
-  const phoneLike = /^[+]?[\d\s\-()]+$/.test(raw);
-  if (phoneLike) {
-    const hasPlus = raw.trim().startsWith("+");
-    const digits = raw.replace(/[^\d]/g, "");
-    return (hasPlus ? "+" : "") + digits;
-  }
-
-  return raw.toLowerCase();
+const getCompanyScope = (req) => {
+  return normalizeRateLimitPart(req.params?.companySlug || req.body?.companySlug || "global");
 };
 
-const getClientIp = (req) => {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim() !== "") {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.ip || "unknown-ip";
-};
-
-const increment = (map, key) => {
-  const now = Date.now();
-  const existing = map.get(key);
-  if (!existing || existing.expiresAt <= now) {
-    map.set(key, { count: 1, expiresAt: now + windowMs });
-    return 1;
-  }
-
-  const nextCount = existing.count + 1;
-  map.set(key, { count: nextCount, expiresAt: existing.expiresAt });
-  return nextCount;
-};
-
-const reset = (map, key) => {
-  map.delete(key);
-};
-
-const loginRateLimit = (req, res, next) => {
-  const ipKey = getClientIp(req);
+const loginRateLimit = async (req, res, next) => {
+  const companyScope = getCompanyScope(req);
+  const ipKey = `ip:${companyScope}:${getClientIp(req)}`;
   const identifierRaw = req.body?.identifier ?? req.body?.email ?? req.body?.phone ?? req.body?.username ?? "";
   const identifierKey = normalizeIdentifier(identifierRaw);
+  const scopedIdentifierKey = identifierKey ? `identifier:${companyScope}:${identifierKey}` : "";
 
-  const now = Date.now();
-  const currentIp = ipAttempts.get(ipKey);
-  const ipCount = !currentIp || currentIp.expiresAt <= now ? 0 : currentIp.count;
+  try {
+    const ipCount = await attempts.get(ipKey);
+    const idCount = scopedIdentifierKey ? await attempts.get(scopedIdentifierKey) : 0;
 
-  let idCount = 0;
-  if (identifierKey) {
-    const currentId = identifierAttempts.get(identifierKey);
-    idCount = !currentId || currentId.expiresAt <= now ? 0 : currentId.count;
-  }
-
-  const limited = ipCount >= ipLimit || (identifierKey && idCount >= identifierLimit);
-  if (limited) {
-    return next(
-      new AppError(429, "Too many login attempts. Try again later.", "AUTH_RATE_LIMITED"),
-    );
-  }
-
-  res.on("finish", () => {
-    const success = res.statusCode >= 200 && res.statusCode < 300;
-    const authFailed = res.statusCode === 401 || res.statusCode === 403;
-
-    if (success) {
-      reset(ipAttempts, ipKey);
-      if (identifierKey) reset(identifierAttempts, identifierKey);
-    } else if (authFailed) {
-      increment(ipAttempts, ipKey);
-      if (identifierKey) increment(identifierAttempts, identifierKey);
+    const limited = ipCount >= ipLimit || (scopedIdentifierKey && idCount >= identifierLimit);
+    if (limited) {
+      return next(
+        new AppError(429, "Too many login attempts. Try again later.", "AUTH_RATE_LIMITED"),
+      );
     }
-  });
 
-  next();
+    res.on("finish", () => {
+      const success = res.statusCode >= 200 && res.statusCode < 300;
+      const authFailed = res.statusCode === 401 || res.statusCode === 403;
+
+      if (success) {
+        void attempts.reset(ipKey);
+        if (scopedIdentifierKey) void attempts.reset(scopedIdentifierKey);
+      } else if (authFailed) {
+        void attempts.increment(ipKey);
+        if (scopedIdentifierKey) void attempts.increment(scopedIdentifierKey);
+      }
+    });
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 };
 
 loginRateLimit._resetLoginRateLimit = () => {
-  ipAttempts.clear();
-  identifierAttempts.clear();
+  return attempts.clear();
 };
 
 module.exports = loginRateLimit;

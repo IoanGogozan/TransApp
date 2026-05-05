@@ -1,5 +1,27 @@
 const logger = require("../config/logger");
 
+const sensitiveQueryParams = new Set(["token", "password", "secret", "clientsecret", "code", "refreshtoken"]);
+
+const sanitizeUrl = (originalUrl) => {
+  if (!originalUrl) {
+    return originalUrl;
+  }
+
+  try {
+    const url = new URL(originalUrl, "http://local");
+
+    for (const key of Array.from(url.searchParams.keys())) {
+      if (sensitiveQueryParams.has(key.toLowerCase())) {
+        url.searchParams.set(key, "[REDACTED]");
+      }
+    }
+
+    return `${url.pathname}${url.search}`.replaceAll("%5BREDACTED%5D", "[REDACTED]");
+  } catch {
+    return "[INVALID_URL]";
+  }
+};
+
 const requestLogger = (req, res, next) => {
   const start = process.hrtime.bigint();
 
@@ -11,7 +33,7 @@ const requestLogger = (req, res, next) => {
       {
         reqId: req.id,
         method: req.method,
-        path: req.originalUrl || req.url,
+        path: sanitizeUrl(req.originalUrl || req.url),
         status: res.statusCode,
         durationMs: Number(durationMs.toFixed(2)),
       },
@@ -21,5 +43,7 @@ const requestLogger = (req, res, next) => {
 
   next();
 };
+
+requestLogger.sanitizeUrl = sanitizeUrl;
 
 module.exports = requestLogger;

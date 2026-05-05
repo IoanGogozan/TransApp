@@ -8,6 +8,8 @@ const requireRole = require("../middlewares/requireRole");
 
 const router = express.Router();
 
+router.use(requireRole("ADMIN", "PLATFORM_ADMIN"));
+
 const sendError = (res, status, code, message = code, details) =>
   res.status(status).json({
     error: {

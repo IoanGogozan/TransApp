@@ -6,7 +6,7 @@ const HelpContent = () => {
   const suppressObserverRef = useRef(false);
   const suppressTimeoutRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDetailsElement | null>(null);
-  const summaryRef = useRef<HTMLSummaryElement | null>(null);
+  const summaryRef = useRef<HTMLElement | null>(null);
   const sectionItems = useMemo(
     () => [
       { id: "admin-setup-checklist", label: "Admin setup checklist" },

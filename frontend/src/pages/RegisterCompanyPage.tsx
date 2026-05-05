@@ -9,6 +9,7 @@ import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
 import SectionHeader from "../components/ui/SectionHeader";
+import { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "../utils/passwordPolicy";
 
 const slugRegex = /^[a-z0-9-]{3,40}$/;
 
@@ -59,8 +60,8 @@ const RegisterCompanyPage = () => {
     } else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(trimmedEmail)) {
       nextErrors.adminEmail = "Enter a valid email address.";
     }
-    if (adminPassword.length < 8) {
-      nextErrors.adminPassword = "Password must be at least 8 characters.";
+    if (adminPassword.length < PASSWORD_MIN_LENGTH) {
+      nextErrors.adminPassword = PASSWORD_TOO_SHORT_MESSAGE;
     }
     setFieldErrors(nextErrors);
     const firstInvalidField =
@@ -200,7 +201,7 @@ const RegisterCompanyPage = () => {
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.adminEmail}</p>
                 ) : null}
               </FormField>
-              <FormField label="Admin password (min 8)" htmlFor="adminPassword">
+              <FormField label={`Admin password (min ${PASSWORD_MIN_LENGTH})`} htmlFor="adminPassword">
                 <Input
                   id="adminPassword"
                   type="password"
@@ -213,7 +214,7 @@ const RegisterCompanyPage = () => {
                   }}
                   required
                   disabled={loading}
-                  minLength={8}
+                  minLength={PASSWORD_MIN_LENGTH}
                 />
                 {fieldErrors.adminPassword ? (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.adminPassword}</p>

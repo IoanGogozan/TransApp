@@ -63,4 +63,46 @@ describe("Public company registration", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns only login-safe company fields from the tenant public endpoint", async () => {
+    const slug = `public-safe-${Date.now()}`;
+    await request(app).post("/api/v1/public/register").send({
+      companyName: "Public Safe Transport",
+      companySlug: slug,
+      adminEmail: "public-safe@example.com",
+      adminPassword: password,
+    });
+
+    const res = await request(app).get(`/api/v1/c/${slug}/public`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.company).toEqual({
+      name: "Public Safe Transport",
+      slug,
+      defaultLanguage: "no",
+    });
+    expect(res.body.company).not.toHaveProperty("id");
+    expect(res.body.company).not.toHaveProperty("plan");
+  });
+
+  it("keeps the legacy public company endpoint minimized", async () => {
+    const slug = `public-legacy-safe-${Date.now()}`;
+    await request(app).post("/api/v1/public/register").send({
+      companyName: "Public Legacy Safe Transport",
+      companySlug: slug,
+      adminEmail: "public-legacy-safe@example.com",
+      adminPassword: password,
+    });
+
+    const res = await request(app).get(`/api/v1/public/c/${slug}/public`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.company).toEqual({
+      name: "Public Legacy Safe Transport",
+      slug,
+      defaultLanguage: "no",
+    });
+    expect(res.body.company).not.toHaveProperty("id");
+    expect(res.body.company).not.toHaveProperty("plan");
+  });
 });

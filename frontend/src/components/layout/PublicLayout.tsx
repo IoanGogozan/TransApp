@@ -11,8 +11,15 @@ const PublicLayout = ({ children, contentClassName }: PublicLayoutProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-6xl">
+    <div className="relative min-h-screen w-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      {menuOpen ? (
+        <div
+          className="fixed inset-0 z-20 md:hidden"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      ) : null}
+      <div className="relative mx-auto w-full max-w-6xl">
         <Card className="w-full">
           <div className="sticky top-0 z-30 -mx-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             <div className="mx-auto w-full max-w-6xl">

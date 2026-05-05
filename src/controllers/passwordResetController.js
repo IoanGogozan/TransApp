@@ -2,6 +2,7 @@ const { z } = require("zod");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const passwordResetService = require("../services/passwordResetService");
+const { PASSWORD_TOO_SHORT_MESSAGE } = require("../utils/passwordPolicy");
 
 const forgotSchema = z.object({
   companySlug: z.string().trim().min(1),
@@ -16,7 +17,7 @@ const validateSchema = z.object({
 const resetSchema = z.object({
   companySlug: z.string().trim().min(1),
   token: z.string().trim().min(1),
-  password: z.string().min(8),
+  password: z.string().min(1, PASSWORD_TOO_SHORT_MESSAGE),
 });
 
 const handleValidation = (parsed) => {

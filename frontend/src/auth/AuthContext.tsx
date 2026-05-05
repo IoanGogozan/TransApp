@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { getMe, login as apiLogin, MeResponse } from "../api/auth";
-import { clearToken, getToken, setToken } from "./token";
+import { getMe, login as apiLogin, logout as apiLogout, MeResponse } from "../api/auth";
+import { clearToken } from "./token";
 import { ApiError } from "../api/http";
 import { setCompanySlug } from "./companySlug";
 
@@ -23,11 +23,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     const load = async () => {
       setLoading(true);
       setError(null);
@@ -40,8 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (err) {
         clearToken();
-        const msg = err instanceof ApiError ? err.message : "Session expired";
-        setError(msg);
+        if (!(err instanceof ApiError && err.status === 401)) {
+          const msg = err instanceof ApiError ? err.message : "Session expired";
+          setError(msg);
+        }
       } finally {
         setLoading(false);
       }
@@ -54,7 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       const res = await apiLogin(companySlug, identifier, password);
-      setToken(res.token);
       const slugToStore = res.company?.slug || companySlug;
       if (slugToStore) setCompanySlug(slugToStore);
       const me = await getMe();
@@ -72,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     clearToken();
+    void apiLogout().catch(() => {});
     setUser(null);
     setCompany(null);
   };

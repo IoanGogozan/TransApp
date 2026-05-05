@@ -5,18 +5,19 @@ const { z } = require("zod");
 const prisma = require("../config/prismaClient");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
+const { createStorageFilename, validateUploadedFile } = require("../utils/fileValidation");
 
 const uploadSchema = z.object({
   title: z.string().trim().min(1),
 });
 
-const mimeToExt = {
-  "application/pdf": ".pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "text/plain": ".txt",
-};
+const allowedDocumentMimeTypes = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "text/plain",
+]);
 
 const mapDocument = (doc) => ({
   id: doc.id,
@@ -39,14 +40,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
   if (!parsed.success) {
     throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
   }
-  if (!req.file) {
-    throw new AppError(400, "File is required", "VALIDATION_ERROR");
-  }
-
-  const ext = mimeToExt[req.file.mimetype];
-  if (!ext) {
-    throw new AppError(400, "Unsupported file type", "UNSUPPORTED_FILE_TYPE");
-  }
+  validateUploadedFile(req.file, allowedDocumentMimeTypes);
 
   const created = await prisma.document.create({
     data: {
@@ -59,7 +53,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
     },
   });
 
-  const relativePath = path.join("uploads", String(req.companyId), "documents", `${created.id}${ext}`);
+  const relativePath = path.join("uploads", String(req.companyId), "documents", createStorageFilename(req.file.mimetype));
   const absolutePath = path.join(process.cwd(), relativePath);
   try {
     await fsp.mkdir(path.dirname(absolutePath), { recursive: true });

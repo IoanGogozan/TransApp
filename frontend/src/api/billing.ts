@@ -1,6 +1,6 @@
 import { http } from "./http";
+import { addCsrfHeader } from "./csrf";
 import { tenantPath } from "../utils/tenantPath";
-import { getToken } from "../auth/token";
 
 export type BillingSubscription = {
   plan?: string;
@@ -111,15 +111,12 @@ export const createVippsAgreement = (
     Accept: "application/json",
     "Content-Type": "application/json",
   };
-
-  const token = getToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  addCsrfHeader(headers, "POST");
 
   return fetch(path, {
     method: "POST",
     cache: "no-store",
+    credentials: "include",
     headers,
     body: JSON.stringify(payload),
   }).then(async (res) => {
@@ -178,10 +175,11 @@ const devPost = async (path: string) => {
   const res = await fetch(path, {
     method: "POST",
     cache: "no-store",
+    credentials: "include",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      ...addCsrfHeader({}, "POST"),
     },
   });
 

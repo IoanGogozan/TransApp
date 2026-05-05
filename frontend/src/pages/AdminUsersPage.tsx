@@ -9,6 +9,7 @@ import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
 import ListState from "../components/ui/ListState";
+import { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "../utils/passwordPolicy";
 
 const AdminUsersPage = () => {
   const { user: me, company } = useAuth();
@@ -111,8 +112,8 @@ const AdminUsersPage = () => {
         setFormError("Phone is required");
         return;
       }
-      if (!password || password.length < 6) {
-        setFormError("Password must be at least 6 characters");
+      if (!password || password.length < PASSWORD_MIN_LENGTH) {
+        setFormError(PASSWORD_TOO_SHORT_MESSAGE);
         return;
       }
     } else {
@@ -120,8 +121,8 @@ const AdminUsersPage = () => {
         setFormError("Email is required");
         return;
       }
-      if (!password || password.length < 8) {
-        setFormError("Password must be at least 8 characters");
+      if (!password || password.length < PASSWORD_MIN_LENGTH) {
+        setFormError(PASSWORD_TOO_SHORT_MESSAGE);
         return;
       }
     }
@@ -195,11 +196,10 @@ const AdminUsersPage = () => {
       return next;
     });
 
-    const minLen = user.role === "DRIVER" ? 6 : 8;
-    if (!resetPasswordValue || resetPasswordValue.length < minLen) {
+    if (!resetPasswordValue || resetPasswordValue.length < PASSWORD_MIN_LENGTH) {
       setResetRowErrors((prev) => ({
         ...prev,
-        [idKey]: `Password must be at least ${minLen} characters`,
+        [idKey]: PASSWORD_TOO_SHORT_MESSAGE,
       }));
       return;
     }
@@ -324,7 +324,7 @@ const AdminUsersPage = () => {
                 )}
 
                 <div className="md:col-span-4">
-                  <FormField label={`Password ${role === "DRIVER" ? "(min 6)" : "(min 8)"}`} htmlFor="password">
+                  <FormField label={`Password (min ${PASSWORD_MIN_LENGTH})`} htmlFor="password">
                     <Input
                       id="password"
                       type="password"

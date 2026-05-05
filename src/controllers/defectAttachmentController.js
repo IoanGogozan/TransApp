@@ -8,6 +8,7 @@ const defectRepository = require("../repositories/defectRepository");
 const defectAttachmentRepository = require("../repositories/defectAttachmentRepository");
 const defectEventRepository = require("../repositories/defectEventRepository");
 const { ensureDefectAccess } = require("../services/defectWorkflowService");
+const { createStorageFilename, validateUploadedFile } = require("../utils/fileValidation");
 
 const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -18,10 +19,7 @@ const uploadSchema = z.object({
   title: z.string().trim().max(120).optional(),
 });
 
-const mimeToExt = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-};
+const allowedAttachmentMimeTypes = new Set(["image/jpeg", "image/png"]);
 
 const defectIdSchema = z.object({
   id: z.string().min(1),
@@ -97,10 +95,8 @@ const downloadDefectAttachment = asyncHandler(async (req, res) => {
   const safeTitle = (attachment.title || "attachment").replace(/[\\/:*?"<>|]+/g, "_");
   const filename = `${safeTitle}${extension}`;
 
-  const isInlineImage = attachment.mimeType === "image/jpeg" || attachment.mimeType === "image/png";
-  const dispositionType = isInlineImage ? "inline" : "attachment";
   res.setHeader("Content-Type", attachment.mimeType);
-  res.setHeader("Content-Disposition", `${dispositionType}; filename="${filename}"`);
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   fs.createReadStream(absolutePath).pipe(res);
 });
 
@@ -115,17 +111,10 @@ const uploadDefectAttachment = asyncHandler(async (req, res) => {
     throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
   }
 
-  if (!req.file) {
-    throw new AppError(400, "File is required", "VALIDATION_ERROR");
-  }
+  validateUploadedFile(req.file, allowedAttachmentMimeTypes);
 
   if (req.file.size > 10 * 1024 * 1024) {
     throw new AppError(400, "File too large", "UPLOAD_FILE_TOO_LARGE");
-  }
-
-  const ext = mimeToExt[req.file.mimetype];
-  if (!ext) {
-    throw new AppError(400, "File type not allowed", "UPLOAD_FILE_TYPE_NOT_ALLOWED");
   }
 
   const defect = await defectRepository.findDefectById({
@@ -163,7 +152,7 @@ const uploadDefectAttachment = asyncHandler(async (req, res) => {
     String(req.companyId),
     "defects",
     String(params.data.id),
-    `${created.id}${ext}`,
+    createStorageFilename(req.file.mimetype),
   );
   const absolutePath = path.join(process.cwd(), relativePath);
 

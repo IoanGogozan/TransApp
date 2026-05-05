@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const userService = require("../services/userService");
 const prisma = require("../config/prismaClient");
 const { getCompanyLimits } = require("../config/planLimits");
+const { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE, isPasswordValid } = require("../utils/passwordPolicy");
 
 const normalizeEmail = (s) => s.trim().toLowerCase();
 const normalizePhone = (s) => {
@@ -31,6 +32,14 @@ const createUser = asyncHandler(async (req, res) => {
 
   const data = parsed.data;
 
+  if (data.role === "PLATFORM_ADMIN" && req.user.role !== "PLATFORM_ADMIN") {
+    throw new AppError(
+      403,
+      "Only platform admins can create platform admins",
+      "USER_CANNOT_CREATE_PLATFORM_ADMIN",
+    );
+  }
+
   const email = data.email?.trim() ? normalizeEmail(data.email) : undefined;
   const username = data.username?.trim() ? normalizeUsername(data.username) : undefined;
   const normalizedPhone = data.phone?.trim() ? normalizePhone(data.phone) : undefined;
@@ -42,17 +51,15 @@ const createUser = asyncHandler(async (req, res) => {
     if (!email) {
       throw new AppError(400, "Email is required for admin users", "VALIDATION_ERROR");
     }
-    if (!data.password || data.password.length < 8) {
-      throw new AppError(400, "Password must be at least 8 characters", "VALIDATION_ERROR");
-    }
   } else {
     if (!normalizedPhone) {
       throw new AppError(400, "Phone is required for driver users", "VALIDATION_ERROR");
     }
-    if (!data.password || data.password.length < 6) {
-      throw new AppError(400, "Password must be at least 6 characters for drivers", "VALIDATION_ERROR");
-    }
     phone = normalizedPhone;
+  }
+
+  if (!isPasswordValid(data.password)) {
+    throw new AppError(400, PASSWORD_TOO_SHORT_MESSAGE, "VALIDATION_ERROR");
   }
 
   const company = await prisma.company.findUnique({
@@ -194,7 +201,7 @@ const updateUserActive = asyncHandler(async (req, res) => {
 });
 
 const updatePasswordSchema = z.object({
-  password: z.string().min(6),
+  password: z.string().min(1, "Password is required"),
 });
 
 const updateUserPassword = asyncHandler(async (req, res) => {
@@ -220,16 +227,8 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   }
 
   const password = body.data.password;
-  if (target.role === "DRIVER") {
-    if (password.length < 6) {
-      throw new AppError(
-        400,
-        "Password must be at least 6 characters for drivers",
-        "VALIDATION_ERROR",
-      );
-    }
-  } else if (password.length < 8) {
-    throw new AppError(400, "Password must be at least 8 characters", "VALIDATION_ERROR");
+  if (!isPasswordValid(password)) {
+    throw new AppError(400, PASSWORD_TOO_SHORT_MESSAGE, "VALIDATION_ERROR");
   }
 
   const user = await userService.updateUserPassword({

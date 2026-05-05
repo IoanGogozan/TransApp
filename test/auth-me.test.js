@@ -75,4 +75,70 @@ describe("Auth + Me", () => {
 
     expect(meRes.status).toBe(200);
   });
+
+  it("rejects an existing token after the user is disabled", async () => {
+    const company = await createCompany({ name: "Auth Disabled Token" });
+    const password = "Password123!";
+    const user = await createUser({
+      companyId: company.id,
+      email: `driver+disabled${Date.now()}@example.com`,
+      role: "DRIVER",
+      passwordPlain: password,
+    });
+
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: user.email, password });
+
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isActive: false },
+    });
+
+    const meRes = await request(app).get("/api/v1/me").set("Authorization", `Bearer ${token}`);
+
+    expect(meRes.status).toBe(403);
+    expect(meRes.body.error.code).toBe("AUTH_USER_DISABLED");
+  });
+
+  it("uses the current database role instead of the role stored in an existing token", async () => {
+    const company = await createCompany({ name: "Auth Role Downgrade" });
+    const password = "Password123!";
+    const admin = await createUser({
+      companyId: company.id,
+      email: `admin+downgrade${Date.now()}@example.com`,
+      role: "ADMIN",
+      passwordPlain: password,
+    });
+
+    const loginRes = await request(app)
+      .post(`/api/v1/c/${company.slug}/auth/login`)
+      .send({ identifier: admin.email, password });
+
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    await prisma.user.update({
+      where: { id: admin.id },
+      data: { role: "DRIVER" },
+    });
+
+    const createUserRes = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        email: "should.not.create@example.com",
+        role: "DRIVER",
+        password: "Password123!",
+      });
+
+    expect(createUserRes.status).toBe(403);
+
+    const meRes = await request(app).get("/api/v1/me").set("Authorization", `Bearer ${token}`);
+    expect(meRes.status).toBe(200);
+    expect(meRes.body.user.role).toBe("DRIVER");
+  });
 });

@@ -173,6 +173,23 @@ const buildVippsEventId = (event) => {
   );
 };
 
+const timingSafeEqualString = (leftValue, rightValue) => {
+  const left = Buffer.from(String(leftValue || ""), "utf8");
+  const right = Buffer.from(String(rightValue || ""), "utf8");
+
+  if (left.length !== right.length) {
+    const length = Math.max(left.length, right.length, 1);
+    const paddedLeft = Buffer.alloc(length);
+    const paddedRight = Buffer.alloc(length);
+    left.copy(paddedLeft);
+    right.copy(paddedRight);
+    crypto.timingSafeEqual(paddedLeft, paddedRight);
+    return false;
+  }
+
+  return crypto.timingSafeEqual(left, right);
+};
+
 const verifyVippsSignature = (req, secret) => {
   const date = req.headers["x-ms-date"];
   const contentHashHeader = req.headers["x-ms-content-sha256"];
@@ -185,7 +202,7 @@ const verifyVippsSignature = (req, secret) => {
 
   const rawBody = req.body instanceof Buffer ? req.body : Buffer.from(req.body || "");
   const contentHash = crypto.createHash("sha256").update(rawBody).digest("base64");
-  if (contentHash !== contentHashHeader) {
+  if (!timingSafeEqualString(contentHash, contentHashHeader)) {
     return { ok: false, error: "VIPPS_CONTENT_HASH_MISMATCH" };
   }
 
@@ -193,7 +210,7 @@ const verifyVippsSignature = (req, secret) => {
   const signature = crypto.createHmac("sha256", secret).update(signedString).digest("base64");
   const expectedAuth = `HMAC-SHA256 SignedHeaders=x-ms-date;host;x-ms-content-sha256&Signature=${signature}`;
 
-  if (authorization !== expectedAuth) {
+  if (!timingSafeEqualString(authorization, expectedAuth)) {
     return { ok: false, error: "VIPPS_SIGNATURE_INVALID" };
   }
 

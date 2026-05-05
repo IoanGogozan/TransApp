@@ -20,6 +20,7 @@ const auth = require("../middlewares/auth");
 const companyContext = require("../middlewares/companyContext");
 const subscriptionContext = require("../middlewares/subscriptionContext");
 const requireActiveSubscription = require("../middlewares/requireActiveSubscription");
+const { csrfProtection } = require("../middlewares/csrfProtection");
 
 const router = express.Router();
 const webhookLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 300 });
@@ -30,7 +31,7 @@ router.use("/webhooks", webhookLimiter, webhookRoutes);
 router.use("/c", companyRoutes);
 router.use("/auth", authRoutes);
 // Protected routes
-router.use(auth, companyContext, subscriptionContext);
+router.use(auth, csrfProtection, companyContext, subscriptionContext);
 router.use("/users", userRoutes);
 router.use("/routes", requireActiveSubscription, routeRoutes);
 router.use("/customers", requireActiveSubscription, customerRoutes);

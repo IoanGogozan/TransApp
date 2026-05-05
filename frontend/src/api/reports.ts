@@ -1,6 +1,5 @@
 import { http } from "./http";
 import { osloToday } from "../utils/oslo";
-import { getToken } from "../auth/token";
 
 type TimesheetResponse = {
   from: string;
@@ -102,9 +101,9 @@ export const downloadWorkEntriesCsv = async (params: {
   const qs = buildWorkEntriesQuery(params);
   const res = await fetch(`/api/v1/reports/work-entries.csv?${qs}`, {
     method: "GET",
+    credentials: "include",
     headers: {
       Accept: "text/csv",
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
     },
   });
   if (!res.ok) {

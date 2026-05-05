@@ -1,5 +1,4 @@
 import { ApiError, ApiErrorShape, http } from "./http";
-import { getToken } from "../auth/token";
 import { hasArrayProp, isListMeta, isRecord, ListResponse } from "./types";
 import { Defect, DefectAttachment, DefectComment, DefectEvent, DefectStatus } from "../types/defect";
 
@@ -299,10 +298,7 @@ export async function uploadDefectAttachment(
 }
 
 export const downloadDefectAttachment = async (id: string | number, attachment: DefectAttachment) => {
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`/api/v1/defects/${id}/attachments/${attachment.id}/download`, { headers });
+  const res = await fetch(`/api/v1/defects/${id}/attachments/${attachment.id}/download`, { credentials: "include" });
   if (!res.ok) {
     const contentType = res.headers.get("content-type") || "";
     const isJson = contentType.includes("application/json");

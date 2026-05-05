@@ -25,19 +25,21 @@ const upload = multer({
 });
 
 router.use(requireRole("PLATFORM_ADMIN", "ADMIN"));
-router.post("/", upload.single("file"), (err, req, res, next) => {
-  if (err) {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ error: { code: "UPLOAD_FILE_TOO_LARGE", message: "File too large" } });
+router.post("/", (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: { code: "UPLOAD_FILE_TOO_LARGE", message: "File too large" } });
+      }
+      if (err.code === "UPLOAD_FILE_TYPE_NOT_ALLOWED") {
+        return res.status(400).json({
+          error: { code: "UPLOAD_FILE_TYPE_NOT_ALLOWED", message: "File type not allowed" },
+        });
+      }
+      return next(err);
     }
-    if (err.code === "UPLOAD_FILE_TYPE_NOT_ALLOWED") {
-      return res.status(400).json({
-        error: { code: "UPLOAD_FILE_TYPE_NOT_ALLOWED", message: "File type not allowed" },
-      });
-    }
-    return next(err);
-  }
-  return uploadDocument(req, res, next);
+    return uploadDocument(req, res, next);
+  });
 });
 router.delete("/:id", deleteDocument);
 

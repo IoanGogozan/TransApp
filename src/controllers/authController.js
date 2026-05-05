@@ -2,11 +2,14 @@ const { z } = require("zod");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const authService = require("../services/authService");
+const { clearAuthCookie, setAuthCookie } = require("../utils/authCookie");
+const { clearCsrfCookie, setCsrfCookie } = require("../utils/csrfToken");
+const { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } = require("../utils/passwordPolicy");
 
 const registerSchema = z.object({
   companyName: z.string().trim().min(1, "companyName is required"),
   email: z.string().trim().email("Valid email required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE),
 });
 
 const loginSchema = z.object({
@@ -15,23 +18,19 @@ const loginSchema = z.object({
 });
 
 const register = asyncHandler(async (req, res) => {
-  const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
-  }
-
-  const result = await authService.registerOwner(parsed.data);
-  res.status(201).json(result);
+  throw new AppError(
+    410,
+    "Company registration moved to /api/v1/public/register",
+    "AUTH_REGISTER_MOVED",
+  );
 });
 
 const login = asyncHandler(async (req, res) => {
-  const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
-  }
-
-  const result = await authService.login(parsed.data);
-  res.json(result);
+  throw new AppError(
+    400,
+    "Tenant-aware login is required",
+    "TENANT_REQUIRED",
+  );
 });
 
 const loginWithCompanySlug = asyncHandler(async (req, res) => {
@@ -51,11 +50,27 @@ const loginWithCompanySlug = asyncHandler(async (req, res) => {
     password: parsed.data.password,
   });
 
-  res.json(result);
+  setAuthCookie(res, result.token);
+  setCsrfCookie(res);
+
+  if (process.env.NODE_ENV === "test") {
+    res.json(result);
+    return;
+  }
+
+  const { token, ...safeResult } = result;
+  res.json(safeResult);
+});
+
+const logout = asyncHandler(async (req, res) => {
+  clearAuthCookie(res);
+  clearCsrfCookie(res);
+  res.json({ ok: true });
 });
 
 module.exports = {
   register,
   login,
   loginWithCompanySlug,
+  logout,
 };

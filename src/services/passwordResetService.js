@@ -3,6 +3,7 @@ const prisma = require("../config/prismaClient");
 const env = require("../config/env");
 const AppError = require("../utils/AppError");
 const { hashPassword } = require("../utils/password");
+const { PASSWORD_TOO_SHORT_MESSAGE, isPasswordValid } = require("../utils/passwordPolicy");
 const { sendEmail } = require("./emailService");
 
 const TOKEN_BYTES = 32;
@@ -124,8 +125,8 @@ const validatePasswordResetToken = async ({ companySlug, token }) => {
 };
 
 const resetPasswordWithToken = async ({ companySlug, token, newPassword }) => {
-  if (!newPassword || newPassword.length < 8) {
-    throw new AppError(400, "Password must be at least 8 characters", "PASSWORD_TOO_SHORT");
+  if (!isPasswordValid(newPassword)) {
+    throw new AppError(400, PASSWORD_TOO_SHORT_MESSAGE, "PASSWORD_TOO_SHORT");
   }
 
   const normalizedSlug = normalizeSlug(companySlug);
@@ -188,7 +189,7 @@ const resetPasswordWithToken = async ({ companySlug, token, newPassword }) => {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: record.user.id },
-      data: { passwordHash, mustChangePassword: false },
+      data: { passwordHash, mustChangePassword: false, tokenVersion: { increment: 1 } },
     });
 
     await tx.passwordResetToken.update({

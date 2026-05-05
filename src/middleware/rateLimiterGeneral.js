@@ -1,37 +1,43 @@
+const { createCounterStore, getClientIp, normalizeRateLimitPart } = require("../utils/rateLimitStore");
+
 const defaultWindowMs = 60 * 1000;
 
-const getClientIp = (req) => {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim() !== "") {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.ip || "unknown-ip";
-};
+const createRateLimiter = ({ windowMs = defaultWindowMs, max = 60, prefix = "general", store } = {}) => {
+  const counterStore = store || createCounterStore({ windowMs, prefix: `rate-limit:${prefix}` });
 
-const createRateLimiter = ({ windowMs = defaultWindowMs, max = 60 } = {}) => {
-  const hits = new Map();
-
-  return (req, res, next) => {
-    const key = getClientIp(req);
-    const now = Date.now();
-    const entry = hits.get(key);
-
-    if (!entry || entry.expiresAt <= now) {
-      hits.set(key, { count: 1, expiresAt: now + windowMs });
-      return next();
+  const getKey = (req) => {
+    const parts = [`ip:${getClientIp(req)}`];
+    if (req.params?.companySlug) {
+      parts.push(`company:${normalizeRateLimitPart(req.params.companySlug)}`);
     }
-
-    if (entry.count >= max) {
-      return res.status(429).json({
-        error: "Too many requests. Try again later.",
-        code: "RATE_LIMITED",
-      });
+    if (req.user?.id) {
+      parts.push(`user:${normalizeRateLimitPart(req.user.id)}`);
     }
-
-    entry.count += 1;
-    hits.set(key, entry);
-    return next();
+    return parts.join(":");
   };
+
+  const middleware = async (req, res, next) => {
+    const key = getKey(req);
+
+    try {
+      const count = await counterStore.get(key);
+
+      if (count >= max) {
+        return res.status(429).json({
+          error: "Too many requests. Try again later.",
+          code: "RATE_LIMITED",
+        });
+      }
+
+      await counterStore.increment(key);
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  middleware._resetRateLimit = () => counterStore.clear();
+  return middleware;
 };
 
 module.exports = createRateLimiter;

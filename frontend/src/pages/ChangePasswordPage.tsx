@@ -8,6 +8,7 @@ import Card from "../components/ui/Card";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
 import SectionHeader from "../components/ui/SectionHeader";
+import { PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "../utils/passwordPolicy";
 
 const ChangePasswordPage = () => {
   const navigate = useNavigate();
@@ -21,8 +22,8 @@ const ChangePasswordPage = () => {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 4) {
-      setError("Password must be at least 4 characters");
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
 
@@ -60,7 +61,7 @@ const ChangePasswordPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={4}
+              minLength={PASSWORD_MIN_LENGTH}
             />
           </FormField>
           <FormField label="Confirm new password" htmlFor="confirmPassword">
@@ -71,7 +72,7 @@ const ChangePasswordPage = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={4}
+              minLength={PASSWORD_MIN_LENGTH}
             />
           </FormField>
           <Button type="submit" disabled={loading}>

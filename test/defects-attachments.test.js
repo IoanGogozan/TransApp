@@ -1,3 +1,5 @@
+const fs = require("fs/promises");
+const path = require("path");
 const request = require("supertest");
 const app = require("../src/app");
 const prisma = require("../src/config/prismaClient");
@@ -32,6 +34,16 @@ describe("Defects and attachments", () => {
   const createDefectAsDriver = async () => {
     const res = await createDefect({ token: tokenADriver, vehicleId: vehicleA.id });
     return res.body.defect?.id;
+  };
+
+  const cleanupAttachmentFile = async (attachmentId) => {
+    const attachment = await prisma.defectAttachment.findUnique({
+      where: { id: attachmentId },
+      select: { storagePath: true },
+    });
+    if (attachment?.storagePath) {
+      await fs.unlink(path.join(process.cwd(), attachment.storagePath)).catch(() => null);
+    }
   };
 
   beforeEach(async () => {
@@ -119,8 +131,56 @@ describe("Defects and attachments", () => {
     expect(res.body.error.code).toBe("UPLOAD_FILE_TYPE_NOT_ALLOWED");
   });
 
+  it("attachment upload rejects spoofed image content", async () => {
+    const defectId = await createDefectAsDriver();
+
+    const res = await request(app)
+      .post(`/api/v1/defects/${defectId}/attachments`)
+      .set("Authorization", `Bearer ${tokenAAdmin}`)
+      .attach("file", Buffer.from("not a real png"), { filename: "spoofed.png", contentType: "image/png" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_FILE_TYPE_NOT_ALLOWED");
+  });
+
+  it("attachment upload rejects extension mismatch", async () => {
+    const defectId = await createDefectAsDriver();
+
+    const res = await request(app)
+      .post(`/api/v1/defects/${defectId}/attachments`)
+      .set("Authorization", `Bearer ${tokenAAdmin}`)
+      .attach("file", pngBuffer, { filename: "image.txt", contentType: "image/png" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_FILE_TYPE_NOT_ALLOWED");
+  });
+
+  it("downloads attachments as files instead of inline content", async () => {
+    const defectId = await createDefectAsDriver();
+
+    const uploadRes = await request(app)
+      .post(`/api/v1/defects/${defectId}/attachments`)
+      .set("Authorization", `Bearer ${tokenAAdmin}`)
+      .field("title", "Safety photo")
+      .attach("file", pngBuffer, { filename: "safety.png", contentType: "image/png" });
+
+    expect(uploadRes.status).toBe(201);
+    const attachmentId = uploadRes.body.attachment.id;
+
+    const downloadRes = await request(app)
+      .get(`/api/v1/defects/${defectId}/attachments/${attachmentId}/download`)
+      .set("Authorization", `Bearer ${tokenAAdmin}`);
+
+    expect(downloadRes.status).toBe(200);
+    expect(downloadRes.headers["content-disposition"]).toContain("attachment;");
+    expect(downloadRes.headers["content-disposition"]).toContain("Safety photo.png");
+
+    await cleanupAttachmentFile(attachmentId);
+  });
+
   it("attachment limit reached at 5", async () => {
     const defectId = await createDefectAsDriver();
+    const attachmentIds = [];
 
     for (let i = 0; i < 5; i++) {
       const res = await request(app)
@@ -128,6 +188,7 @@ describe("Defects and attachments", () => {
         .set("Authorization", `Bearer ${tokenAAdmin}`)
         .attach("file", pngBuffer, { filename: `image-${i}.png`, contentType: "image/png" });
       expect(res.status).toBe(201);
+      attachmentIds.push(res.body.attachment.id);
     }
 
     const sixth = await request(app)
@@ -137,5 +198,9 @@ describe("Defects and attachments", () => {
 
     expect(sixth.status).toBe(409);
     expect(sixth.body.error.code).toBe("ATTACHMENT_LIMIT_REACHED");
+
+    for (const attachmentId of attachmentIds) {
+      await cleanupAttachmentFile(attachmentId);
+    }
   });
 });

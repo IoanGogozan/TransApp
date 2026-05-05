@@ -1,7 +1,6 @@
 import { http } from "./http";
 
 export type LoginResponse = {
-  token: string;
   user: {
     id: number;
     email: string | null;
@@ -35,10 +34,8 @@ export type MeResponse = {
 
 export type PublicCompanyResponse = {
   company: {
-    id: number;
     name: string;
     slug: string;
-    plan: string;
     defaultLanguage: string;
   };
 };
@@ -71,6 +68,11 @@ export const registerCompany = (input: {
   });
 
 export const getMe = () => http<MeResponse>("/api/v1/me");
+
+export const logout = () =>
+  http<{ ok: true }>("/api/v1/auth/logout", {
+    method: "POST",
+  });
 
 export const requestPasswordReset = (companySlug: string, email: string) =>
   http<{ ok: true; message: string }>("/api/v1/auth/forgot-password", {

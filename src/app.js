@@ -9,17 +9,50 @@ const requestId = require("./middlewares/requestId");
 const requestLogger = require("./middlewares/requestLogger");
 
 const app = express();
+const isProduction = process.env.NODE_ENV === "production";
 
 app.disable("x-powered-by");
+if (process.env.TRUST_PROXY === "true") {
+  app.set("trust proxy", 1);
+}
 app.use(
   helmet({
-    contentSecurityPolicy: false,
-    hsts: false,
+    contentSecurityPolicy: isProduction
+      ? {
+          useDefaults: true,
+          directives: {
+            "default-src": ["'self'"],
+            "base-uri": ["'self'"],
+            "connect-src": ["'self'"],
+            "font-src": ["'self'"],
+            "form-action": ["'self'"],
+            "frame-ancestors": ["'none'"],
+            "img-src": ["'self'", "data:"],
+            "object-src": ["'none'"],
+            "script-src": ["'self'"],
+            "style-src": ["'self'"],
+            "upgrade-insecure-requests": [],
+          },
+        }
+      : false,
+    hsts: isProduction
+      ? {
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
+      : false,
+    frameguard: {
+      action: "deny",
+    },
+    referrerPolicy: {
+      policy: "no-referrer",
+    },
   }),
 );
-if (process.env.NODE_ENV === "production") {
-  app.use(helmet.hsts({ maxAge: 15552000 }));
-}
+app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  next();
+});
 
 // Disable HTTP caching for APIs and etag generation
 app.set("etag", false);
@@ -62,8 +95,8 @@ const corsOptions = {
     return callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id"],
-  credentials: false,
+  allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id", "X-CSRF-Token"],
+  credentials: true,
 };
 
 app.use("/api", cors(corsOptions));

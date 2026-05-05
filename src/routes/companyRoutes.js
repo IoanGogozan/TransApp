@@ -4,6 +4,7 @@ const { getPublicCompany } = require("../controllers/companyController");
 const loginRateLimit = require("../middleware/loginRateLimit");
 const billingRoutes = require("./billingRoutes");
 const auth = require("../middlewares/auth");
+const { csrfProtection } = require("../middlewares/csrfProtection");
 const companyContext = require("../middlewares/companyContext");
 const subscriptionContext = require("../middlewares/subscriptionContext");
 const createRateLimiter = require("../middleware/rateLimiterGeneral");
@@ -16,6 +17,7 @@ router.post("/:companySlug/auth/login", loginRateLimit, loginWithCompanySlug);
 router.use(
   "/:companySlug/billing",
   auth,
+  csrfProtection,
   companyContext,
   subscriptionContext,
   billingLimiter,

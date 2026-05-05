@@ -203,6 +203,7 @@ model User {
   username           String?
   passwordHash       String    @map("password_hash")
   mustChangePassword Boolean   @default(false) @map("must_change_password")
+  tokenVersion       Int       @default(0) @map("token_version")
   role               UserRole  @default(DRIVER)
   language           Language?
   isActive           Boolean   @default(true) @map("active")

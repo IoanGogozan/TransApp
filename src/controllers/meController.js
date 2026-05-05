@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { parseDateQueryParam, getTodayYYYYMMDDInOslo, getOsloDayRangeForDate } = require("../utils/dateUtils");
 const userService = require("../services/userService");
+const { PASSWORD_TOO_SHORT_MESSAGE, isPasswordValid } = require("../utils/passwordPolicy");
 
 const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -47,7 +48,7 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 const updateMyPasswordSchema = z.object({
-  password: z.string().min(4),
+  password: z.string().min(1, "Password is required"),
 });
 
 const updateMyPassword = asyncHandler(async (req, res) => {
@@ -56,9 +57,8 @@ const updateMyPassword = asyncHandler(async (req, res) => {
     throw new AppError(400, "Validation failed", "VALIDATION_ERROR", parsed.error.format());
   }
 
-  const minLength = req.user.role === "DRIVER" ? 4 : 8;
-  if (parsed.data.password.length < minLength) {
-    const formattedError = { password: { _errors: [`Password must be at least ${minLength} characters`] } };
+  if (!isPasswordValid(parsed.data.password)) {
+    const formattedError = { password: { _errors: [PASSWORD_TOO_SHORT_MESSAGE] } };
     throw new AppError(400, "Validation failed", "VALIDATION_ERROR", formattedError);
   }
 

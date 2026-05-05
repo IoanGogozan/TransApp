@@ -7,7 +7,6 @@ import { listCompanyUsers } from "../api/users";
 import { Vehicle } from "../types/vehicle";
 import { User } from "../types/user";
 import { ApiError } from "../api/http";
-import { getToken } from "../auth/token";
 import { getDefectCategoryLabel } from "../utils/defects";
 import { formatDateTime } from "../utils/time";
 import { tenantPath } from "../utils/tenantPath";
@@ -130,10 +129,6 @@ const DefectsListPage = () => {
     const createdUrls: string[] = [];
 
     const loadPreviews = async () => {
-      const token = getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
       const previews: Record<string, string> = {};
       const errors: Record<string, boolean> = {};
 
@@ -143,7 +138,7 @@ const DefectsListPage = () => {
         try {
           const res = await fetch(
             getDefectAttachmentDownloadUrl(defect.id, attachment.id),
-            { headers },
+            { credentials: "include" },
           );
           if (!res.ok) {
             throw new Error("Preview fetch failed");

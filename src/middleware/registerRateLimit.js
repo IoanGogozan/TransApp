@@ -1,59 +1,40 @@
 const AppError = require("../utils/AppError");
+const { createCounterStore, getClientIp } = require("../utils/rateLimitStore");
+
 const windowMs = 15 * 60 * 1000;
 const ipLimit = 20;
 
-const ipAttempts = new Map();
+const attempts = createCounterStore({ windowMs, prefix: "rate-limit:register" });
 
-const getClientIp = (req) => {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim() !== "") {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.ip || "unknown-ip";
-};
+const registerRateLimit = async (req, res, next) => {
+  const ipKey = `ip:${getClientIp(req)}`;
 
-const increment = (map, key) => {
-  const now = Date.now();
-  const existing = map.get(key);
-  if (!existing || existing.expiresAt <= now) {
-    map.set(key, { count: 1, expiresAt: now + windowMs });
-    return 1;
-  }
-  const nextCount = existing.count + 1;
-  map.set(key, { count: nextCount, expiresAt: existing.expiresAt });
-  return nextCount;
-};
+  try {
+    const ipCount = await attempts.get(ipKey);
 
-const reset = (map, key) => {
-  map.delete(key);
-};
-
-const registerRateLimit = (req, res, next) => {
-  const ipKey = getClientIp(req);
-  const now = Date.now();
-  const current = ipAttempts.get(ipKey);
-  const ipCount = !current || current.expiresAt <= now ? 0 : current.count;
-
-  if (ipCount >= ipLimit) {
-    return next(
-      new AppError(429, "Too many registrations. Try again later.", "REGISTER_RATE_LIMITED"),
-    );
-  }
-
-  res.on("finish", () => {
-    const success = res.statusCode >= 200 && res.statusCode < 300;
-    if (success) {
-      reset(ipAttempts, ipKey);
-    } else {
-      increment(ipAttempts, ipKey);
+    if (ipCount >= ipLimit) {
+      return next(
+        new AppError(429, "Too many registrations. Try again later.", "REGISTER_RATE_LIMITED"),
+      );
     }
-  });
 
-  next();
+    res.on("finish", () => {
+      const success = res.statusCode >= 200 && res.statusCode < 300;
+      if (success) {
+        void attempts.reset(ipKey);
+      } else {
+        void attempts.increment(ipKey);
+      }
+    });
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 };
 
 registerRateLimit._resetRegisterRateLimit = () => {
-  ipAttempts.clear();
+  return attempts.clear();
 };
 
 module.exports = registerRateLimit;

@@ -1,10 +1,14 @@
 const prisma = require("../config/prismaClient");
 const AppError = require("../utils/AppError");
 const { hashPassword } = require("../utils/password");
+const { PASSWORD_TOO_SHORT_MESSAGE, isPasswordValid } = require("../utils/passwordPolicy");
 
 const createUser = async ({ email, phone, username, password, role, companyId, mustChangePassword = false }) => {
   if (!password) {
     throw new AppError(400, "Password is required", "VALIDATION_ERROR");
+  }
+  if (!isPasswordValid(password)) {
+    throw new AppError(400, PASSWORD_TOO_SHORT_MESSAGE, "VALIDATION_ERROR");
   }
   if (email) {
     const emailExists = await prisma.user.findFirst({ where: { companyId, email } });
@@ -32,7 +36,7 @@ const createUser = async ({ email, phone, username, password, role, companyId, m
 
   return prisma.user.create({
     data: { email, phone, username, passwordHash, role, companyId, mustChangePassword: mustChangePasswordFlag },
-    select: { id: true, email: true, phone: true, username: true, role: true, companyId: true, mustChangePassword: true },
+    select: { id: true, email: true, phone: true, username: true, role: true, companyId: true, mustChangePassword: true, tokenVersion: true },
   });
 };
 
@@ -48,16 +52,21 @@ const listUsersByCompany = async (companyId) => {
       isActive: true,
       companyId: true,
       mustChangePassword: true,
+      tokenVersion: true,
     },
     orderBy: { createdAt: "desc" },
   });
 };
 
 const updateUserPassword = async ({ companyId, userId, password }) => {
+  if (!isPasswordValid(password)) {
+    throw new AppError(400, PASSWORD_TOO_SHORT_MESSAGE, "VALIDATION_ERROR");
+  }
+
   const passwordHash = await hashPassword(password);
   const result = await prisma.user.updateMany({
     where: { id: userId, companyId },
-    data: { passwordHash, mustChangePassword: false },
+    data: { passwordHash, mustChangePassword: false, tokenVersion: { increment: 1 } },
   });
 
   if (result.count === 0) {
@@ -66,7 +75,7 @@ const updateUserPassword = async ({ companyId, userId, password }) => {
 
   return prisma.user.findFirst({
     where: { id: userId, companyId },
-    select: { id: true, email: true, phone: true, username: true, role: true, isActive: true, companyId: true, mustChangePassword: true },
+    select: { id: true, email: true, phone: true, username: true, role: true, isActive: true, companyId: true, mustChangePassword: true, tokenVersion: true },
   });
 };
 
