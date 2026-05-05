@@ -520,6 +520,8 @@ Implementation:
 
 ### 17. Add GitHub Actions CI
 
+Status: done.
+
 Target files:
 
 - `.github/workflows/ci.yml`
@@ -537,6 +539,7 @@ Recommended pipeline:
 - frontend install/build
 - secret scan
 - dependency review
+- `npm audit --audit-level=high` for backend and frontend
 - CodeQL/SAST
 - Docker/container scan, if containerization is added
 
