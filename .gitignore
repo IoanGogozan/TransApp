@@ -11,6 +11,7 @@ frontend/dist
 frontend/.env
 frontend/.env.*
 !.env.example
+!.env.test.example
 
 # logs
 *.log

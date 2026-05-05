@@ -1,7 +1,19 @@
 ## Database environments
 
+- Local development uses PostgreSQL in Docker by default.
 - Dev uses `.env` and connects to the `transapp` database defined in `DATABASE_URL`.
 - Tests use `.env.test` and connect to the `transapp_test` database.
+- The Docker container exposes PostgreSQL on host port `5434` to avoid collisions with other local Postgres instances.
+- The container creates both local databases:
+  - `transapp`
+  - `transapp_test`
+- Docker commands:
+  - Start DB: `npm run db:up`
+  - Stop DB: `npm run db:down`
+  - Follow DB logs: `npm run db:logs`
+- Local connection strings:
+  - Dev: `postgresql://postgres:123456@localhost:5434/transapp`
+  - Test: `postgresql://postgres:123456@localhost:5434/transapp_test`
 - Seed data:
   - Dev: `npm run db:seed:dev`
   - Test: `npm run db:seed:test`
@@ -11,6 +23,7 @@
 
 ## After Prisma schema changes
 
+- Start PostgreSQL first with `npm run db:up`.
 - `npx prisma migrate dev`
 - `npx prisma generate`
 - restart backend
