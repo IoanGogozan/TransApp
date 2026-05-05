@@ -34,7 +34,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 const validateResetToken = asyncHandler(async (req, res) => {
-  const data = handleValidation(validateSchema.safeParse(req.query));
+  const data = handleValidation(validateSchema.safeParse(req.body));
   await passwordResetService.validatePasswordResetToken(data);
   res.json({ valid: true });
 });

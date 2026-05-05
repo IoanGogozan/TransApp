@@ -51,7 +51,7 @@ const registerOwner = async ({ companyName, email, password }) => {
       data: {
         email: normalizedEmail,
         passwordHash,
-        role: "PLATFORM_ADMIN",
+        role: "ADMIN",
         companyId: company.id,
       },
       select: {

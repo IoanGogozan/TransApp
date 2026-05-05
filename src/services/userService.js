@@ -40,9 +40,12 @@ const createUser = async ({ email, phone, username, password, role, companyId, m
   });
 };
 
-const listUsersByCompany = async (companyId) => {
+const listUsersByCompany = async (companyId, { includePlatformAdmins = false } = {}) => {
   return prisma.user.findMany({
-    where: { companyId },
+    where: {
+      companyId,
+      ...(includePlatformAdmins ? {} : { role: { not: "PLATFORM_ADMIN" } }),
+    },
     select: {
       id: true,
       email: true,

@@ -13,7 +13,7 @@ Confirmed findings in the codebase:
 - `src/middlewares/companyContext.js` sets `req.companyId` directly from the JWT and does not verify `:companySlug`.
 - `src/middlewares/auth.js` trusts the JWT payload and does not revalidate the user in the database.
 - `src/services/authService.js` uses `findUnique({ where: { email } })` and `findUnique({ where: userLookup })`, even though `email`, `phone`, and `username` are only unique together with `companyId`.
-- `src/controllers/userController.js` allows `role: "PLATFORM_ADMIN"` when creating users, including requests made by regular `ADMIN` users.
+- `src/controllers/userController.js` previously allowed tenant user-management payloads to request `role: "PLATFORM_ADMIN"`.
 - `src/routes/documentAdminRoutes.js` uses a Multer handler with an error-middleware signature on a normal route.
 - `src/middlewares/requestLogger.js` logs `req.originalUrl || req.url`, including query strings.
 - `frontend/src/auth/token.ts` stores the JWT in `localStorage`.
@@ -23,7 +23,7 @@ Confirmed findings in the codebase:
 
 1. Fix authorization bugs and tenant isolation first.
 2. Every critical fix must include both a negative test and a positive test.
-3. Avoid a major role model refactor in the first pass. First block privilege escalation; the `OWNER` / `SUPER_ADMIN` refactor stays in a separate phase.
+3. Keep the role model simple: `DRIVER`, `ADMIN`, and `PLATFORM_ADMIN`. Harden the rules instead of introducing `OWNER` / `SUPER_ADMIN`.
 4. Do not present the app as production-ready until at least P0 and P1 are complete.
 
 ## P0 - Critical Fixes
@@ -78,7 +78,7 @@ Recommended implementation:
 - Disable `POST /api/v1/auth/login` or return `410 GONE` / `400 TENANT_REQUIRED`.
 - Keep tenant-aware login: `POST /api/v1/c/:companySlug/auth/login`.
 - Remove or mark internal the `login()` function in `authService.js` that performs lookup without `companyId`.
-- For owner registration, replace `findUnique({ email })` with an explicit product decision:
+- For company admin registration, replace `findUnique({ email })` with an explicit product decision:
   - either allow the same email in different companies;
   - or check globally with `findFirst({ where: { email } })`, but then the database schema does not enforce global uniqueness.
 - Recommendation for B2B SaaS: allow the same email in multiple companies and require `companySlug` for login.
@@ -107,21 +107,23 @@ Target files:
 
 Implementation:
 
-- In `createUser`, after body validation:
-  - if `data.role === "PLATFORM_ADMIN"` and `req.user.role !== "PLATFORM_ADMIN"`, return `403`.
-- Check existing update endpoints too, if role updates exist.
-- Short term, keep `PLATFORM_ADMIN` as the company owner role for compatibility.
+- Tenant user management can create only `ADMIN` and `DRIVER`.
+- `PLATFORM_ADMIN` is an internal platform role and must be provisioned outside tenant user management.
+- Company admins cannot modify platform admin accounts.
+- Company admin plan limits count only `ADMIN`, not `PLATFORM_ADMIN`.
+- Company admin user lists hide `PLATFORM_ADMIN` accounts.
 
 Tests:
 
 - `ADMIN` cannot create `PLATFORM_ADMIN`.
-- `PLATFORM_ADMIN` can create `PLATFORM_ADMIN`, if that is the intended behavior.
+- `PLATFORM_ADMIN` cannot be created through tenant user management.
 - `ADMIN` can create `ADMIN`.
 - `ADMIN` can create `DRIVER`.
+- `ADMIN` cannot see `PLATFORM_ADMIN` accounts in the tenant user list.
 
 Acceptance criteria:
 
-- A company admin cannot create or modify users with a higher role.
+- Tenant-level user management cannot provision or expose platform admin accounts to company admins.
 
 ### 4. Revalidate the user in auth middleware
 
@@ -261,15 +263,13 @@ Minimum implementation:
 - Add `sanitizeUrl()` in `requestLogger`.
 - Redact `token`, `password`, `secret`, `clientSecret`, `code`, and `refreshToken`.
 - Log the sanitized URL instead of the raw `originalUrl`.
-
-Recommended follow-up:
-
 - Change token validation from `GET /reset-password/validate?token=...` to `POST /reset-password/validate` with the token in the body.
 
 Tests:
 
 - A request with `?token=abc` is logged as `?token=[REDACTED]`.
 - A request without sensitive parameters remains readable.
+- Reset token validation accepts `POST` body and rejects the old `GET` query-string route.
 
 Acceptance criteria:
 
@@ -462,14 +462,8 @@ Implemented CSRF behavior:
 
 - Login sets an `HttpOnly` session cookie and a separate readable CSRF cookie.
 - Cookie-authenticated `POST`, `PUT`, `PATCH`, and `DELETE` requests must send `X-CSRF-Token`.
-- Bearer-token API clients remain compatible and do not require CSRF.
+- Bearer-token API clients remain compatible in development and test. In production, Bearer auth is disabled by default and requires `ALLOW_BEARER_AUTH=true`.
 - Logout clears both the session cookie and the CSRF cookie.
-
-Temporary alternative:
-
-- Keep Bearer tokens, but document the MVP limitation.
-- Shorten JWT lifetime.
-- Add strict CSP and revocation through `tokenVersion`.
 
 Tests:
 
@@ -478,31 +472,33 @@ Tests:
 - Logout invalidates the session.
 - Mutating requests without valid CSRF are rejected.
 
-### 15. Clarify the role model
+### 15. Harden the role model
 
-Risk: medium, but the refactor is broad.
+Status: done for the current product model.
 
 Problem:
 
-- `PLATFORM_ADMIN` appears to be used as a company owner role, not only as a global platform admin.
+- The app only needs three roles for now: driver, company admin, and internal platform admin.
+- Adding `OWNER` / `SUPER_ADMIN` would add complexity without a clear current workflow.
 
-Proposed model:
+Current model:
 
-- `OWNER`: primary company owner/admin.
-- `ADMIN`: operational company admin.
+- `ADMIN`: company admin. There can be multiple admins in a company.
 - `DRIVER`: driver.
-- `SUPER_ADMIN`: internal platform admin, without `companyId` or with separate rules.
+- `PLATFORM_ADMIN`: internal platform operator.
 
 Implementation:
 
-- Add a new enum or controlled role migration.
-- Map existing `PLATFORM_ADMIN` users to `OWNER`.
-- Introduce clear `SUPER_ADMIN` rules.
-- Update tests, UI labels, and documentation.
+- Keep the existing enum.
+- Block `PLATFORM_ADMIN` creation through tenant user management.
+- Keep `ADMIN` as the role created during public company registration.
+- Hide platform admin accounts from company admin user lists.
+- Do not count platform admin accounts against tenant admin plan limits.
 
 Acceptance criteria:
 
-- Roles clearly express the difference between tenant owner and global platform admin.
+- Company admins manage `ADMIN` and `DRIVER` users only.
+- Platform admin remains an internal role, not a company owner role.
 
 ### 16. Use production-grade file storage
 
@@ -548,6 +544,8 @@ Acceptance criteria:
 - Every PR or push runs tests and build automatically.
 
 ### 18. Enable stricter TypeScript gradually on the frontend
+
+Status: done.
 
 Target files:
 
@@ -597,7 +595,7 @@ Implementation:
 14. HttpOnly cookie auth or documented localStorage limitation.
 15. CI/CD.
 16. Gradual TypeScript strict mode.
-17. `OWNER` / `SUPER_ADMIN` role refactor.
+17. Role model hardening without `OWNER` / `SUPER_ADMIN`.
 18. Production file storage.
 19. README/security docs update.
 

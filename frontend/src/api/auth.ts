@@ -81,9 +81,10 @@ export const requestPasswordReset = (companySlug: string, email: string) =>
   });
 
 export const validatePasswordResetToken = (companySlug: string, token: string) =>
-  http<{ valid: true }>(
-    `/api/v1/auth/reset-password/validate?companySlug=${encodeURIComponent(companySlug)}&token=${encodeURIComponent(token)}`
-  );
+  http<{ valid: true }>("/api/v1/auth/reset-password/validate", {
+    method: "POST",
+    body: { companySlug, token },
+  });
 
 export const resetPasswordWithToken = (companySlug: string, token: string, password: string) =>
   http<{ ok: true }>("/api/v1/auth/reset-password", {

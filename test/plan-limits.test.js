@@ -6,11 +6,11 @@ const { loginWithSlug } = require("./helpers/auth");
 const password = "Password123!";
 
 describe("Plan limits", () => {
-  it("blocks creating an admin beyond BASIC plan limit (owner counts as admin)", async () => {
+  it("blocks creating an admin beyond BASIC plan limit", async () => {
     const company = await createCompany({ name: "Basic Admin Co", plan: "BASIC" });
-    const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.basic@example.com", passwordPlain: password });
+    const admin = await createUser({ companyId: company.id, role: "ADMIN", email: "admin.basic@example.com", passwordPlain: password });
 
-    const loginRes = await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password });
+    const loginRes = await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password });
     const token = loginRes.body.token;
     const res = await request(app)
       .post("/api/v1/users")
@@ -80,13 +80,14 @@ describe("Plan limits", () => {
     await createUser({ companyId: company.id, role: "ADMIN", email: "admin2.pro@example.com", passwordPlain: password });
     await createUser({ companyId: company.id, role: "ADMIN", email: "admin3.pro@example.com", passwordPlain: password });
     await createUser({ companyId: company.id, role: "ADMIN", email: "admin4.pro@example.com", passwordPlain: password });
+    await createUser({ companyId: company.id, role: "ADMIN", email: "admin5.pro@example.com", passwordPlain: password });
 
     const loginRes = await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password });
     const token = loginRes.body.token;
     const res = await request(app)
       .post("/api/v1/users")
       .set("Authorization", `Bearer ${token}`)
-      .send({ email: "admin5.pro@example.com", password, role: "ADMIN" });
+      .send({ email: "admin6.pro@example.com", password, role: "ADMIN" });
 
     expect(res.status).toBe(409);
     expect(res.body.error?.code).toBe("PLAN_LIMIT_REACHED");
@@ -97,6 +98,7 @@ describe("Plan limits", () => {
   it("blocks reactivating an admin beyond plan limit", async () => {
     const company = await createCompany({ name: "Reactivate Admin Co", plan: "BASIC" });
     const owner = await createUser({ companyId: company.id, role: "PLATFORM_ADMIN", email: "owner.reactivate.admin@example.com", passwordPlain: password });
+    await createUser({ companyId: company.id, role: "ADMIN", email: "active.admin@example.com", passwordPlain: password });
     const inactiveAdmin = await createUser({ companyId: company.id, role: "ADMIN", email: "inactive.admin@example.com", passwordPlain: password, active: false });
 
     const token = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password })).body.token;

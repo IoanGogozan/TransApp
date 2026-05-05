@@ -24,6 +24,9 @@ const createSchema = z.object({
   role: z.enum(["ADMIN", "DRIVER", "PLATFORM_ADMIN"]).optional().default("DRIVER"),
 });
 
+const COMPANY_MANAGED_ROLES = new Set(["ADMIN", "DRIVER"]);
+const COMPANY_ADMIN_ROLES = ["ADMIN"];
+
 const createUser = asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -32,10 +35,10 @@ const createUser = asyncHandler(async (req, res) => {
 
   const data = parsed.data;
 
-  if (data.role === "PLATFORM_ADMIN" && req.user.role !== "PLATFORM_ADMIN") {
+  if (!COMPANY_MANAGED_ROLES.has(data.role)) {
     throw new AppError(
       403,
-      "Only platform admins can create platform admins",
+      "Platform admins must be provisioned outside tenant user management",
       "USER_CANNOT_CREATE_PLATFORM_ADMIN",
     );
   }
@@ -45,7 +48,7 @@ const createUser = asyncHandler(async (req, res) => {
   const normalizedPhone = data.phone?.trim() ? normalizePhone(data.phone) : undefined;
   let phone = normalizedPhone;
 
-  const isAdminRole = data.role === "ADMIN" || data.role === "PLATFORM_ADMIN";
+  const isAdminRole = data.role === "ADMIN";
 
   if (isAdminRole) {
     if (!email) {
@@ -72,7 +75,7 @@ const createUser = asyncHandler(async (req, res) => {
 
   const [adminCount, driverCount] = await Promise.all([
     prisma.user.count({
-      where: { companyId: req.companyId, isActive: true, role: { in: ["ADMIN", "PLATFORM_ADMIN"] } },
+      where: { companyId: req.companyId, isActive: true, role: { in: COMPANY_ADMIN_ROLES } },
     }),
     prisma.user.count({
       where: { companyId: req.companyId, isActive: true, role: "DRIVER" },
@@ -111,7 +114,9 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 const listUsers = asyncHandler(async (req, res) => {
-  const users = await userService.listUsersByCompany(req.companyId);
+  const users = await userService.listUsersByCompany(req.companyId, {
+    includePlatformAdmins: req.user.role === "PLATFORM_ADMIN",
+  });
   res.json({ users });
 });
 
@@ -127,7 +132,11 @@ const enforceAdminUserGuards = async (req, targetUserId) => {
     });
 
     if (target?.role === "PLATFORM_ADMIN") {
-      throw new AppError(403, "Admins can't modify owner accounts.", "USER_CANNOT_MODIFY_OWNER");
+      throw new AppError(
+        403,
+        "Admins can't modify platform admin accounts.",
+        "USER_CANNOT_MODIFY_PLATFORM_ADMIN",
+      );
     }
   }
 };
@@ -169,14 +178,14 @@ const updateUserActive = asyncHandler(async (req, res) => {
 
       const [adminCount, driverCount] = await Promise.all([
         prisma.user.count({
-          where: { companyId: req.companyId, isActive: true, role: { in: ["ADMIN", "PLATFORM_ADMIN"] } },
+          where: { companyId: req.companyId, isActive: true, role: { in: COMPANY_ADMIN_ROLES } },
         }),
         prisma.user.count({
           where: { companyId: req.companyId, isActive: true, role: "DRIVER" },
         }),
       ]);
 
-      const isAdminRole = ["ADMIN", "PLATFORM_ADMIN"].includes(target.role);
+      const isAdminRole = target.role === "ADMIN";
       const limit = isAdminRole ? limits.admins : limits.drivers;
       const current = isAdminRole ? adminCount : driverCount;
 

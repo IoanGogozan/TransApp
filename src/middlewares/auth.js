@@ -3,11 +3,20 @@ const prisma = require("../config/prismaClient");
 const { verifyToken } = require("../utils/jwt");
 const { getAuthCookie } = require("../utils/authCookie");
 
+const isBearerAuthAllowed = () =>
+  process.env.NODE_ENV !== "production" || process.env.ALLOW_BEARER_AUTH === "true";
+
 const auth = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
   const [scheme, bearerToken] = authHeader.split(" ");
-  const token = scheme === "Bearer" && bearerToken ? bearerToken : getAuthCookie(req);
-  const authSource = scheme === "Bearer" && bearerToken ? "bearer" : "cookie";
+  const hasBearerToken = scheme === "Bearer" && Boolean(bearerToken);
+
+  if (hasBearerToken && !isBearerAuthAllowed()) {
+    return next(new AppError(401, "Bearer auth is disabled", "AUTH_BEARER_DISABLED"));
+  }
+
+  const token = hasBearerToken ? bearerToken : getAuthCookie(req);
+  const authSource = hasBearerToken ? "bearer" : "cookie";
 
   if (!token) {
     return next(new AppError(401, "Unauthorized", "AUTH_MISSING_TOKEN"));
@@ -61,4 +70,5 @@ const auth = async (req, res, next) => {
   }
 };
 
+auth.isBearerAuthAllowed = isBearerAuthAllowed;
 module.exports = auth;

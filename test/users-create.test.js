@@ -120,27 +120,75 @@ describe("User creation rules", () => {
     expect(res.body.error.code).toBe("USER_CANNOT_CREATE_PLATFORM_ADMIN");
   });
 
-  it("allows platform admin to create platform admin", async () => {
-    const company = await createCompany({ name: "Owner Creates Owner Co", plan: "PRO" });
-    const owner = await createUser({
+  it("prevents platform admin creation through tenant user management", async () => {
+    const company = await createCompany({ name: "Platform Admin Provisioning Co", plan: "PRO" });
+    const platformAdmin = await createUser({
       companyId: company.id,
       role: "PLATFORM_ADMIN",
-      email: "owner.creates.owner@example.com",
+      email: "platform.provisioning@example.com",
       passwordPlain: ownerPassword,
     });
-    const ownerToken = (await loginWithSlug({ companySlug: company.slug, identifier: owner.email, password: ownerPassword })).body.token;
+    const platformAdminToken = (await loginWithSlug({ companySlug: company.slug, identifier: platformAdmin.email, password: ownerPassword })).body.token;
 
     const res = await request(app)
       .post("/api/v1/users")
-      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("Authorization", `Bearer ${platformAdminToken}`)
       .send({
         email: "second.platform.admin@example.com",
         role: "PLATFORM_ADMIN",
         password: "Password123!",
       });
 
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("USER_CANNOT_CREATE_PLATFORM_ADMIN");
+  });
+
+  it("allows admin to create another company admin", async () => {
+    const company = await createCompany({ name: "Multiple Admin Co", plan: "PRO" });
+    const admin = await createUser({
+      companyId: company.id,
+      role: "ADMIN",
+      email: "admin.creator@example.com",
+      passwordPlain: ownerPassword,
+    });
+    const adminToken = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        email: "second.company.admin@example.com",
+        role: "ADMIN",
+        password: "Password123!",
+      });
+
     expect(res.status).toBe(201);
-    expect(res.body.user.role).toBe("PLATFORM_ADMIN");
+    expect(res.body.user.role).toBe("ADMIN");
+  });
+
+  it("hides platform admins from company admin user lists", async () => {
+    const company = await createCompany({ name: "Hidden Platform Admin Co", plan: "PRO" });
+    const admin = await createUser({
+      companyId: company.id,
+      role: "ADMIN",
+      email: "admin.list@example.com",
+      passwordPlain: ownerPassword,
+    });
+    const platformAdmin = await createUser({
+      companyId: company.id,
+      role: "PLATFORM_ADMIN",
+      email: "platform.hidden@example.com",
+      passwordPlain: ownerPassword,
+    });
+    const adminToken = (await loginWithSlug({ companySlug: company.slug, identifier: admin.email, password: ownerPassword })).body.token;
+
+    const res = await request(app)
+      .get("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.users.map((user) => user.id)).toContain(admin.id);
+    expect(res.body.users.map((user) => user.id)).not.toContain(platformAdmin.id);
   });
 
   it("allows same phone in different companies", async () => {
